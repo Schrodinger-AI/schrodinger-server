@@ -1,0 +1,13 @@
+{
+  "ClientId": "SchrodingerServer_EntityEventHandler_001",
+  "apollo": {
+    "UseApollo" : false,
+    "AppId": "SchrodingerServer",
+    "MetaServer": "http://127.0.0.1:8090",
+    "Namespaces": [
+      "eventHandler_appsettings.json",
+      "orleans.json",
+      "chains.json"
+    ]
+  }
+}

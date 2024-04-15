@@ -1,1 +1,1 @@
-# schrodinger-server
+# SchrodingerServer
