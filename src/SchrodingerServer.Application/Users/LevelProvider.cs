@@ -132,6 +132,10 @@ public class LevelProvider : ApplicationService, ILevelProvider
 
     private async Task<bool> CheckAddressIsInWhiteListAsync(string address)
     {
+        if (string.IsNullOrEmpty(address))
+        {
+            return false;
+        }
         
         try
         {
