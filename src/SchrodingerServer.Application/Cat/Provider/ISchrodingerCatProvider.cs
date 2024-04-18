@@ -119,12 +119,11 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
     {
         try
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerDetailDto>(new GraphQLRequest
+            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerDetailQueryDto>(new GraphQLRequest
             {
                 Query =
                     @"query($chainId:String!, $address:String!, $symbol:String!){
-                    getSchrodingerDetail(input: {keyword:$keyword,chainId:$chainId,tick:$tick,traits:$traits,generations:$generations,skipCount:$skipCount,maxResultCount:$maxResultCount,filterSgr:$filterSgr}){
-                       
+                    getSchrodingerDetail(input: {chainId:$chainId,address:$address,symbol:$symbol}){
                         symbol,
                         tokenName,
                         inscriptionImageUri,
@@ -132,17 +131,18 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         generation,
                         address,
                         traits{traitType,value}
-                    }
+                    
                 }
             }",
                 Variables = new
                 {
                     chainId = input.ChainId ?? "",
                     address = input.Address ?? "",
-                    symbol = input.Symbol ?? ""}
+                    symbol = input.Symbol ?? ""
+                }
             });
 
-            return indexerResult;
+            return indexerResult.GetSchrodingerDetail;
         }
         catch (Exception e)
         {

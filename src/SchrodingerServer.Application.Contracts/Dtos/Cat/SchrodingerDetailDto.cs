@@ -1,7 +1,11 @@
 using System.Collections.Generic;
+using SchrodingerServer.Common;
 
 namespace SchrodingerServer.Dtos.Cat;
-
+public class SchrodingerDetailQueryDto
+{
+    public SchrodingerDetailDto GetSchrodingerDetail { get; set; }
+}
 public class SchrodingerDetailDto
 {
     public string Symbol { get; set; }
@@ -12,6 +16,7 @@ public class SchrodingerDetailDto
     public int Decimals { get; set; }
     public string Address { get; set; }
     public List<TraitDto> Traits { get; set; }
+    public long HolderAmount{ get; set; }
 }
 
 public class TraitDto
