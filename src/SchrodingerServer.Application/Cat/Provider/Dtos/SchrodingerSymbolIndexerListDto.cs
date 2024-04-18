@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using SchrodingerServer.Dtos.Cat;
 
 namespace SchrodingerServer.Cat.Provider.Dtos;
 
@@ -20,7 +21,7 @@ public class SchrodingerSymbolIndexerDto
     public string Adopter { get; set; }
     public long AdoptTime { get; set; }
     public string Tick { get; set; }
-    //public List<TraitsInfo> Traits { get; set; }
+    public List<TraitsInfo> Traits { get; set; }
     public int Rank { get; set; }
     public string Level { get; set; }
     public string Grade { get; set; }
