@@ -49,7 +49,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         inscriptionDeploy,
                         adopter,
                         adoptTime,
-                        traits{traitType,value}
+                        traits{traitType,value},
+                        address
                     }
                 }
             }",
