@@ -133,7 +133,7 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
             var userGrain =  await _userInformationProvider.GetUserById(userId);
             userAddress = userGrain == null ? "" : (userGrain.AelfAddress.IsNullOrEmpty()?userGrain.CaAddressMain:userGrain.AelfAddress);
         }
-        _logger.LogInformation("Get current user address chainId: {chainId} address:{address}", userAddress);
+        _logger.LogInformation("Get current user address address:{address}", userAddress);
         return userAddress;
     }
 }

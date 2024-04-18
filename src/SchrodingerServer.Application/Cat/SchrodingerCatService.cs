@@ -52,6 +52,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             input.Address = address;
         }
+        _logger.LogInformation("GetSchrodingerCatListAsync address:{address}",input.Address);
+
         List<SchrodingerIndexerDto> indexerList;
         var result = new SchrodingerListDto();
 
