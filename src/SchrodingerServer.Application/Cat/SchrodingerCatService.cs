@@ -104,23 +104,23 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             SkipCount = 0,
             MaxResultCount = 1
         };
-        var symbolIndexerListDto = await _schrodingerCatProvider.GetSchrodingerAllCatsListAsync(querySymolInput);
-        if (symbolIndexerListDto == null)
+        var symbolIndexerListDto =  await GetSchrodingerAllCatsPageList(querySymolInput);
+
+        if (symbolIndexerListDto == null && symbolIndexerListDto.TotalCount == 0)
         {
             return new SchrodingerDetailDto();
         }
-
-        if (!address.IsNullOrEmpty())
+        var amount = symbolIndexerListDto.Data[0].Amount;
+        if (address.IsNullOrEmpty())
         {
-            var holderDetail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
+            input.Address = symbolIndexerListDto.Data[0].Address;
         }
 
+        var detail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
 
-
-        //query holderIndex
-  
         //query total amount
         detail.HolderAmount = detail.Amount;
+        detail.Amount = amount;
         return detail;
     }
 
