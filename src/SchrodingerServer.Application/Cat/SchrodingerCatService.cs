@@ -96,8 +96,29 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             input.Address = address;
         }
+        //query symbolIndex
+        var querySymolInput = new GetCatListInput
+        {
+            ChainId = input.ChainId,
+            Keyword = input.Symbol,
+            SkipCount = 0,
+            MaxResultCount = 1
+        };
+        var symbolIndexerListDto = await _schrodingerCatProvider.GetSchrodingerAllCatsListAsync(querySymolInput);
+        if (symbolIndexerListDto == null)
+        {
+            return new SchrodingerDetailDto();
+        }
+
+        if (!address.IsNullOrEmpty())
+        {
+            var holderDetail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
+        }
+
+
+
         //query holderIndex
-        var detail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
+  
         //query total amount
         detail.HolderAmount = detail.Amount;
         return detail;
