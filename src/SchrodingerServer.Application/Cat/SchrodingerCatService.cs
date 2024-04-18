@@ -47,12 +47,11 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
     public async Task<SchrodingerListDto> GetSchrodingerCatListAsync(GetCatListInput input)
     {
-        if ((string.IsNullOrEmpty(input.Address) && !string.IsNullOrEmpty(input.SearchAddress)) || 
-            (string.IsNullOrEmpty(input.Address) && string.IsNullOrEmpty(input.SearchAddress)))
+        var address = await _userActionProvider.GetCurrentUserAddressAsync();
+        if (!address.IsNullOrEmpty())
         {
-            return await GetSchrodingerCatPageList(input);
+            input.Address = address;
         }
-        
         List<SchrodingerIndexerDto> indexerList;
         var result = new SchrodingerListDto();
 
