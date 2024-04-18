@@ -37,5 +37,7 @@ public class SchrodingerServerApplicationAutoMapperProfile : Profile
         CreateMap<ZealyUserXpGrainDto, UserXpInfoDto>();
         CreateMap<ZealyUserXpRecordIndex, XpRecordDto>();
         CreateMap<SchrodingerIndexerDto, SchrodingerDto>();
+        CreateMap<SchrodingerSymbolIndexerDto, SchrodingerDto>();
+
     }
 }

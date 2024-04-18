@@ -130,6 +130,36 @@ public class LevelProvider : ApplicationService, ILevelProvider
         return rankDataList;
     }
 
+    public async Task<double> GetAwakenSGRPrice()
+    {
+        //get awaken price
+        var price = 0.0;
+        try
+        {
+            var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
+                PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
+                {
+                    ["token0Symbol"] = "ELF",
+                    ["token1Symbol"] = "SGR-1",
+                    ["feeRate"] = "0.03",
+                    ["chainId"] = _levelOptions.CurrentValue.ChainId
+                });
+            if (resp is not { Code: "20000" })
+            {
+                _logger.LogError("AwakenPrice get failed,response:{response}",(resp == null ? "non result" : resp.Code));
+                return price;
+            }
+
+            price = (double)(resp.Data.Items?.First().ValueLocked0 / resp.Data.Items?.First().ValueLocked1);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("AwakenPrice get failed",e);
+        }
+
+        return price;
+    }
+
     private async Task<bool> CheckAddressIsInWhiteListAsync(string address)
     {
         if (string.IsNullOrEmpty(address))
@@ -160,7 +190,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
         return false;
     }
 
-    private async Task<LevelInfoDto> GetItemLevelDicAsync(int rank, double price)
+    public async Task<LevelInfoDto> GetItemLevelDicAsync(int rank, double price)
     {
         var levelInfo = new LevelInfoDto();
         if (_levelInfoDic != null && _levelInfoDic.Count > 0)

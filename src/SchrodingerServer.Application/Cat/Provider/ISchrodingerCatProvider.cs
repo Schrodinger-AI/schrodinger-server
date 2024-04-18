@@ -12,6 +12,9 @@ namespace SchrodingerServer.Cat.Provider;
 public interface ISchrodingerCatProvider
 {
     Task<SchrodingerIndexerListDto> GetSchrodingerCatListAsync(GetCatListInput input);
+    Task<SchrodingerSymbolIndexerListDto> GetSchrodingerAllCatsListAsync(GetCatListInput input);
+
+    Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync(GetCatDetailInput input);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -46,7 +49,6 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         inscriptionDeploy,
                         adopter,
                         adoptTime,
-                        address,
                         traits{traitType,value}
                     }
                 }
@@ -65,6 +67,87 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "GetSchrodingerCatList Indexer error");
             return new SchrodingerIndexerListDto();
+        }
+    }
+
+    public async Task<SchrodingerSymbolIndexerListDto> GetSchrodingerAllCatsListAsync(GetCatListInput input)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerSymbolIndexerQuery>(new GraphQLRequest
+            {
+                Query =
+                    @"query($keyword:String!, $chainId:String!, $tick:String!, $traits:[TraitsInput!],$raritys:[String!],$generations:[Int!],$skipCount:Int!,$maxResultCount:Int!,$filterSgr:Boolean!){
+                    getAllSchrodingerList(input: {keyword:$keyword,chainId:$chainId,tick:$tick,traits:$traits,raritys:$raritys,generations:$generations,skipCount:$skipCount,maxResultCount:$maxResultCount,filterSgr:$filterSgr}){
+                        totalCount,
+                        data{
+                        symbol,
+                        tokenName,
+                        inscriptionImageUri,
+                        amount,
+                        generation,
+                        decimals,
+                        inscriptionDeploy,
+                        adopter,
+                        adoptTime,
+                        traits{traitType,value},
+                        rarity,
+                        rank,
+                        level,
+                        grade
+                    }
+                }
+            }",
+                Variables = new
+                {
+                    keyword = input.Keyword ?? "", chainId = input.ChainId ?? "",
+                    tick = input.Tick ?? "", traits = input.Traits,raritys = input.Rarities, generations = input.Generations,
+                    skipCount = input.SkipCount, maxResultCount = input.MaxResultCount,filterSgr = input.FilterSgr
+                }
+            });
+
+            return indexerResult.GetAllSchrodingerList;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetSchrodingerAllCatsListAsync Indexer error");
+            return new SchrodingerSymbolIndexerListDto();
+        }
+    }
+
+    public async Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync(GetCatDetailInput input)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerDetailDto>(new GraphQLRequest
+            {
+                Query =
+                    @"query($chainId:String!, $address:String!, $symbol:String!){
+                    getSchrodingerDetail(input: {keyword:$keyword,chainId:$chainId,tick:$tick,traits:$traits,generations:$generations,skipCount:$skipCount,maxResultCount:$maxResultCount,filterSgr:$filterSgr}){
+                       
+                        symbol,
+                        tokenName,
+                        inscriptionImageUri,
+                        amount,
+                        generation,
+                        address,
+                        traits{traitType,value}
+                    }
+                }
+            }",
+                Variables = new
+                {
+                    chainId = input.ChainId ?? "",
+                    address = input.Address ?? "",
+                    symbol = input.Symbol ?? ""}
+            });
+
+            return indexerResult;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetSchrodingerAllCatsListAsync Indexer error");
+            return new SchrodingerDetailDto();
         }
     }
 }

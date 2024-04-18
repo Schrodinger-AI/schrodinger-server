@@ -27,17 +27,22 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     private readonly IOptionsMonitor<LevelOptions> _levelOptions;
     private readonly IObjectMapper _objectMapper;
     private readonly ILogger<SchrodingerCatService> _logger;
+    private readonly IUserInformationProvider _userInformationProvider;
+    private readonly IUserActionProvider _userActionProvider;
 
     private static readonly List<string> GenOneTraitTypes = new() { "Background", "Clothes", "Breed" };
 
     public SchrodingerCatService(ISchrodingerCatProvider schrodingerCatProvider, ILevelProvider levelProvider,
-        IObjectMapper objectMapper, ILogger<SchrodingerCatService> logger, IOptionsMonitor<LevelOptions> levelOptions)
+        IObjectMapper objectMapper, ILogger<SchrodingerCatService> logger, IOptionsMonitor<LevelOptions> levelOptions,
+        IUserInformationProvider userInformationProvider,IUserActionProvider userActionProvider)
     {
         _schrodingerCatProvider = schrodingerCatProvider;
         _levelProvider = levelProvider;
         _objectMapper = objectMapper;
         _logger = logger;
         _levelOptions = levelOptions;
+        _userInformationProvider = userInformationProvider;
+        _userActionProvider = userActionProvider;
     }
 
     public async Task<SchrodingerListDto> GetSchrodingerCatListAsync(GetCatListInput input)
@@ -74,6 +79,30 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         return result;
     }
 
+    public async Task<SchrodingerListDto> GetSchrodingerAllCatsListAsync(GetCatListInput input)
+    {
+        var address = await _userActionProvider.GetCurrentUserAddressAsync();
+        if (!address.IsNullOrEmpty())
+        {
+            input.Address = address;
+        }
+        
+        return await GetSchrodingerAllCatsPageList(input);
+    }
+
+    public async Task<SchrodingerDetailDto> GetSchrodingerCatDeailAsync(GetCatDetailInput input)
+    {
+        var address = await _userActionProvider.GetCurrentUserAddressAsync();
+        if (!address.IsNullOrEmpty())
+        {
+            input.Address = address;
+        }
+        //query holderIndex
+        var detail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
+        //query total amount
+        return detail;
+    }
+
     private async Task<SchrodingerListDto> GetSchrodingerCatPageList(GetCatListInput input)
     {
         var result = new SchrodingerListDto();
@@ -84,7 +113,29 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         result.TotalCount = schrodingerIndexerListDto.TotalCount;
         return result;
     }
-
+    private async Task<SchrodingerListDto> GetSchrodingerAllCatsPageList(GetCatListInput input)
+    {
+        var result = new SchrodingerListDto();
+        input.FilterSgr = true;
+        var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerAllCatsListAsync(input);
+        var list = _objectMapper.Map<List<SchrodingerSymbolIndexerDto>, List<SchrodingerDto>>(schrodingerIndexerListDto.Data);
+        //get awaken price
+        var price = await _levelProvider.GetAwakenSGRPrice();
+        foreach (var schrodingerDto in list.Where(schrodingerDto => schrodingerDto.Generation == 9))
+        {
+            //get levelInfo
+            var levelInfoDto = await _levelProvider.GetItemLevelDicAsync(schrodingerDto.Rank, price);
+            schrodingerDto.AwakenPrice = levelInfoDto?.AwakenPrice;
+            schrodingerDto.Level = levelInfoDto?.Level;
+            schrodingerDto.Token = levelInfoDto?.Token;
+            schrodingerDto.Total = levelInfoDto?.Token;
+            schrodingerDto.Describe = levelInfoDto?.Describe;
+        }
+        result.Data = list;
+        result.TotalCount = schrodingerIndexerListDto.TotalCount;
+        return result;
+    }
+    
     private async Task<List<SchrodingerDto>> SetLevelInfoAsync(List<SchrodingerIndexerDto> indexerList, string address,
         string chainId, string searchAddress = "")
     {

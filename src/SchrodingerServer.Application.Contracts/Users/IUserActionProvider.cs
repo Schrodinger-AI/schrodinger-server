@@ -15,4 +15,7 @@ public interface IUserActionProvider
 
     Task<MyPointDetailsDto> GetMyPointsAsync(GetMyPointsInput input);
     Task<string> GetCurrentUserAddressAsync(string chainId);
+    
+    Task<string> GetCurrentUserAddressAsync();
+
 }
