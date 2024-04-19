@@ -95,6 +95,26 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         result.TotalCount = schrodingerIndexerListDto.TotalCount;
         return result;
     }
+    
+    private async Task BatchGetSchrodingerCatListAsync(GetCatListInput input)
+    {
+        int maxPage = 10;
+        int currentPage = 0;
+        int pageSize = 10000;
+        var tasks = new List<Task>();
+        while(currentPage < maxPage)
+        {
+            tasks.Add(Task.Run(() =>
+            {
+                var skipCount = (currentPage - 1) * pageSize;
+                var max
+                var schrodingerIndexerListDto = _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
+                return schrodingerIndexerListDto;
+            }));
+        }
+
+        await Task.WhenAll(tasks);
+    }
 
     private async Task<List<SchrodingerDto>> SetLevelInfoAsync(List<SchrodingerIndexerDto> indexerList, string address,
         string chainId, string searchAddress = "")
