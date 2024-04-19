@@ -78,8 +78,9 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     {
         var result = new SchrodingerListDto();
         input.FilterSgr = true;
-        var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
-        var data = await SetLevelInfoAsync(schrodingerIndexerListDto.Data, input.Address, input.ChainId, input.SearchAddress);
+        /*var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
+        var data = await SetLevelInfoAsync(schrodingerIndexerListDto.Data, input.Address, input.ChainId, input.SearchAddress);*/
+        var data = await BatchGetSchrodingerCatListAsync(input);
         if (input.Rarities.IsNullOrEmpty())
         {
             result.Data = data;
@@ -96,7 +97,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         return result;
     }
     
-    private async Task BatchGetSchrodingerCatListAsync(GetCatListInput input)
+    private async Task<List<SchrodingerDto>> BatchGetSchrodingerCatListAsync(GetCatListInput input)
     {
         int maxPage = 20;
         int currentPage = 0;
