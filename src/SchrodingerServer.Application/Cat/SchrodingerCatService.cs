@@ -125,7 +125,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
 
         var holderDetail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
-        if (holderDetail == null)
+        if (holderDetail == null || holderDetail.Address.IsNullOrEmpty())
         {
             detail.Amount = amount;
             detail.HolderAmount = 0;
