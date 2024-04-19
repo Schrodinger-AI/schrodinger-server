@@ -124,7 +124,15 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             return detail;
         }
 
-        detail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
+        var holderDetail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
+        if (holderDetail == null)
+        {
+            detail.Amount = amount;
+            detail.HolderAmount = 0;
+            return detail;
+        }
+
+        detail = holderDetail;
 
         //query total amount
         detail.HolderAmount = detail.Amount;
