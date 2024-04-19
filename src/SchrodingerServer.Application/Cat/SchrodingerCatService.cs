@@ -42,8 +42,6 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
     public async Task<SchrodingerListDto> GetSchrodingerCatListAsync(GetCatListInput input)
     {
-        // var res = await BatchGetAllCatList(input);
-        
         if ((string.IsNullOrEmpty(input.Address) && !string.IsNullOrEmpty(input.SearchAddress)) || 
             (string.IsNullOrEmpty(input.Address) && string.IsNullOrEmpty(input.SearchAddress)))
         {
