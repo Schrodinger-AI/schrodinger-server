@@ -6,7 +6,6 @@ namespace SchrodingerServer.Dtos.Cat;
 
 public class GetCatListInput : PagedAndSortedResultRequestDto
 {
-    public const int MaxMaxResultCount = 10000;
     public string ChainId { get; set; }
     public string Address { get; set; }
     public string Tick { get; set; }
@@ -16,6 +15,9 @@ public class GetCatListInput : PagedAndSortedResultRequestDto
     public List<string> Rarities { get; set; } = new();
     public string SearchAddress { get; set; }
     public bool FilterSgr { get; set; } = false;
+    public int SkipCount { get; set; } 
+    public int MaxResultCount { get; set; } 
+
 }
 
 public class TraitInput
