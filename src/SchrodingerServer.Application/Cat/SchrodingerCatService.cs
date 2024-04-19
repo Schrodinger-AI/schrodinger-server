@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using NUglify.Helpers;
 using SchrodingerServer.Cat.Provider;
 using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.Common;
@@ -232,60 +229,5 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         } while (!list.IsNullOrEmpty());
 
         return res;
-    }
-    
-    private async Task<List<Boolean>> BatchGetAllCatList(GetCatListInput input)
-    {
-        var stopwatch = Stopwatch.StartNew();
-        int maxPage = 40;
-        int currentPage = 1;
-        int pageSize = 100;
-        var tasks = new List<Task>();
-        while(currentPage < maxPage)
-        {
-            tasks.Add(Task.Run(() =>
-            {
-                input.SkipCount = (currentPage - 1) * pageSize;
-                input.MaxResultCount = pageSize;
-                return  _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
-            }));
-            currentPage++;
-        }
-        await Task.WhenAll(tasks);
-        
-        var time = stopwatch.ElapsedMilliseconds;
-        Console.WriteLine($"BatchGetAllCatList: {time}ms");
-        
-        var res = tasks.Select(x => x.IsCompleted).ToList();
-        Console.WriteLine();
-
-        return res;
-        // ThreadPool.GetMinThreads(out int minWorkerThreads, out int minCompletionPortThreads);
-        // Console.WriteLine($"minWorkerThreads: {minWorkerThreads}, minCompletionPortThreads: {minCompletionPortThreads}");
-        //
-        // var batchNum = 5;
-        // Task<SchrodingerIndexerListDto>[] tasks = new Task<SchrodingerIndexerListDto>[batchNum];
-        // int skipCount = 0;
-        // int maxResultCount = 200;
-        // var stopwatch = Stopwatch.StartNew();
-        // for (int i = 0; i < batchNum; i++)
-        // {
-        //     int index = i; 
-        //
-        //     var batchQueryInput = input;
-        //     batchQueryInput.SkipCount = skipCount + index * maxResultCount;
-        //     batchQueryInput.MaxResultCount = maxResultCount;
-        //     
-        //     tasks[i] =  _schrodingerCatProvider.GetSchrodingerCatListAsync(batchQueryInput);
-        // } 
-        //
-        // await Task.WhenAll(tasks);
-        // var time = stopwatch.ElapsedMilliseconds;
-        // Console.WriteLine($"BatchGetAllCatList: {time}ms");
-        //
-        // var res = new List<SchrodingerIndexerDto>();
-        // var validData = tasks.Where(task => task.Result.Data != null);
-        // validData.ForEach(task => res.AddRange(task.Result.Data));
-        // return res;
     }
 }
