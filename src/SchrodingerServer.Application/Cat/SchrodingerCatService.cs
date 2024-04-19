@@ -80,7 +80,11 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         input.FilterSgr = true;
         var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
         var data = await SetLevelInfoAsync(schrodingerIndexerListDto.Data, input.Address, input.ChainId, input.SearchAddress);
-        result.Data = data;
+        var pageData = data
+            .Where(cat => input.Rarities.Contains(cat.Rarity))
+            .OrderByDescending(cat => cat.AdoptTime)
+            .ToList();
+        result.Data = pageData;
         result.TotalCount = schrodingerIndexerListDto.TotalCount;
         return result;
     }
