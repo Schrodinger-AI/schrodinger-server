@@ -6,6 +6,7 @@ namespace SchrodingerServer.Dtos.Cat;
 
 public class GetCatListInput : PagedAndSortedResultRequestDto
 {
+    public const int MaxMaxResultCount = 10000;
     public string ChainId { get; set; }
     public string Address { get; set; }
     public string Tick { get; set; }
