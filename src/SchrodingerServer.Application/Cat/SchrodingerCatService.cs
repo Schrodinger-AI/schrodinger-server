@@ -98,21 +98,19 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     
     private async Task BatchGetSchrodingerCatListAsync(GetCatListInput input)
     {
-        int maxPage = 10;
+        int maxPage = 20;
         int currentPage = 0;
-        int pageSize = 10000;
+        int pageSize = 5000;
         var tasks = new List<Task>();
         while(currentPage < maxPage)
         {
             tasks.Add(Task.Run(() =>
             {
-                var skipCount = (currentPage - 1) * pageSize;
-                var max
-                var schrodingerIndexerListDto = _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
-                return schrodingerIndexerListDto;
+                input.SkipCount = (currentPage - 1) * pageSize;
+                input.MaxResultCount = pageSize;
+                return _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
             }));
         }
-
         await Task.WhenAll(tasks);
     }
 
