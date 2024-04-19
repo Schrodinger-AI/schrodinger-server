@@ -34,7 +34,7 @@ public class SchrodingerCatController
     [HttpPost("detail")]
     public async Task<SchrodingerDetailDto> GetSchrodingerAllCatsList(GetCatDetailInput input)
     {
-        return await _schrodingerCatService.GetSchrodingerCatDeailAsync(input);
+        return await _schrodingerCatService.GetSchrodingerCatDetailAsync(input);
     }
     
 }

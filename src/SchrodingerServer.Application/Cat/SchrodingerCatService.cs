@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using SchrodingerServer.Cat.Provider;
 using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.Common;
@@ -91,7 +92,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         return await GetSchrodingerAllCatsPageList(input);
     }
 
-    public async Task<SchrodingerDetailDto> GetSchrodingerCatDeailAsync(GetCatDetailInput input)
+    public async Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync(GetCatDetailInput input)
     {
         var detail = new SchrodingerDetailDto();
         var address = await _userActionProvider.GetCurrentUserAddressAsync();
@@ -114,10 +115,12 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             return new SchrodingerDetailDto();
         }
         var amount = symbolIndexerListDto.Data[0].Amount;
-   
+        _logger.LogInformation("GetSchrodingerCatDetailAsync address:{address}",address);
         if (address.IsNullOrEmpty())
         {
             detail = _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
+            _logger.LogInformation("GetSchrodingerCatDetailAsync detail:{detail}",JsonConvert.SerializeObject(detail));
+
             return detail;
         }
 
