@@ -93,32 +93,35 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
     public async Task<SchrodingerDetailDto> GetSchrodingerCatDeailAsync(GetCatDetailInput input)
     {
+        var detail = new SchrodingerDetailDto();
         var address = await _userActionProvider.GetCurrentUserAddressAsync();
         if (!address.IsNullOrEmpty())
         {
             input.Address = address;
         }
         //query symbolIndex
-        var querySymolInput = new GetCatListInput
+        var querySymbolInput = new GetCatListInput
         {
             ChainId = input.ChainId,
             Keyword = input.Symbol,
             SkipCount = 0,
             MaxResultCount = 1
         };
-        var symbolIndexerListDto =  await GetSchrodingerAllCatsPageList(querySymolInput);
+        var symbolIndexerListDto =  await GetSchrodingerAllCatsPageList(querySymbolInput);
 
         if (symbolIndexerListDto == null && symbolIndexerListDto.TotalCount == 0)
         {
             return new SchrodingerDetailDto();
         }
         var amount = symbolIndexerListDto.Data[0].Amount;
+   
         if (address.IsNullOrEmpty())
         {
-            input.Address = symbolIndexerListDto.Data[0].Address;
+            detail = _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
+            return detail;
         }
 
-        var detail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
+        detail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
 
         //query total amount
         detail.HolderAmount = detail.Amount;
