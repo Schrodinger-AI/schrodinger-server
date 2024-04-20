@@ -147,7 +147,18 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         input.FilterSgr = true;
         var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
         var data = await SetLevelInfoAsync(schrodingerIndexerListDto.Data, input.Address, input.ChainId, input.SearchAddress);
-        result.Data = data;
+        if (input.Rarities.IsNullOrEmpty())
+        {
+            result.Data = data;
+            result.TotalCount = schrodingerIndexerListDto.TotalCount;
+            return result;
+        }
+
+        var pageData = data
+            .Where(cat => input.Rarities.Contains(cat.Rarity))
+            .OrderByDescending(cat => cat.AdoptTime)
+            .ToList();
+        result.Data = pageData;
         result.TotalCount = schrodingerIndexerListDto.TotalCount;
         return result;
     }
@@ -189,7 +200,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         var itemLevelList = await GetItemLevelInfoAsync(getLevelInfoInputDto);
         if (genNineList.Count != itemLevelList.Count)
         {
-            _logger.LogWarning("get item level count not equals");
+            _logger.LogWarning("get item level count not equals, count1: {count1}, count2:{count2}", genNineList.Count, itemLevelList.Count);
             return list;
         }
 
