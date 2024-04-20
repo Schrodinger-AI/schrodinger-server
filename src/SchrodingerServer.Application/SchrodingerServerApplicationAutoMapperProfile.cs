@@ -1,4 +1,6 @@
+using System.Linq;
 using AutoMapper;
+using Microsoft.IdentityModel.Tokens;
 using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.ContractInvoke.Eto;
 using SchrodingerServer.Dtos.Cat;
@@ -37,5 +39,11 @@ public class SchrodingerServerApplicationAutoMapperProfile : Profile
         CreateMap<ZealyUserXpGrainDto, UserXpInfoDto>();
         CreateMap<ZealyUserXpRecordIndex, XpRecordDto>();
         CreateMap<SchrodingerIndexerDto, SchrodingerDto>();
+        CreateMap<SchrodingerSymbolIndexerDto, SchrodingerDto>();
+        CreateMap<SchrodingerDto, SchrodingerDetailDto>()
+            .ForMember(des => des.Traits, opt
+                => opt.MapFrom(source => source.Traits.IsNullOrEmpty()?null:source.Traits.Select(item => new TraitDto { TraitType = item.TraitType, Value = item.Value }).ToList()))
+            ;;
+
     }
 }
