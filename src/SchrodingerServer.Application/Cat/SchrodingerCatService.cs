@@ -180,28 +180,28 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         var price = await _levelProvider.GetAwakenSGRPrice();
 
         var isInWhiteList = await _levelProvider.CheckAddressIsInWhiteListAsync(input.Address);
-        if (isInWhiteList)
+        _logger.LogInformation("calculate rank info for user: {address}", input.Address);
+        foreach (var schrodingerDto in list.Where(schrodingerDto => schrodingerDto.Generation == 9))
         {
-            _logger.LogInformation("calculate rank info for whitelist user: {address}", input.Address);
-            foreach (var schrodingerDto in list.Where(schrodingerDto => schrodingerDto.Generation == 9))
-            {
-                //get levelInfo
-                var levelInfoDto = await _levelProvider.GetItemLevelDicAsync(schrodingerDto.Rank, price);
-                _logger.LogInformation("rank info: {info}", JsonConvert.SerializeObject(levelInfoDto));
-                schrodingerDto.AwakenPrice = levelInfoDto?.AwakenPrice;
-                schrodingerDto.Level = levelInfoDto?.Level;
-                schrodingerDto.Token = levelInfoDto?.Token;
-                // schrodingerDto.Total = levelInfoDto?.Token;
-                schrodingerDto.Describe = levelInfoDto?.Describe;
-            }
+            //get levelInfo
+            var levelInfoDto = await _levelProvider.GetItemLevelDicAsync(schrodingerDto.Rank, price);
+            _logger.LogInformation("rank info: {info}", JsonConvert.SerializeObject(levelInfoDto));
+            schrodingerDto.AwakenPrice = levelInfoDto?.AwakenPrice;
+            schrodingerDto.Level = levelInfoDto?.Level;
+            schrodingerDto.Token = levelInfoDto?.Token;
+            // schrodingerDto.Total = levelInfoDto?.Token;
+            schrodingerDto.Describe = levelInfoDto?.Describe;
         }
-        else
+        
+        if (!isInWhiteList)
         {
+            _logger.LogInformation("user not in whitelist");
             foreach (var schrodingerDto in list.Where(schrodingerDto => schrodingerDto.Generation == 9))
             {
                 schrodingerDto.Rank = 0;
                 schrodingerDto.Level = "";
                 schrodingerDto.Rarity = "";
+                schrodingerDto.AwakenPrice = "";
             }
         }
         
