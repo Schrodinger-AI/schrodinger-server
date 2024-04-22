@@ -130,7 +130,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
 
             detail = holderDetail ?? _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
-            
+            detail.Amount = amount;
             _logger.LogInformation("GetSchrodingerCatDetailAsync detail:{detail}",JsonConvert.SerializeObject(detail));
             return detail;
         }
