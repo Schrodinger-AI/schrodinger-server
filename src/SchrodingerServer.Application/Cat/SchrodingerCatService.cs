@@ -182,10 +182,12 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         var isInWhiteList = await _levelProvider.CheckAddressIsInWhiteListAsync(input.Address);
         if (isInWhiteList)
         {
+            _logger.LogInformation("calculate rank info for whitelist user: {address}", input.Address);
             foreach (var schrodingerDto in list.Where(schrodingerDto => schrodingerDto.Generation == 9))
             {
                 //get levelInfo
                 var levelInfoDto = await _levelProvider.GetItemLevelDicAsync(schrodingerDto.Rank, price);
+                _logger.LogInformation("rank info: {info}", JsonConvert.SerializeObject(levelInfoDto));
                 schrodingerDto.AwakenPrice = levelInfoDto?.AwakenPrice;
                 schrodingerDto.Level = levelInfoDto?.Level;
                 schrodingerDto.Token = levelInfoDto?.Token;
