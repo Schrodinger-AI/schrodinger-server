@@ -100,6 +100,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             input.Address = address;
         }
+        
+        var holderDetail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
         //query symbolIndex
         var querySymbolInput = new GetCatListInput
         {
@@ -109,11 +111,19 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             MaxResultCount = 1
         };
         var symbolIndexerListDto =  await GetSchrodingerAllCatsPageList(querySymbolInput);
-
+        
         if (symbolIndexerListDto == null || symbolIndexerListDto.TotalCount == 0)
         {
-            return new SchrodingerDetailDto();
+            if (holderDetail == null)
+            {
+                return new SchrodingerDetailDto();
+            }
+
+            detail = holderDetail;
+            detail.HolderAmount = holderDetail.Amount;
+            return detail;
         }
+        
         var amount = symbolIndexerListDto.Data[0].Amount;
         _logger.LogInformation("GetSchrodingerCatDetailAsync address:{address}",address);
         if (address.IsNullOrEmpty())
@@ -123,8 +133,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
             return detail;
         }
-
-        var holderDetail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
+        
         if (holderDetail == null || holderDetail.Address.IsNullOrEmpty())
         {
             detail = _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
@@ -134,8 +143,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
 
         detail = holderDetail;
-
-        //query total amount
+        
         detail.HolderAmount = detail.Amount;
         detail.Amount = amount;
         return detail;
