@@ -167,6 +167,12 @@ public class LevelProvider : ApplicationService, ILevelProvider
             return false;
         }
         
+        var chainId  = _levelOptions.CurrentValue.ChainIdForReal;
+        if (!address.EndsWith(chainId))
+        {
+            address = "ELF_" + address + "_" + chainId;
+        }
+        
         try
         {
             var resp = await _httpProvider.InvokeAsync<WhiteListResponse>(_levelOptions.CurrentValue.SchrodingerUrl,
