@@ -199,8 +199,9 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             foreach (var schrodingerDto in list.Where(schrodingerDto => schrodingerDto.Generation == 9))
             {
-              
                 schrodingerDto.Rank = 0;
+                schrodingerDto.Level = "";
+                schrodingerDto.Rarity = "";
             }
         }
         
