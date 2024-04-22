@@ -178,16 +178,22 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         var list = _objectMapper.Map<List<SchrodingerSymbolIndexerDto>, List<SchrodingerDto>>(schrodingerIndexerListDto.Data);
         //get awaken price
         var price = await _levelProvider.GetAwakenSGRPrice();
-        foreach (var schrodingerDto in list.Where(schrodingerDto => schrodingerDto.Generation == 9))
+
+        var isInWhiteList = await _levelProvider.CheckAddressIsInWhiteListAsync(input.Address);
+        if (isInWhiteList)
         {
-            //get levelInfo
-            var levelInfoDto = await _levelProvider.GetItemLevelDicAsync(schrodingerDto.Rank, price);
-            schrodingerDto.AwakenPrice = levelInfoDto?.AwakenPrice;
-            schrodingerDto.Level = levelInfoDto?.Level;
-            schrodingerDto.Token = levelInfoDto?.Token;
-            schrodingerDto.Total = levelInfoDto?.Token;
-            schrodingerDto.Describe = levelInfoDto?.Describe;
+            foreach (var schrodingerDto in list.Where(schrodingerDto => schrodingerDto.Generation == 9))
+            {
+                //get levelInfo
+                var levelInfoDto = await _levelProvider.GetItemLevelDicAsync(schrodingerDto.Rank, price);
+                schrodingerDto.AwakenPrice = levelInfoDto?.AwakenPrice;
+                schrodingerDto.Level = levelInfoDto?.Level;
+                schrodingerDto.Token = levelInfoDto?.Token;
+                // schrodingerDto.Total = levelInfoDto?.Token;
+                schrodingerDto.Describe = levelInfoDto?.Describe;
+            }
         }
+        
         result.Data = list;
         result.TotalCount = schrodingerIndexerListDto.TotalCount;
         return result;

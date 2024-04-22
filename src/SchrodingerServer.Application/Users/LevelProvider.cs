@@ -160,7 +160,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
         return price;
     }
 
-    private async Task<bool> CheckAddressIsInWhiteListAsync(string address)
+    public async Task<bool> CheckAddressIsInWhiteListAsync(string address)
     {
         if (string.IsNullOrEmpty(address))
         {
