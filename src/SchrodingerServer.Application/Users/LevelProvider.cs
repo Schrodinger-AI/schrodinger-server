@@ -167,7 +167,9 @@ public class LevelProvider : ApplicationService, ILevelProvider
             return false;
         }
         
-        var chainId  = _levelOptions.CurrentValue.ChainIdForReal;
+        var chainId  = _levelOptions.CurrentValue.ChainId;
+        var chainIdForReal  = _levelOptions.CurrentValue.ChainIdForReal;
+        chainId = chainIdForReal.IsNullOrEmpty() ? chainId : chainIdForReal;
         if (!address.EndsWith(chainId))
         {
             address = "ELF_" + address + "_" + chainId;
