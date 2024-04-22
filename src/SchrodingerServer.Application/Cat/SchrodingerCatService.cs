@@ -202,6 +202,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 schrodingerDto.Level = "";
                 schrodingerDto.Rarity = "";
                 schrodingerDto.AwakenPrice = "";
+                schrodingerDto.Token = "";
             }
         }
         
