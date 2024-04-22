@@ -110,7 +110,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         };
         var symbolIndexerListDto =  await GetSchrodingerAllCatsPageList(querySymbolInput);
 
-        if (symbolIndexerListDto == null && symbolIndexerListDto.TotalCount == 0)
+        if (symbolIndexerListDto == null || symbolIndexerListDto.TotalCount == 0)
         {
             return new SchrodingerDetailDto();
         }
