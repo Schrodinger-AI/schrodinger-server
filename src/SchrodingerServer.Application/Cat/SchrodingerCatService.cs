@@ -195,6 +195,14 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 schrodingerDto.Describe = levelInfoDto?.Describe;
             }
         }
+        else
+        {
+            foreach (var schrodingerDto in list.Where(schrodingerDto => schrodingerDto.Generation == 9))
+            {
+              
+                schrodingerDto.Rank = 0;
+            }
+        }
         
         result.Data = list;
         result.TotalCount = schrodingerIndexerListDto.TotalCount;
