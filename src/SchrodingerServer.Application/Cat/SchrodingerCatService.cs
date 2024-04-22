@@ -100,6 +100,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             input.Address = address;
         }
+        
+        var holderDetail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
         //query symbolIndex
         var querySymbolInput = new GetCatListInput
         {
@@ -109,11 +111,19 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             MaxResultCount = 1
         };
         var symbolIndexerListDto =  await GetSchrodingerAllCatsPageList(querySymbolInput);
-
-        if (symbolIndexerListDto == null && symbolIndexerListDto.TotalCount == 0)
+        
+        if (symbolIndexerListDto == null || symbolIndexerListDto.TotalCount == 0)
         {
-            return new SchrodingerDetailDto();
+            if (holderDetail == null)
+            {
+                return new SchrodingerDetailDto();
+            }
+
+            detail = holderDetail;
+            detail.HolderAmount = holderDetail.Amount;
+            return detail;
         }
+        
         var amount = symbolIndexerListDto.Data[0].Amount;
         _logger.LogInformation("GetSchrodingerCatDetailAsync address:{address}",address);
         if (address.IsNullOrEmpty())
@@ -123,8 +133,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
             return detail;
         }
-
-        var holderDetail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(input);
+        
         if (holderDetail == null || holderDetail.Address.IsNullOrEmpty())
         {
             detail = _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
@@ -134,8 +143,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
 
         detail = holderDetail;
-
-        //query total amount
+        
         detail.HolderAmount = detail.Amount;
         detail.Amount = amount;
         return detail;
@@ -170,16 +178,34 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         var list = _objectMapper.Map<List<SchrodingerSymbolIndexerDto>, List<SchrodingerDto>>(schrodingerIndexerListDto.Data);
         //get awaken price
         var price = await _levelProvider.GetAwakenSGRPrice();
+
+        var isInWhiteList = await _levelProvider.CheckAddressIsInWhiteListAsync(input.Address);
+        _logger.LogInformation("calculate rank info for user: {address}", input.Address);
         foreach (var schrodingerDto in list.Where(schrodingerDto => schrodingerDto.Generation == 9))
         {
             //get levelInfo
             var levelInfoDto = await _levelProvider.GetItemLevelDicAsync(schrodingerDto.Rank, price);
+            _logger.LogInformation("rank info: {info}", JsonConvert.SerializeObject(levelInfoDto));
             schrodingerDto.AwakenPrice = levelInfoDto?.AwakenPrice;
             schrodingerDto.Level = levelInfoDto?.Level;
             schrodingerDto.Token = levelInfoDto?.Token;
-            schrodingerDto.Total = levelInfoDto?.Token;
+            // schrodingerDto.Total = levelInfoDto?.Token;
             schrodingerDto.Describe = levelInfoDto?.Describe;
         }
+        
+        if (!isInWhiteList)
+        {
+            _logger.LogInformation("user not in whitelist");
+            foreach (var schrodingerDto in list.Where(schrodingerDto => schrodingerDto.Generation == 9))
+            {
+                schrodingerDto.Rank = 0;
+                schrodingerDto.Level = "";
+                schrodingerDto.Rarity = "";
+                schrodingerDto.AwakenPrice = "";
+                schrodingerDto.Token = "";
+            }
+        }
+        
         result.Data = list;
         result.TotalCount = schrodingerIndexerListDto.TotalCount;
         return result;

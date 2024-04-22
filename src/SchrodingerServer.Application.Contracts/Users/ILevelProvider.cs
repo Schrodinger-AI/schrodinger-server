@@ -12,4 +12,5 @@ public interface ILevelProvider
 
     Task<LevelInfoDto> GetItemLevelDicAsync(int rank, double price);
 
+    Task<bool> CheckAddressIsInWhiteListAsync(string address);
 }

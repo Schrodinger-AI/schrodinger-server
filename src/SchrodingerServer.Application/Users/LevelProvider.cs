@@ -160,11 +160,19 @@ public class LevelProvider : ApplicationService, ILevelProvider
         return price;
     }
 
-    private async Task<bool> CheckAddressIsInWhiteListAsync(string address)
+    public async Task<bool> CheckAddressIsInWhiteListAsync(string address)
     {
         if (string.IsNullOrEmpty(address))
         {
             return false;
+        }
+        
+        var chainId  = _levelOptions.CurrentValue.ChainId;
+        var chainIdForReal  = _levelOptions.CurrentValue.ChainIdForReal;
+        chainId = chainIdForReal.IsNullOrEmpty() ? chainId : chainIdForReal;
+        if (!address.EndsWith(chainId))
+        {
+            address = "ELF_" + address + "_" + chainId;
         }
         
         try
