@@ -137,7 +137,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         if (holderDetail == null || holderDetail.Address.IsNullOrEmpty())
         {
-            detail = _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
+            detail = holderDetail ?? _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
             detail.Amount = amount;
             detail.HolderAmount = 0;
             return detail;
