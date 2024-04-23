@@ -128,15 +128,16 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         _logger.LogInformation("GetSchrodingerCatDetailAsync address:{address}",address);
         if (address.IsNullOrEmpty())
         {
-            detail = _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
-            _logger.LogInformation("GetSchrodingerCatDetailAsync detail:{detail}",JsonConvert.SerializeObject(detail));
 
+            detail = holderDetail ?? _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
+            detail.Amount = amount;
+            _logger.LogInformation("GetSchrodingerCatDetailAsync detail:{detail}",JsonConvert.SerializeObject(detail));
             return detail;
         }
         
         if (holderDetail == null || holderDetail.Address.IsNullOrEmpty())
         {
-            detail = _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
+            detail = holderDetail ?? _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
             detail.Amount = amount;
             detail.HolderAmount = 0;
             return detail;
