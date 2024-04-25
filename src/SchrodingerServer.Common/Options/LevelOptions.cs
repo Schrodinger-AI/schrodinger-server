@@ -9,4 +9,6 @@ public class LevelOptions
     
     public string S3LevelFileKeyName { get; set; }
     public int BatchQuerySize { get; set; } = 100;
+    
+    public string ChainIdForReal { get; set; } 
 }

@@ -6,4 +6,9 @@ namespace SchrodingerServer.Cat;
 public interface ISchrodingerCatService
 {
     Task<SchrodingerListDto> GetSchrodingerCatListAsync(GetCatListInput input);
+    
+    Task<SchrodingerListDto> GetSchrodingerAllCatsListAsync(GetCatListInput input);
+    
+    Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync (GetCatDetailInput input);
+
 }

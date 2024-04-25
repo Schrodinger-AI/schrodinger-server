@@ -123,4 +123,17 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
         _logger.LogInformation("Get current user address chainId: {chainId} address:{address}", chainId, userAddress);
         return userAddress;
     }
+    
+    public async Task<string> GetCurrentUserAddressAsync()
+    {
+        var userId  = CurrentUser.IsAuthenticated ? CurrentUser.GetId() : Guid.Empty;
+        string userAddress = null;
+        if (userId != Guid.Empty)
+        {
+            var userGrain =  await _userInformationProvider.GetUserById(userId);
+            userAddress = userGrain == null ? "" : (userGrain.AelfAddress.IsNullOrEmpty()?userGrain.CaAddressMain:userGrain.AelfAddress);
+        }
+        _logger.LogInformation("Get current user address address:{address}", userAddress);
+        return userAddress;
+    }
 }
