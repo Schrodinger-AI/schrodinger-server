@@ -74,7 +74,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
         _pointDispatchProvider = pointDispatchProvider;
         _distributedLock = distributedLock;
         _schrodingerCatProvider = schrodingerCatProvider;
-        timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 10 * 1000;
+        timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 60 * 1000;
     }
 
     protected override async Task DoWorkAsync(PeriodicBackgroundWorkerContext workerContext)
