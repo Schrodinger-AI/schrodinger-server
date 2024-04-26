@@ -105,12 +105,12 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
     {
         _logger.LogInformation("PointAccumulateForSGR9Worker execute for bizDate: {bizDate} pointName:{1}", bizDate, pointName);
         
-        var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + TimeHelper.GetUtcDaySeconds());
-        if (dateTime == null)
-        {
-            _logger.LogInformation("UniswapPriceSnapshotWorker has not executed today.");
-            return;
-        }
+        // var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + TimeHelper.GetUtcDaySeconds());
+        // if (dateTime == null)
+        // {
+        //     _logger.LogInformation("UniswapPriceSnapshotWorker has not executed today.");
+        //     return;
+        // }
         
         DateTime now = DateTime.Now;
         int curIndex = now.Hour * 6 + now.Minute / 10;
@@ -200,14 +200,16 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             var snapshotByAddress = allSnapshots.GroupBy(snapshot => snapshot.Address).Select(group => new HolderDailyChangeDto
             {
                 Address = group.Key,
-                Balance = (long)group.Average(item => item.Amount),
+                Balance = (long)group.Sum(item => item.Amount)/2/100000000,
                 Symbol = baseSymbol,
                 Date = bizDate
             });
             
             var symbols = new List<string> { baseSymbol };
             var symbolPriceDict = await _symbolDayPriceProvider.GetSymbolPricesAsync(priceBizDate, symbols);
-            var symbolPrice = DecimalHelper.GetValueFromDict(symbolPriceDict, baseSymbol, baseSymbol);
+            // var symbolPrice = DecimalHelper.GetValueFromDict(symbolPriceDict, baseSymbol, baseSymbol);
+            var symbolPrice = (decimal)2.2;
+            
             
             foreach (var snapshot in snapshotByAddress)
             {
