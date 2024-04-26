@@ -92,6 +92,7 @@ public class SchrodingerServerEntityEventHandlerModule : AbpModule
         context.AddBackgroundWorkerAsync<PointAssemblyTransactionWorker>();
         context.AddBackgroundWorkerAsync<PointSendTransactionWorker>();
         context.AddBackgroundWorkerAsync<SyncHolderBalanceWorker>();
+        context.AddBackgroundWorkerAsync<PointAccumulateForSGR9Worker>();
         var client = context.ServiceProvider.GetRequiredService<IClusterClient>();
         AsyncHelper.RunSync(async ()=> await client.Connect());
     }

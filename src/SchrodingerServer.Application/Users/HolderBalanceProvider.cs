@@ -20,6 +20,8 @@ public interface IHolderBalanceProvider
     
     Task<List<HolderBalanceIndex>> GetPreHolderBalanceListAsync(string chainId, string bizDate, int skipCount,
         int maxResultCount);
+    
+    Task<HolderDailyChangeDto> GetLastHoldingRecordAsync(string chainId, string address, string symbol, string excludeDate);
 }
 
 public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependency
@@ -102,5 +104,35 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
         var tuple = await _holderBalanceIndexRepository.GetListAsync(Filter, skip: skipCount, limit: maxResultCount);
         
         return !tuple.Item2.IsNullOrEmpty() ? tuple.Item2 : new List<HolderBalanceIndex>();
+    }
+    
+    
+    public async Task<HolderDailyChangeDto> GetLastHoldingRecordAsync(string chainId, string address, string symbol, string excludeDate)
+    {
+        var graphQlResponse = await _graphQlHelper.QueryAsync<IndexerHolderDailyChangeDto>(new GraphQLRequest
+        {
+            Query = @"query($chainId:String!,$skipCount:Int!,$maxResultCount:Int!,$address:String!,$symbol:String!,$excludeDate:String!){
+            getSchrodingerHolderDailyChangeList(input: {chainId:$chainId,skipCount:$skipCount,maxResultCount:$maxResultCount, address:$address, symbol:$symbol, excludeDate:$excludeDate})
+            {
+               data {
+                address,
+                symbol,
+                date,
+                changeAmount,
+                balance
+                },
+                totalCount
+            }}",
+            Variables = new
+            {
+                chainId = chainId,
+                skipCount = 0,
+                maxResultCount = 1000,
+                address = address,
+                symbol = symbol,
+                excludeDate = excludeDate
+            }
+        });
+        return graphQlResponse?.GetSchrodingerHolderDailyChangeList.Data?.LastOrDefault();
     }
 }

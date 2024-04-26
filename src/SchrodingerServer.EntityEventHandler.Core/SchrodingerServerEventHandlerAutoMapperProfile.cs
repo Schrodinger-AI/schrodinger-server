@@ -1,5 +1,6 @@
 using System.Linq;
 using AutoMapper;
+using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.ContractInvoke.Eto;
 using SchrodingerServer.ContractInvoke.Index;
 using SchrodingerServer.Dtos.TraitsDto;
@@ -31,5 +32,6 @@ public class SchrodingerServerEventHandlerAutoMapperProfile : Profile
         
         CreateMap<XpRecordEto, ZealyUserXpRecordIndex>();
         CreateMap<AddXpRecordEto, ZealyUserXpRecordIndex>();
+        CreateMap<SchrodingerIndexerDto, PointsSnapshotIndex>();
     }
 }
