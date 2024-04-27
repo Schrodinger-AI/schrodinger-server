@@ -276,7 +276,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
     
     private async Task<List<int>> SetSnapshotIndexCacheAsync(string bizDate, int startIndex)
     {
-        AssertHelper.IsTrue(123 - startIndex <= MinimumIndexGap, "PointAccumulateForSGR9Worker minimum gap cannot be satisfied");
+        AssertHelper.IsTrue(123 - startIndex > MinimumIndexGap, "PointAccumulateForSGR9Worker minimum gap cannot be satisfied");
         Random random = new Random();
         
         int randomNumber1 = random.Next(startIndex, 113);
