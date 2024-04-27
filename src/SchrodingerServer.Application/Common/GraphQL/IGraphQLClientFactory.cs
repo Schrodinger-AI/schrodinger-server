@@ -11,5 +11,6 @@ public enum GraphQLClientEnum
 {
     ForestClient,
     SchrodingerClient,
-    PointPlatform
+    PointPlatform,
+    AwakenClient
 }

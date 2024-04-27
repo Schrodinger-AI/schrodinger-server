@@ -100,7 +100,10 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
 
     private async Task HandlePointRecords(string chainId, string bizDate, string pointName, List<PointDailyRecordIndex> records)
     {
+        _logger.LogInformation(
+            "HandlePointRecords begin chainId:{chainId}  count: {count}", chainId,  records.Count);
         var batchList = SplitList(records, _pointTradeOptions.CurrentValue.MaxBatchSize);
+        _logger.LogInformation("SplitList success count: {count}",  batchList.Count);
 
         foreach (var tradeList in batchList)
         {
@@ -125,10 +128,14 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
                     string.Join(",", tradeList.Select(item => item.Id)));
             }
         }
+        
+        _logger.LogInformation("HandlePointRecords finish");
     }
     
     private async Task HandleSendPointRecord(string bizId)
     {
+        _logger.LogInformation(
+            "HandleSendPointRecord begin bizId:{bizId}", bizId);
         try
         {
             var pointAssemblyTransactionGrain = _clusterClient.GetGrain<IPointAssemblyTransactionGrain>(bizId);
@@ -143,6 +150,9 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
             await _pointSettleService.BatchSettleAsync(settleDto);
             
             await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(settleDto, PointRecordStatus.Success.ToString());
+            
+            _logger.LogInformation(
+                "HandleSendPointRecord finish bizId:{bizId}", bizId);
         }
         catch (Exception e)
         {

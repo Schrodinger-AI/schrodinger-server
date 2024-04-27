@@ -5,7 +5,7 @@ using SchrodingerServer.Entities;
 
 namespace SchrodingerServer.Users.Index;
 
-public class PointsSnapshotIndex : SchrodingerEntity<string>, IIndexBuild
+public class AwakenLiquiditySnapshotIndex : SchrodingerEntity<string>, IIndexBuild
 {
     [Keyword] public string Address { get; set; }
     
@@ -13,7 +13,13 @@ public class PointsSnapshotIndex : SchrodingerEntity<string>, IIndexBuild
     
     [Keyword] public string BizDate { get; set; }
     
-    public decimal Amount { get; set; }
+    public long Token0Amount { get; set; }
+    
+    public long Token1Amount { get; set; }
+    
+    public string Token0Name { get; set; }
+    
+    public string Token1Name { get; set; }
     
     public DateTime CreateTime { get; set; }
 }
