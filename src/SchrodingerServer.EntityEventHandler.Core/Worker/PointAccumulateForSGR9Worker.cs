@@ -162,12 +162,15 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
                 MaxResultCount = MaxResultCount
             };
             getSGR1HolderResult = await _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
-
+           
             if (getSGR1HolderResult == null)
             {
                 _logger.LogError("GetSchrodingerCatListAsync result is null");
                 break;
             }
+            
+            _logger.LogInformation("PointAccumulateForSGR9Worker GetSchrodingerCatListAsync, start: {start}, total: {total}", skipCount, getSGR1HolderResult.TotalCount);
+
 
             if (getSGR1HolderResult.Data.IsNullOrEmpty())
             {
@@ -198,11 +201,15 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             skipCount += getSGR1HolderResult.Data.Count;
         } while (!getSGR1HolderResult.Data.IsNullOrEmpty());
         
+        _logger.LogInformation("PointAccumulateForSGR9Worker GetSchrodingerCatListAsync Finish");
+        
         if (snapshotIndex == SnapShotCount-1)
         {
             _logger.LogInformation("PointAccumulateForSGR9Worker cal points");
             await Task.Delay(3000);
             var allSnapshots = await GetAllIndex(bizDate, pointName);
+            _logger.LogInformation("PointAccumulateForSGR9Worker  snapshot counts: {cnt}", allSnapshots.Count);
+
             var snapshotByAddress = allSnapshots.GroupBy(snapshot => snapshot.Address).Select(group => new HolderDailyChangeDto
             {
                 Address = group.Key,
@@ -211,11 +218,12 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
                 Date = bizDate
             });
             
+            _logger.LogInformation("PointAccumulateForSGR9Worker  snapshot by address counts: {cnt}", snapshotByAddress.Count());
+            
             var symbols = new List<string> { baseSymbol };
             var symbolPriceDict = await _symbolDayPriceProvider.GetSymbolPricesAsync(priceBizDate, symbols);
             // var symbolPrice = DecimalHelper.GetValueFromDict(symbolPriceDict, baseSymbol, baseSymbol);
             var symbolPrice = (decimal)2.2;
-            
             
             foreach (var snapshot in snapshotByAddress)
             {
