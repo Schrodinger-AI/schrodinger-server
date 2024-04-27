@@ -19,6 +19,7 @@ using Orleans;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.Configuration;
 using SchrodingerServer.Common;
+using SchrodingerServer.Common.GraphQL;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.EntityEventHandler.Core;
 using SchrodingerServer.EntityEventHandler.Core.Options;
@@ -93,6 +94,7 @@ public class SchrodingerServerEntityEventHandlerModule : AbpModule
         context.AddBackgroundWorkerAsync<PointSendTransactionWorker>();
         context.AddBackgroundWorkerAsync<SyncHolderBalanceWorker>();
         context.AddBackgroundWorkerAsync<PointAccumulateForSGR9Worker>();
+        context.AddBackgroundWorkerAsync<PointAccumulateForSGR11Worker>();
         var client = context.ServiceProvider.GetRequiredService<IClusterClient>();
         AsyncHelper.RunSync(async ()=> await client.Connect());
     }
@@ -170,6 +172,7 @@ public class SchrodingerServerEntityEventHandlerModule : AbpModule
         context.Services.AddSingleton(new GraphQLHttpClient(configuration["GraphQL:Configuration"],
             new NewtonsoftJsonSerializer()));
         context.Services.AddScoped<IGraphQLClient>(sp => sp.GetRequiredService<GraphQLHttpClient>());
+        Configure<GraphQLOptions>(configuration.GetSection("GraphQL"));
     }
     
     private void ConfigureRedis(
