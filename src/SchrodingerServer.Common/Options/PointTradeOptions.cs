@@ -22,6 +22,8 @@ public class PointTradeOptions
     {
         return PointMapping.TryGetValue(pointName, out var pointInfo) ? pointInfo.ActionName : null;
     }
+    
+    public int CurIndex { get; set; }
 }
 
 public class ChainInfo
