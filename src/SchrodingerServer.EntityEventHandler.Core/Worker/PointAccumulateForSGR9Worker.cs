@@ -35,7 +35,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
     private const int MinimumIndexGap = 24;
     private const int SnapShotCount = 2;
 
-    private readonly ILogger<SyncHolderBalanceWorker> _logger;
+    private readonly ILogger<PointAccumulateForSGR9Worker> _logger;
     private readonly IHolderBalanceProvider _holderBalanceProvider;
     private readonly INESTRepository<PointsSnapshotIndex, string> _pointSnapshotIndexRepository;
     private readonly IOptionsMonitor<WorkerOptions> _workerOptionsMonitor;
@@ -50,7 +50,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
     private readonly IAbpDistributedLock _distributedLock;
     private readonly string _lockKey = "PointAccumulateForSGR9Worker";
 
-    public PointAccumulateForSGR9Worker(AbpAsyncTimer timer,IServiceScopeFactory serviceScopeFactory,ILogger<SyncHolderBalanceWorker> logger,
+    public PointAccumulateForSGR9Worker(AbpAsyncTimer timer,IServiceScopeFactory serviceScopeFactory,ILogger<PointAccumulateForSGR9Worker> logger,
         IHolderBalanceProvider holderBalanceProvider, IOptionsMonitor<WorkerOptions> workerOptionsMonitor,
         INESTRepository<PointsSnapshotIndex, string> pointSnapshotIndexRepository, IObjectMapper objectMapper,
         IPointDailyRecordService pointDailyRecordService,
@@ -74,7 +74,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
         _pointDispatchProvider = pointDispatchProvider;
         _distributedLock = distributedLock;
         _schrodingerCatProvider = schrodingerCatProvider;
-        timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 60 * 1000;
+        timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 6 * 1000;
     }
 
     protected override async Task DoWorkAsync(PeriodicBackgroundWorkerContext workerContext)
@@ -277,21 +277,23 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
     private async Task<List<int>> SetSnapshotIndexCacheAsync(string bizDate, int startIndex)
     {
         _logger.LogInformation("PointAccumulateForSGR9Worker startIndex: {index1}", startIndex);
-        AssertHelper.IsTrue(123 - startIndex > MinimumIndexGap, "PointAccumulateForSGR9Worker minimum gap cannot be satisfied");
-        Random random = new Random();
-        
-        int randomNumber1 = random.Next(startIndex, 113);
+        AssertHelper.IsTrue(120 - startIndex > MinimumIndexGap, "PointAccumulateForSGR9Worker minimum gap cannot be satisfied");
+
+        int randomNumber1;
         int randomNumber2;
-        do
-        {
-            randomNumber2 = random.Next(startIndex, 113);
-        } while (randomNumber2  - randomNumber1 < MinimumIndexGap || randomNumber1 - randomNumber2 < MinimumIndexGap);
 
-        if (randomNumber1 > randomNumber2)
+        if (startIndex >= 70)
         {
-            (randomNumber1, randomNumber2) = (randomNumber2, randomNumber1);
+            randomNumber1 = startIndex;
+            randomNumber2 = randomNumber1 + MinimumIndexGap;
         }
-
+        else
+        {
+            Random random = new Random();
+            randomNumber1 =  random.Next(startIndex, 70);
+            randomNumber2 = random.Next(randomNumber1 + MinimumIndexGap, 120);
+        }
+        
         var data = new List<int>() { randomNumber1, randomNumber2};
         
         await _distributedCache.SetAsync(PointDispatchConstants.SGR9_SNAPSHOT_INDEX_CACHE_KEY_PREFIX + bizDate, data, new DistributedCacheEntryOptions()
