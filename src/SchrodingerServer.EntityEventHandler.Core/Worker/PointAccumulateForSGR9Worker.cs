@@ -138,7 +138,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
 
     private async Task HandleHolderDailyChangeAsync(string chainId, string bizDate, string pointName, int snapshotIndex)
     {
-        _logger.LogInformation("HandleHolderDailyChangeAsync start...");
+        _logger.LogInformation("PointAccumulateForSGR9Worker Took Snapshot for date: {date}, index:{index}", bizDate, snapshotIndex);
         var skipCount = 0;
         List<SchrodingerIndexerDto> holderList;
         SchrodingerIndexerListDto getSGR1HolderResult;
@@ -276,6 +276,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
     
     private async Task<List<int>> SetSnapshotIndexCacheAsync(string bizDate, int startIndex)
     {
+        _logger.LogInformation("PointAccumulateForSGR9Worker startIndex: {index1}", startIndex);
         AssertHelper.IsTrue(123 - startIndex > MinimumIndexGap, "PointAccumulateForSGR9Worker minimum gap cannot be satisfied");
         Random random = new Random();
         
