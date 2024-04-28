@@ -77,28 +77,29 @@ public class SyncHolderBalanceWorker :  AsyncPeriodicBackgroundWorkerBase
             return;
         }
         //specify the point name to execute job
-        var txPointNames = _workerOptionsMonitor.CurrentValue.TxPointNames;
-        foreach (var pointName in txPointNames)
+        // var txPointNames = _workerOptionsMonitor.CurrentValue.TxPointNames;
+        
+        var pointName = _workerOptionsMonitor.CurrentValue.GetWorkerPointName(_lockKey);
+        
+        var bizDateList = _workerOptionsMonitor.CurrentValue.GetWorkerBizDateList(_lockKey);
+        if (!bizDateList.IsNullOrEmpty())
         {
-            var bizDateList = _workerOptionsMonitor.CurrentValue.GetWorkerBizDateList(_lockKey);
-            if (!bizDateList.IsNullOrEmpty())
+            foreach (var bizDate in bizDateList)
             {
-                foreach (var bizDate in bizDateList)
-                {
-                    await DoSyncHolderBalance(bizDate, pointName);
-                }
-            }
-            else
-            {
-                var bizDate = _workerOptionsMonitor.CurrentValue.GetWorkerBizDate(_lockKey);
-                if (bizDate.IsNullOrEmpty())
-                {
-                    bizDate = DateTime.UtcNow.AddDays(-1).ToString(TimeHelper.Pattern);
-                }
-
                 await DoSyncHolderBalance(bizDate, pointName);
             }
         }
+        else
+        {
+            var bizDate = _workerOptionsMonitor.CurrentValue.GetWorkerBizDate(_lockKey);
+            if (bizDate.IsNullOrEmpty())
+            {
+                bizDate = DateTime.UtcNow.AddDays(-1).ToString(TimeHelper.Pattern);
+            }
+
+            await DoSyncHolderBalance(bizDate, pointName);
+        }   
+        
         _logger.LogInformation("SyncHolderBalanceWorker end...");
     }
     

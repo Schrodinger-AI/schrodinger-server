@@ -115,11 +115,9 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
-        var chainIds = _workerOptionsMonitor.CurrentValue.ChainIds;
-        foreach (var chainId in chainIds)
-        {
-            await GenerateSnapshotAsync(chainId, bizDate, pointName, indexList.IndexOf(curIndex));
-        }
+   
+        await GenerateSnapshotAsync("tDVV", bizDate, pointName, indexList.IndexOf(curIndex));
+        
 
         _logger.LogInformation("PointAccumulateForSGR11Worker end...");
     }
@@ -162,11 +160,13 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                 CreateTime = now,
                 BizDate = bizDate
             }).ToList();
+        _logger.LogInformation("PointAccumulateForSGR11Worker  liquidity address record counts: {cnt}", snapshots.Count);
 
         var validSnapshots = snapshots.Where(x => x.Token0Amount >= 0 && x.Token1Amount >= 0).ToList();
         
+        _logger.LogInformation("PointAccumulateForSGR11Worker  valid record counts: {cnt}", validSnapshots.Count);
         await _pointSnapshotIndexRepository.BulkAddOrUpdateAsync(validSnapshots);
-        _logger.LogInformation("PointAccumulateForSGR11Worker  liquidity address record counts: {cnt}", validSnapshots.Count);
+        
         
         if (snapshotIndex == SnapShotCount-1)
         {
