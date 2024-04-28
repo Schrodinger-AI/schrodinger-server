@@ -131,11 +131,11 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
         _logger.LogInformation("PointAccumulateForSGR9Worker Index Judgement, {index1}, {index2}, {curIndex}", 
             indexList[0], indexList[1], curIndex);
         
-        var manualIndex =  _pointTradeOptions.CurrentValue.CurIndex;
-        if (manualIndex > 0)
+        var manaliIndexList =  _pointTradeOptions.CurrentValue.indexList;
+        if (!manaliIndexList.IsNullOrEmpty())
         {
-            curIndex = manualIndex;
-            _logger.LogInformation("PointAccumulateForSGR9Worker change cur index to {index1}", curIndex);
+            indexList = manaliIndexList.ToList();
+            _logger.LogInformation("PointAccumulateForSGR9Worker change snap index list to {index1}", indexList);
         }
         
         if (!indexList.Contains(curIndex))
