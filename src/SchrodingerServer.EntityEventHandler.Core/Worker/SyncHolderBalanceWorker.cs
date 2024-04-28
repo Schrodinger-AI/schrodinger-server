@@ -207,6 +207,9 @@ public class SyncHolderBalanceWorker :  AsyncPeriodicBackgroundWorkerBase
         {
             holderBalanceIndices = await _holderBalanceProvider.GetPreHolderBalanceListAsync(chainId, bizDate,
                 skipCount, MaxResultCount);
+            _logger.LogInformation(
+                "GetHolderDailyChangeList before  chainId:{chainId} skipCount: {skipCount} bizDate:{bizDate} count: {count}",
+                chainId, skipCount,bizDate , holderBalanceIndices?.Count);
             var  realHolderBalanceIndices = holderBalanceIndices
                 .Where(t => !_pointTradeOptions.CurrentValue.BlackPointAddressList.Contains(t.Address)).ToList();
             if (realHolderBalanceIndices.IsNullOrEmpty())
