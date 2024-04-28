@@ -24,6 +24,10 @@ public interface IPointDailyRecordProvider
     Task<List<PointDailyRecordIndex>> GetPendingPointDailyRecordsAsync(string chainId, int skipCount);
     
     Task UpdatePointDailyRecordAsync(PointSettleDto settleDto,  string status);
+
+    Task<List<PointDailyRecordIndex>> GetAllDailyRecordIndex(string chainId, string bizDate, string pointName);
+    
+    Task<List<PointDailyRecordIndex>> GetPendingDailyRecordIndex(string chainId);
 }
 
 public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDependency
@@ -120,5 +124,86 @@ public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDep
                 _logger.LogError(e, "PointDailyRecordGrain UpdateAsync fail, id: {id}.", userPoints.Id);
             }
         }
+    }
+    
+    public async Task<List<PointDailyRecordIndex>> GetAllDailyRecordIndex(string chainId, string bizDate, string pointName)
+    {
+        var res = new List<PointDailyRecordIndex>();
+        List<PointDailyRecordIndex> list;
+        var skipCount = 0;
+        var mustQuery = new List<Func<QueryContainerDescriptor<PointDailyRecordIndex>, QueryContainer>>();
+        
+        mustQuery.Add(q => q.Term(i =>
+            i.Field(f => f.ChainId).Value(chainId)));
+        mustQuery.Add(q => q.Term(i =>
+            i.Field(f => f.BizDate).Value(bizDate)));
+        mustQuery.Add(q => q.Range(i =>
+            i.Field(f => f.PointAmount).GreaterThan(0)));
+        mustQuery.Add(q => q.Term(i =>
+            i.Field(f => f.PointName).Value(pointName)));
+        mustQuery.Add(q => 
+            !q.Exists(e => e.Field(f => f.BizId)));
+
+
+        QueryContainer Filter(QueryContainerDescriptor<PointDailyRecordIndex> f) =>
+            f.Bool(b => b.Must(mustQuery));
+        
+        var sorting = new Func<SortDescriptor<PointDailyRecordIndex>, IPromise<IList<ISort>>>(s =>
+            s.Ascending(t => t.CreateTime));
+
+        do
+        {
+            list = (await _pointDailyRecordIndexRepository.GetSortListAsync(filterFunc: Filter, skip: skipCount, limit: 10000, sortFunc: sorting)).Item2;
+            var count = list.Count;
+            res.AddRange(list);
+            if (list.IsNullOrEmpty() || count < 10000)
+            {
+                break;
+            }
+            skipCount += count;
+        } while (!list.IsNullOrEmpty());
+
+        return res;
+    }
+    
+    
+    public async Task<List<PointDailyRecordIndex>> GetPendingDailyRecordIndex(string chainId)
+    {
+        var res = new List<PointDailyRecordIndex>();
+        List<PointDailyRecordIndex> list;
+        var skipCount = 0;
+        var mustQuery = new List<Func<QueryContainerDescriptor<PointDailyRecordIndex>, QueryContainer>>();
+        
+        mustQuery.Add(q => q.Term(i =>
+            i.Field(f => f.ChainId).Value(chainId)));
+        
+        mustQuery.Add(q => q.Range(i =>
+            i.Field(f => f.PointAmount).GreaterThan(0)));
+        
+        mustQuery.Add(q => 
+            q.Exists(e => e.Field(f => f.BizId)));
+        
+        mustQuery.Add(q => q.Term(i =>
+            i.Field(f => f.Status).Value(PointRecordStatus.Pending.ToString())));
+        
+        QueryContainer Filter(QueryContainerDescriptor<PointDailyRecordIndex> f) =>
+            f.Bool(b => b.Must(mustQuery));
+        
+        var sorting = new Func<SortDescriptor<PointDailyRecordIndex>, IPromise<IList<ISort>>>(s =>
+            s.Ascending(t => t.CreateTime));
+
+        do
+        {
+            list = (await _pointDailyRecordIndexRepository.GetSortListAsync(filterFunc: Filter, skip: skipCount, limit: 10000, sortFunc: sorting)).Item2;
+            var count = list.Count;
+            res.AddRange(list);
+            if (list.IsNullOrEmpty() || count < 10000)
+            {
+                break;
+            }
+            skipCount += count;
+        } while (!list.IsNullOrEmpty());
+
+        return res;
     }
 }
