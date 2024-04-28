@@ -1,13 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using AElf.Indexing.Elasticsearch;
 using GraphQL;
 using Microsoft.Extensions.Logging;
 using Nest;
+using SchrodingerServer.Common;
+using SchrodingerServer.Common.Dtos;
 using SchrodingerServer.Common.GraphQL;
+using SchrodingerServer.Common.HttpClient;
 using SchrodingerServer.Symbol;
 using SchrodingerServer.Symbol.Provider;
+using SchrodingerServer.Users.Dto;
 using Volo.Abp.Application.Dtos;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.ObjectMapping;
@@ -17,6 +22,7 @@ namespace SchrodingerServer.Awaken.Provider;
 public interface IAwakenLiquidityProvider
 {
     Task<List<AwakenLiquidityRecordDto>> GetLiquidityRecordsAsync(GetAwakenLiquidityRecordDto dto);
+    Task<GetAwakenPriceDto> GetPriceAsync(string token1Symbol, string chainId, string feeRate);
 }
 
 public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDependency
@@ -24,15 +30,20 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
     private readonly IGraphQLClientFactory _graphQlClientFactory;
     private readonly IObjectMapper _objectMapper;
     private readonly ILogger<AwakenLiquidityProvider> _logger;
+    private readonly IHttpProvider _httpProvider;
+    
+    public static ApiInfo AwakenPrice = new(HttpMethod.Get, "/api/app/trade-pairs");
 
     public AwakenLiquidityProvider( 
         IGraphQLClientFactory graphQlClientFactory,
         IObjectMapper objectMapper,
+        IHttpProvider httpProvider,
         ILogger<AwakenLiquidityProvider> logger)
     {
         _graphQlClientFactory = graphQlClientFactory;
         _objectMapper = objectMapper;
         _logger = logger;
+        _httpProvider = httpProvider;
     }
     
 
@@ -97,6 +108,31 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
             throw;
         }
     }
+    
+    
+    public async Task<GetAwakenPriceDto> GetPriceAsync(string token1Symbol, string chainId, string feeRate)
+    {
+        try
+        {
+            var resp = await _httpProvider.InvokeAsync<CommonResponseDto<GetAwakenPriceDto>>(
+                "https://awaken.finance", AwakenPrice, null,
+                new Dictionary<string, string>()
+                {
+                    ["token0Symbol"] = "ELF",
+                    ["token1Symbol"] = token1Symbol,
+                    ["feeRate"] = feeRate,
+                    ["chainId"] = chainId
+                });
+            AssertHelper.NotNull(resp, "Response empty");
+            AssertHelper.NotNull(resp.Success, "Response failed, {}", resp.Message);
+            return resp.Data ?? new GetAwakenPriceDto();
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Points domain get points failed");
+            return new GetAwakenPriceDto();
+        }
+    }
 }
 
 public class AwakenLiquidityRecordDto
@@ -134,5 +170,22 @@ public class GetAwakenLiquidityRecordDto
     
     public int MaxResultCount { get; set; }
 }
+
+public class GetAwakenPriceDto 
+{
+    public int TotalCount { get; set; }
+    public List<GetAwakenPriceDetail> Items { get; set; } = new();
+}
+
+
+
+public class GetAwakenPriceDetail 
+{
+    public decimal Price { get; set; }
+    public decimal priceUSD { get; set; }
+    
+}
+
+
 
 
