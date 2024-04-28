@@ -65,7 +65,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         _distributedCache = distributedCache;
         _pointSnapshotIndexRepository = pointSnapshotIndexRepository;
         _distributedEventBus = distributedEventBus;
-        timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 6 * 1000;
+        timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 60 * 1000;
     }
 
     protected override async Task DoWorkAsync(PeriodicBackgroundWorkerContext workerContext)
@@ -180,6 +180,9 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                 });
             
             _logger.LogInformation("PointAccumulateForSGR11Worker  snapshot by address counts: {cnt}", snapshotByAddress.Count());
+
+            var elfPrice = await GetELFPrice(chainId);
+            var sgrPrice = await GetSGRPrice(chainId) * elfPrice;
             
             foreach (var snapshot in snapshotByAddress)
             {
@@ -191,7 +194,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                     BizDate = bizDate,
                     CreateTime = now,
                     UpdateTime = now,
-                    PointAmount = snapshot.Token0Amount * GetSGRPrice() + snapshot.Token1Amount * GetELFPrice(),
+                    PointAmount = snapshot.Token0Amount * sgrPrice + snapshot.Token1Amount * elfPrice ,
                 };
                 
                 await  _distributedEventBus.PublishAsync(pointDailyRecordEto);
@@ -199,15 +202,21 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         }
     }
     
-    private decimal GetELFPrice()
+    private async Task<decimal> GetELFPrice(string chainId)
     {
-        return 1;
+        var priceDto = await _awakenLiquidityProvider.GetPriceAsync("USDT", chainId, "0.0005");
+        var price = priceDto.Items.FirstOrDefault().Price;
+        AssertHelper.IsTrue(price != null && price > 0, "SGR price is null or zero");
+        return price;
     }
     
     
-    private decimal GetSGRPrice()
+    private async Task<decimal> GetSGRPrice(string chainId)
     {
-        return 1;
+        var priceDto = await _awakenLiquidityProvider.GetPriceAsync("SGR-1", chainId, "0.03");
+        var price = priceDto.Items.FirstOrDefault().Price;
+        AssertHelper.IsTrue(price != null && price > 0, "SGR price is null or zero");
+        return 1 / price;
     }
     
     private  async Task<List<AwakenLiquiditySnapshotIndex>> GetAllIndex(string bizDate, string pointName)

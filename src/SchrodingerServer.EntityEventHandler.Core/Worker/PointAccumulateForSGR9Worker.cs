@@ -105,12 +105,12 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
     {
         _logger.LogInformation("PointAccumulateForSGR9Worker execute for bizDate: {bizDate} pointName:{1}", bizDate, pointName);
         
-        var isExecuted = await _pointDispatchProvider.GetDispatchAsync(PointDispatchConstants.SYNC_SGR9_PREFIX , bizDate, pointName);
-        if (isExecuted)
-        {
-            _logger.LogInformation("PointAccumulateForSGR9Worker has been executed for bizDate: {0} pointName:{1}", bizDate, pointName);
-            return;
-        }
+        // var isExecuted = await _pointDispatchProvider.GetDispatchAsync(PointDispatchConstants.SYNC_SGR9_PREFIX , bizDate, pointName);
+        // if (isExecuted)
+        // {
+        //     _logger.LogInformation("PointAccumulateForSGR9Worker has been executed for bizDate: {0} pointName:{1}", bizDate, pointName);
+        //     return;
+        // }
         
         
         // var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + TimeHelper.GetUtcDaySeconds());
