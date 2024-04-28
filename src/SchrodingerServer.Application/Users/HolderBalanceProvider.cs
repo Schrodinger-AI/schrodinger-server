@@ -21,7 +21,7 @@ public interface IHolderBalanceProvider
     Task<List<HolderBalanceIndex>> GetPreHolderBalanceListAsync(string chainId, string bizDate, int skipCount,
         int maxResultCount);
     
-    Task<HolderDailyChangeDto> GetLastHoldingRecordAsync(string chainId, string address, string symbol, string excludeDate);
+    Task<HolderDailyChangeDto> GetLastHoldingRecordAsync(string chainId, string address, string symbol, List<string> excludeDate);
 }
 
 public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependency
@@ -108,11 +108,11 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
     }
     
     
-    public async Task<HolderDailyChangeDto> GetLastHoldingRecordAsync(string chainId, string address, string symbol, string excludeDate)
+    public async Task<HolderDailyChangeDto> GetLastHoldingRecordAsync(string chainId, string address, string symbol, List<string>  excludeDate)
     {
         var graphQlResponse = await _graphQlHelper.QueryAsync<IndexerHolderDailyChangeDto>(new GraphQLRequest
         {
-            Query = @"query($chainId:String!,$skipCount:Int!,$maxResultCount:Int!,$address:String!,$symbol:String!,$excludeDate:String!){
+            Query = @"query($chainId:String!,$skipCount:Int!,$maxResultCount:Int!,$address:String!,$symbol:String!,$excludeDate:[String!){
             getSchrodingerHolderDailyChangeList(input: {chainId:$chainId,skipCount:$skipCount,maxResultCount:$maxResultCount, address:$address, symbol:$symbol, excludeDate:$excludeDate})
             {
                data {
