@@ -87,7 +87,7 @@ public class PointDailyRecordService : IPointDailyRecordService, ISingletonDepen
         //use balance
         if (pointInfo.UseBalance)
         {
-            return (decimal)(dto.Balance * pointInfo.Factor * symbolPrice);
+            return (decimal)(dto.Balance * pointInfo.Factor * symbolPrice)/100000000;
         }
         var changeAmount = Math.Abs(dto.ChangeAmount);
         var pointAmount = (decimal)(changeAmount * pointInfo.Factor);

@@ -221,7 +221,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             var snapshotByAddress = allSnapshots.GroupBy(snapshot => snapshot.Address).Select(group => new HolderDailyChangeDto
             {
                 Address = group.Key,
-                Balance = (long)group.Sum(item => item.Amount)/2/100000000,
+                Balance = (long)group.Sum(item => item.Amount)/2,
                 Symbol = baseSymbol,
                 Date = bizDate
             });
