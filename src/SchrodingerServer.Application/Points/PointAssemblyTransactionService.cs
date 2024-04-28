@@ -108,6 +108,8 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
         foreach (var tradeList in batchList)
         {
             var bizId = IdGenerateHelper.GetPointBizId(chainId, bizDate, pointName, Guid.NewGuid().ToString());
+            _logger.LogInformation(
+                "Prepare to AssemblechainId:{chainId}  count: {count}  bizId: {bidId}", chainId,  tradeList.Count, bizId);
             try
             {
                 var pointSettleDto = PointSettleDto.Of(chainId, pointName, bizId, tradeList);
