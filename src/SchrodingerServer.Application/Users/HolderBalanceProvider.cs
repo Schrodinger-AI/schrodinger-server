@@ -14,7 +14,7 @@ namespace SchrodingerServer.Users;
 public interface IHolderBalanceProvider
 {
     Task<List<HolderDailyChangeDto>> GetHolderDailyChangeListAsync(string chainId, string bizDate, int skipCount,
-        int maxResultCount);
+        int maxResultCount, string symbol);
 
     Task<Dictionary<string, HolderBalanceIndex>> GetHolderBalanceAsync(string chainId, List<string> ids);
     
@@ -38,12 +38,12 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
 
 
     public async Task<List<HolderDailyChangeDto>> GetHolderDailyChangeListAsync(string chainId, string date,
-        int skipCount, int maxResultCount)
+        int skipCount, int maxResultCount, string symbol)
     {
         var graphQlResponse = await _graphQlHelper.QueryAsync<IndexerHolderDailyChangeDto>(new GraphQLRequest
         {
-            Query = @"query($chainId:String!,$date:String!,$skipCount:Int!,$maxResultCount:Int!){
-            getSchrodingerHolderDailyChangeList(input: {chainId:$chainId,date:$date,skipCount:$skipCount,maxResultCount:$maxResultCount})
+            Query = @"query($chainId:String!,$date:String!,$skipCount:Int!,$maxResultCount:Int!,$symbol:String!){
+            getSchrodingerHolderDailyChangeList(input: {chainId:$chainId,date:$date,skipCount:$skipCount,maxResultCount:$maxResultCount,symbol:$symbol})
             {
                data {
                 address,
@@ -59,7 +59,8 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
                 chainId,
                 date,
                 skipCount,
-                maxResultCount
+                maxResultCount,
+                symbol
             }
         });
         return graphQlResponse?.GetSchrodingerHolderDailyChangeList.Data;

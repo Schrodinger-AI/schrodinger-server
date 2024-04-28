@@ -140,7 +140,7 @@ public class SyncHolderBalanceWorker :  AsyncPeriodicBackgroundWorkerBase
         do
         {
             dailyChanges =
-                await _holderBalanceProvider.GetHolderDailyChangeListAsync(chainId, bizDate, skipCount, MaxResultCount);
+                await _holderBalanceProvider.GetHolderDailyChangeListAsync(chainId, bizDate, skipCount, MaxResultCount, _pointTradeOptions.CurrentValue.BaseCoin);
             _logger.LogInformation(
                 "GetHolderDailyChangeList chainId:{chainId} skipCount: {skipCount} bizDate:{bizDate} count: {count}",
                 chainId, skipCount,bizDate , dailyChanges?.Count);
