@@ -85,12 +85,12 @@ public class PointAssemblyTransactionWorker : AsyncPeriodicBackgroundWorkerBase
             _logger.LogInformation("PointAssemblyTransactionWorker has been executed for bizDate: {0} pointName: {1}", bizDate, pointName);
             return;
         }
-        // var isBeforeExecuted =  await _pointDispatchProvider.GetDispatchAsync(PointDispatchConstants.SYNC_HOLDER_BALANCE_PREFIX, bizDate, pointName);
-        // if (!isBeforeExecuted)
-        // {
-        //     _logger.LogInformation("SyncHolderBalanceWorker has not  executed for bizDate: {0} pointName:{1}", bizDate, pointName);
-        //     return;
-        // }
+        var isBeforeExecuted =  await _pointDispatchProvider.GetDispatchAsync(PointDispatchConstants.SYNC_HOLDER_BALANCE_PREFIX, bizDate, pointName);
+        if (!isBeforeExecuted)
+        {
+            _logger.LogInformation("SyncHolderBalanceWorker has not  executed for bizDate: {0} pointName:{1}", bizDate, pointName);
+            return;
+        }
         var chainIds = _workerOptionsMonitor.CurrentValue.ChainIds;
         foreach (var chainId in chainIds)
         {
