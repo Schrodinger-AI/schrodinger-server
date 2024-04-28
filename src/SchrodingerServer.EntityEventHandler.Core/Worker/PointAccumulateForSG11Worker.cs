@@ -114,10 +114,13 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         {
             return;
         }
+        
+        var chainIds = _workerOptionsMonitor.CurrentValue.ChainIds;
+        foreach (var chainId in chainIds)
+        {
+            await GenerateSnapshotAsync(chainId, bizDate, pointName, indexList.IndexOf(curIndex));
+        }
 
-        await GenerateSnapshotAsync("tDVV", bizDate,  pointName, indexList.IndexOf(curIndex));
-        
-        
         _logger.LogInformation("PointAccumulateForSGR11Worker end...");
     }
 
@@ -159,9 +162,11 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                 CreateTime = now,
                 BizDate = bizDate
             }).ToList();
-        await _pointSnapshotIndexRepository.BulkAddOrUpdateAsync(snapshots);
-        _logger.LogInformation("PointAccumulateForSGR11Worker  liquidity address record counts: {cnt}", snapshots.Count);
+
+        var validSnapshots = snapshots.Where(x => x.Token0Amount >= 0 && x.Token1Amount >= 0).ToList();
         
+        await _pointSnapshotIndexRepository.BulkAddOrUpdateAsync(validSnapshots);
+        _logger.LogInformation("PointAccumulateForSGR11Worker  liquidity address record counts: {cnt}", validSnapshots.Count);
         
         if (snapshotIndex == SnapShotCount-1)
         {
@@ -194,8 +199,10 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                     BizDate = bizDate,
                     CreateTime = now,
                     UpdateTime = now,
-                    PointAmount = snapshot.Token0Amount * sgrPrice + snapshot.Token1Amount * elfPrice ,
+                    ChainId = chainId,
+                    PointAmount = (snapshot.Token0Amount * sgrPrice + snapshot.Token1Amount * elfPrice) * 99 / 100000000 ,
                 };
+                
                 
                 await  _distributedEventBus.PublishAsync(pointDailyRecordEto);
             }
