@@ -236,7 +236,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             foreach (var snapshot in snapshotByAddress)
             {
                 var dayBefore = TimeHelper.GetDateStrAddDays(bizDate, -1);
-                var excludeDate = new List<string> { dayBefore, bizDate };
+                var excludeDate = new List<string> {  bizDate };
                 var lastHoldingRecord = await _holderBalanceProvider.GetLastHoldingRecordAsync(chainId, snapshot.Address, baseSymbol, excludeDate);
                 if (lastHoldingRecord == null || lastHoldingRecord.Balance <= 0)
                 {
