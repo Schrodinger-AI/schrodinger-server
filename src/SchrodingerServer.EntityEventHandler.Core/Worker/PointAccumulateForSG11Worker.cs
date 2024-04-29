@@ -61,6 +61,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         IAbpDistributedLock distributedLock,
         IOptionsMonitor<PointTradeOptions> pointTradeOptions,
         IDistributedEventBus distributedEventBus,
+        IPointDispatchProvider pointDispatchProvider,
         INESTRepository<AwakenLiquiditySnapshotIndex, string> pointSnapshotIndexRepository): base(timer,
         serviceScopeFactory)
     {
@@ -73,6 +74,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         _distributedCache = distributedCache;
         _pointSnapshotIndexRepository = pointSnapshotIndexRepository;
         _distributedEventBus = distributedEventBus;
+        _pointDispatchProvider = pointDispatchProvider;
         timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 60 * 1000;
     }
 
