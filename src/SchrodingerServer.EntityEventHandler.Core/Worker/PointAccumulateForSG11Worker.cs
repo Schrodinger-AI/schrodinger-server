@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nest;
+using Newtonsoft.Json;
 using NUglify.Helpers;
 using Orleans;
 using SchrodingerServer.Awaken.Provider;
@@ -228,7 +229,8 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                 input.Id = id;
                 var pointDailyRecordGrain = _clusterClient.GetGrain<IPointDailyRecordGrain>(input.Id);
                 var result = await pointDailyRecordGrain.UpdateAsync(input);
-                _logger.LogDebug("PointAccumulateForSGR11Worker write grain result: {result}", result);
+                _logger.LogDebug("PointAccumulateForSGR11Worker write grain result: {result}, record: {record}", 
+                    JsonConvert.SerializeObject(result), JsonConvert.SerializeObject(input));
 
                 if (!result.Success)
                 {
