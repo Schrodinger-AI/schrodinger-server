@@ -228,6 +228,8 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                 input.Id = id;
                 var pointDailyRecordGrain = _clusterClient.GetGrain<IPointDailyRecordGrain>(input.Id);
                 var result = await pointDailyRecordGrain.UpdateAsync(input);
+                _logger.LogDebug("PointAccumulateForSGR11Worker write grain result: {result}", result);
+
                 if (!result.Success)
                 {
                     _logger.LogError(
