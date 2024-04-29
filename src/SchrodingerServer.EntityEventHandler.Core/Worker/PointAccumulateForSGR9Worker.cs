@@ -131,7 +131,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
         _logger.LogInformation("PointAccumulateForSGR9Worker Index Judgement, {index1}, {index2}, {curIndex}", 
             indexList[0], indexList[1], curIndex);
         
-        var manaliIndexList =  _pointTradeOptions.CurrentValue.indexList;
+        var manaliIndexList =  _pointTradeOptions.CurrentValue.IndexList;
         if (!manaliIndexList.IsNullOrEmpty())
         {
             indexList = manaliIndexList.ToList();

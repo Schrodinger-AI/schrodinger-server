@@ -36,7 +36,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     private const string SGR = "SGR-1";
     private const string ELF = "ELF";
 
-    private readonly ILogger<SyncHolderBalanceWorker> _logger;
+    private readonly ILogger<PointAccumulateForSGR11Worker> _logger;
     private readonly IOptionsMonitor<WorkerOptions> _workerOptionsMonitor;
     private readonly IOptionsMonitor<PointTradeOptions> _pointTradeOptions;
     private readonly INESTRepository<AwakenLiquiditySnapshotIndex, string> _pointSnapshotIndexRepository;
@@ -49,7 +49,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     private readonly IDistributedEventBus _distributedEventBus;
     private readonly string _lockKey = "PointAccumulateForSGR11Worker";
 
-    public PointAccumulateForSGR11Worker(AbpAsyncTimer timer,IServiceScopeFactory serviceScopeFactory,ILogger<SyncHolderBalanceWorker> logger,
+    public PointAccumulateForSGR11Worker(AbpAsyncTimer timer,IServiceScopeFactory serviceScopeFactory,ILogger<PointAccumulateForSGR11Worker> logger,
         IOptionsMonitor<WorkerOptions> workerOptionsMonitor,
         IObjectMapper objectMapper,
         IDistributedCache<List<int>> distributedCache,
@@ -107,7 +107,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         _logger.LogInformation("PointAccumulateForSGR11Worker Index Judgement, {index1}, {index2}, {curIndex}", 
             indexList[0], indexList[1], curIndex);
         
-        var manaliIndexList =  _pointTradeOptions.CurrentValue.indexList;
+        var manaliIndexList =  _pointTradeOptions.CurrentValue.IndexList;
         if (!manaliIndexList.IsNullOrEmpty())
         {
             indexList = manaliIndexList.ToList();
@@ -119,8 +119,11 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
-        await GenerateSnapshotAsync("tDVV", bizDate, pointName, indexList.IndexOf(curIndex));
-        
+        var chainIds = _workerOptionsMonitor.CurrentValue.ChainIds;
+        foreach (var chainId in chainIds)
+        {
+            await GenerateSnapshotAsync(chainId, bizDate, pointName, indexList.IndexOf(curIndex));
+        }
 
         _logger.LogInformation("PointAccumulateForSGR11Worker end...");
     }
@@ -189,11 +192,23 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             
             _logger.LogInformation("PointAccumulateForSGR11Worker  snapshot by address counts: {cnt}", snapshotByAddress.Count());
 
-            var elfPrice = await GetELFPrice(chainId);
-            var sgrPrice = await GetSGRPrice(chainId) * elfPrice;
+            var validAddress = await GetValidAddressAsync(chainId);
+            _logger.LogInformation("PointAccumulateForSGR11Worker  get valid address counts: {cnt}", validAddress.Count());
+            
+            var elfPrice = await GetELFPrice();
+            var sgrPrice = await GetSGRPrice() * elfPrice;
+            
+            _logger.LogInformation("PointAccumulateForSGR11Worker  get prices in USD, ELF: {elf}, SGR: {sgr}", elfPrice, sgrPrice);
+
             
             foreach (var snapshot in snapshotByAddress)
             {
+                if (!validAddress.Contains(snapshot.Address))
+                {
+                    _logger.LogInformation("PointAccumulateForSGR11Worker Holding Less Than 24hours, address: {address}", snapshot.Address);
+                    continue;
+                }
+                
                 var pointDailyRecordEto = new PointDailyRecordEto
                 {
                     Id = IdGenerateHelper.GetId(chainId, bizDate, pointName, snapshot.Address),
@@ -212,7 +227,55 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         }
     }
     
-    private async Task<decimal> GetELFPrice(string chainId)
+    private async  Task<List<string>> GetValidAddressAsync(string chainId)
+    {
+        DateTime currentUtc = DateTime.UtcNow; 
+        DateTime targetUtc = currentUtc.AddHours(-24).Date;
+
+        DateTime targetUtcMidnight =
+            new DateTime(targetUtc.Year, targetUtc.Month, targetUtc.Day, 0, 0, 0, DateTimeKind.Utc);
+        
+        long milliseconds = new DateTimeOffset(targetUtcMidnight).ToUnixTimeMilliseconds();
+        
+        _logger.LogInformation("PointAccumulateForSGR11Worker get time in targetUtc: {targetUtc} targetUtcMidnight: {targetUtcMidnight}", targetUtc, targetUtcMidnight);
+        
+        var request = new GetAwakenLiquidityRecordDto
+        {
+            SkipCount = 0,
+            MaxResultCount = MaxResultCount,
+            ChainId = chainId,
+            Pair = _pointTradeOptions.CurrentValue.AwakenPoolId,
+            TimestampMax = milliseconds
+        };
+
+        var res = await _awakenLiquidityProvider.GetLiquidityRecordsAsync(request);
+        var validRecord = res.Where(x => x.Type == "MINT" || x.Type == "BURN").ToList();
+        validRecord.ForEach(x =>
+        {
+            x.Token0Amount = x.Type == "MINT" ? x.Token0Amount : -x.Token0Amount;
+            x.Token1Amount = x.Type == "MINT" ? x.Token1Amount : -x.Token1Amount;
+
+            if (x.Token0 == ELF)
+            {
+                (x.Token0Amount, x.Token1Amount) = (x.Token1Amount, x.Token0Amount);
+            }
+        });
+        
+        var snapshots = res.GroupBy(snapshot => snapshot.Address).Select(group => new AwakenLiquiditySnapshotIndex
+        {
+            Address = group.Key,
+            Token0Amount = group.Sum(item => item.Token0Amount),
+            Token1Amount = group.Sum(item => item.Token1Amount),
+        }).ToList();
+        _logger.LogInformation("PointAccumulateForSGR11Worker get snapshot in ts: {ts} counts: {cnt}", milliseconds, snapshots.Count);
+
+        var validSnapshots = snapshots.Where(x => x.Token0Amount >= 0 && x.Token1Amount >= 0).ToList();
+        _logger.LogInformation("PointAccumulateForSGR11Worker get valid snapshot in ts: {ts} counts: {cnt}", milliseconds, snapshots.Count);
+        var address = validSnapshots.Select(x => x.Address).ToList();
+        return address;
+    }
+    
+    private async Task<decimal> GetELFPrice()
     {
         var priceDto = await _awakenLiquidityProvider.GetPriceAsync(USDT, "tDVV", "0.0005");
         var price = priceDto.Items.FirstOrDefault().Price;
@@ -221,7 +284,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     }
     
     
-    private async Task<decimal> GetSGRPrice(string chainId)
+    private async Task<decimal> GetSGRPrice()
     {
         var priceDto = await _awakenLiquidityProvider.GetPriceAsync(SGR, "tDVV", "0.03");
         var price = priceDto.Items.FirstOrDefault().Price;
