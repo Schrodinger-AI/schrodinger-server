@@ -8,14 +8,17 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nest;
 using NUglify.Helpers;
+using Orleans;
 using SchrodingerServer.Awaken.Provider;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.EntityEventHandler.Core.Options;
+using SchrodingerServer.Grains.Grain.Points;
 using SchrodingerServer.Points;
 using SchrodingerServer.Points.Provider;
 using SchrodingerServer.Users.Eto;
 using SchrodingerServer.Users.Index;
+using Volo.Abp;
 using Volo.Abp.BackgroundWorkers;
 using Volo.Abp.Caching;
 using Volo.Abp.DistributedLocking;
@@ -40,18 +43,18 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     private readonly IOptionsMonitor<WorkerOptions> _workerOptionsMonitor;
     private readonly IOptionsMonitor<PointTradeOptions> _pointTradeOptions;
     private readonly INESTRepository<AwakenLiquiditySnapshotIndex, string> _pointSnapshotIndexRepository;
-
-    private readonly IObjectMapper _objectMapper;
+    
     private readonly IAwakenLiquidityProvider _awakenLiquidityProvider;
     private readonly IPointDispatchProvider _pointDispatchProvider;
     private readonly IAbpDistributedLock _distributedLock;
     private readonly IDistributedCache<List<int>> _distributedCache;
     private readonly IDistributedEventBus _distributedEventBus;
+    private readonly IClusterClient _clusterClient;
     private readonly string _lockKey = "PointAccumulateForSGR11Worker";
 
     public PointAccumulateForSGR11Worker(AbpAsyncTimer timer,IServiceScopeFactory serviceScopeFactory,ILogger<PointAccumulateForSGR11Worker> logger,
         IOptionsMonitor<WorkerOptions> workerOptionsMonitor,
-        IObjectMapper objectMapper,
+        IClusterClient clusterClient,
         IDistributedCache<List<int>> distributedCache,
         IAwakenLiquidityProvider awakenLiquidityProvider,
         IAbpDistributedLock distributedLock,
@@ -62,6 +65,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     {
         _logger = logger;
         _workerOptionsMonitor = workerOptionsMonitor;
+        _clusterClient = clusterClient;
         _pointTradeOptions = pointTradeOptions;
         _distributedLock = distributedLock;
         _awakenLiquidityProvider = awakenLiquidityProvider;
@@ -209,16 +213,38 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                     continue;
                 }
                 
+                var id = IdGenerateHelper.GetId(chainId, bizDate, pointName, snapshot.Address);
+                var pointAmount = (snapshot.Token0Amount * sgrPrice + snapshot.Token1Amount * elfPrice) * 99 /
+                                  100000000;
+                var input = new PointDailyRecordGrainDto()
+                {
+                    ChainId = chainId,
+                    PointName = pointName,
+                    BizDate = bizDate,
+                    Address = snapshot.Address,
+                    HolderBalanceId = IdGenerateHelper.GetHolderBalanceId(chainId, "", snapshot.Address),
+                    PointAmount = pointAmount
+                };
+                input.Id = id;
+                var pointDailyRecordGrain = _clusterClient.GetGrain<IPointDailyRecordGrain>(input.Id);
+                var result = await pointDailyRecordGrain.UpdateAsync(input);
+                if (!result.Success)
+                {
+                    _logger.LogError(
+                        "Handle Point Daily Record fail, id: {id}.", input.Id);
+                    throw new UserFriendlyException($"Update Grain fail, id: {input.Id}.");
+                }
+                
                 var pointDailyRecordEto = new PointDailyRecordEto
                 {
-                    Id = IdGenerateHelper.GetId(chainId, bizDate, pointName, snapshot.Address),
+                    Id = id,
                     Address = snapshot.Address,
                     PointName = pointName,
                     BizDate = bizDate,
                     CreateTime = now,
                     UpdateTime = now,
                     ChainId = chainId,
-                    PointAmount = (snapshot.Token0Amount * sgrPrice + snapshot.Token1Amount * elfPrice) * 99 / 100000000 ,
+                    PointAmount = pointAmount
                 };
                 
                 

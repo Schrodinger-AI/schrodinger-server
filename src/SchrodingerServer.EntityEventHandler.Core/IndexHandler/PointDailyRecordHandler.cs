@@ -15,11 +15,11 @@ public class PointDailyRecordHandler : IDistributedEventHandler<PointDailyRecord
 {
     private readonly INESTRepository<PointDailyRecordIndex, string> _repository;
     private readonly IObjectMapper _objectMapper;
-    private readonly ILogger<ContractInvokeHandler> _logger;
+    private readonly ILogger<PointDailyRecordHandler> _logger;
 
     public PointDailyRecordHandler(INESTRepository<PointDailyRecordIndex, string> repository, 
         IObjectMapper objectMapper, 
-        ILogger<ContractInvokeHandler> logger)
+        ILogger<PointDailyRecordHandler> logger)
     {
         _repository = repository;
         _objectMapper = objectMapper;
