@@ -230,13 +230,13 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             
             var symbols = new List<string> { baseSymbol };
             var symbolPriceDict = await _symbolDayPriceProvider.GetSymbolPricesAsync(priceBizDate, symbols);
-            // var symbolPrice = DecimalHelper.GetValueFromDict(symbolPriceDict, baseSymbol, baseSymbol);
-            var symbolPrice = (decimal)2.2;
+            var symbolPrice = DecimalHelper.GetValueFromDict(symbolPriceDict, baseSymbol, baseSymbol);
+            // var symbolPrice = (decimal)2.2;
             
             foreach (var snapshot in snapshotByAddress)
             {
                 var dayBefore = TimeHelper.GetDateStrAddDays(bizDate, -1);
-                var excludeDate = new List<string> {  bizDate };
+                var excludeDate = new List<string> { dayBefore, bizDate };
                 var lastHoldingRecord = await _holderBalanceProvider.GetLastHoldingRecordAsync(chainId, snapshot.Address, baseSymbol, excludeDate);
                 if (lastHoldingRecord == null || lastHoldingRecord.Balance <= 0)
                 {

@@ -88,19 +88,25 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
-        
         var pointName = _workerOptionsMonitor.CurrentValue.GetWorkerPointName(_lockKey);
-        //
-        // var bizDate = _workerOptionsMonitor.CurrentValue.GetWorkerBizDate(_lockKey);
-        // if (bizDate.IsNullOrEmpty())
-        // {
-        //     bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
-        // }
-        //
-        // await DoSyncHolderBalance(bizDate, pointName);   
-        
-        var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
-        
+        var bizDateList = _workerOptionsMonitor.CurrentValue.GetWorkerBizDateList(_lockKey);
+        if (!bizDateList.IsNullOrEmpty())
+        {
+            foreach (var bizDate in bizDateList)
+            {
+                await SGR11SnapshotForOnceAsync(bizDate, pointName);
+            }
+        }
+        else
+        {
+            var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
+            await SGR11SnapshotWorkAsync(bizDate, pointName);
+        }
+    }
+    
+    
+    private async Task SGR11SnapshotWorkAsync(string bizDate, string pointName)
+    {
         DateTime now = DateTime.Now;
         int curIndex = now.Hour * 6 + now.Minute / 10;
         var indexList = await _distributedCache.GetAsync(PointDispatchConstants.SGR11_SNAPSHOT_INDEX_CACHE_KEY_PREFIX + bizDate);
@@ -131,6 +137,18 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         }
 
         _logger.LogInformation("PointAccumulateForSGR11Worker end...");
+    }
+    
+    private async Task SGR11SnapshotForOnceAsync(string bizDate, string pointName)
+    {
+        var chainIds = _workerOptionsMonitor.CurrentValue.ChainIds;
+        foreach (var chainId in chainIds)
+        {
+            await GenerateSnapshotAsync(chainId, bizDate, pointName, 1);
+        }
+
+        _logger.LogInformation("PointAccumulateForSGR11Worker SGR11SnapshotForOnceAsync date:{date} end...", 
+            bizDate);
     }
 
 
@@ -197,7 +215,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             
             _logger.LogInformation("PointAccumulateForSGR11Worker  snapshot by address counts: {cnt}", snapshotByAddress.Count());
 
-            var validAddress = await GetValidAddressAsync(chainId);
+            var validAddress = await GetValidAddressAsync(chainId, bizDate);
             _logger.LogInformation("PointAccumulateForSGR11Worker  get valid address counts: {cnt}", validAddress.Count());
             
             var elfPrice = await GetELFPrice();
@@ -257,9 +275,9 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         }
     }
     
-    private async  Task<List<string>> GetValidAddressAsync(string chainId)
+    private async  Task<List<string>> GetValidAddressAsync(string chainId, string bizDate)
     {
-        DateTime currentUtc = DateTime.UtcNow; 
+        DateTime currentUtc = DateTime.ParseExact(bizDate, "yyyyMMdd", null); 
         DateTime targetUtc = currentUtc.AddHours(-24).Date;
 
         DateTime targetUtcMidnight =
