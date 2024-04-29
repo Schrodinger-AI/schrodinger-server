@@ -38,13 +38,13 @@ public class PointDailyRecordGrain : Grain<PointDailyRecordState>, IPointDailyRe
      */
     public async Task<GrainResultDto<PointDailyRecordGrainDto>> UpdateAsync(PointDailyRecordGrainDto input)
     {
-        var holderBalanceIds = State.HolderBalanceIds;
-        //If has bizId, can not be modify (The process has entered the packaging and sending transaction)
-        //Each point name and each HolderBalanceId can only be calculated once.
-        if (!State.BizId.IsNullOrEmpty() || holderBalanceIds.Contains(input.HolderBalanceId))
-        {
-            return OfGrainResultDto(true, CommonConstant.TradeRepeated);
-        }
+        // var holderBalanceIds = State.HolderBalanceIds;
+        // //If has bizId, can not be modify (The process has entered the packaging and sending transaction)
+        // //Each point name and each HolderBalanceId can only be calculated once.
+        // if (!State.BizId.IsNullOrEmpty() || holderBalanceIds.Contains(input.HolderBalanceId))
+        // {
+        //     return OfGrainResultDto(true, CommonConstant.TradeRepeated);
+        // }
 
         var prePointAmount = State.PointAmount;
         State = _objectMapper.Map<PointDailyRecordGrainDto, PointDailyRecordState>(input);
