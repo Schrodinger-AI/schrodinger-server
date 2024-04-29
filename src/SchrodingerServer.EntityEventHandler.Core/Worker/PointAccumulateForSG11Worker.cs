@@ -32,6 +32,9 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     private const int MaxResultCount = 2000;
     private const int MinimumIndexGap = 24;
     private const int SnapShotCount = 2;
+    private const string USDT = "USDT";
+    private const string SGR = "SGR-1";
+    private const string ELF = "ELF";
 
     private readonly ILogger<SyncHolderBalanceWorker> _logger;
     private readonly IOptionsMonitor<WorkerOptions> _workerOptionsMonitor;
@@ -72,7 +75,8 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     {
         await using var handle = await _distributedLock.TryAcquireAsync(_lockKey);
         var openSwitch = _workerOptionsMonitor.CurrentValue.GetWorkerSwitch(_lockKey);
-        _logger.LogInformation("PointAccumulateForSGR11Worker start openSwitch {openSwitch}", openSwitch);
+        var poolId = _pointTradeOptions.CurrentValue.AwakenPooliId;
+        _logger.LogInformation("PointAccumulateForSGR11Worker start openSwitch {openSwitch}, pool:{pool}", openSwitch, poolId);
         if (!openSwitch)
         {
             _logger.LogWarning("PointAccumulateForSGR11Worker has not open...");
@@ -115,7 +119,6 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
-   
         await GenerateSnapshotAsync("tDVV", bizDate, pointName, indexList.IndexOf(curIndex));
         
 
@@ -130,7 +133,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             SkipCount = 0,
             MaxResultCount = MaxResultCount,
             ChainId = chainId,
-            Pair = "1JzsAHLmJaMX9RoKyyUb5jgTZpkAWVKifsGSLNUokvxtzmZzp",
+            Pair = _pointTradeOptions.CurrentValue.AwakenPooliId,
             TimestampMax = TimeHelper.GetTimeStampInMilliseconds()
         };
 
@@ -141,7 +144,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             x.Token0Amount = x.Type == "MINT" ? x.Token0Amount : -x.Token0Amount;
             x.Token1Amount = x.Type == "MINT" ? x.Token1Amount : -x.Token1Amount;
 
-            if (x.Token0 == "ELF")
+            if (x.Token0 == ELF)
             {
                 (x.Token0Amount, x.Token1Amount) = (x.Token1Amount, x.Token0Amount);
             }
@@ -155,8 +158,8 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                 Address = group.Key,
                 Token0Amount = group.Sum(item => item.Token0Amount),
                 Token1Amount = group.Sum(item => item.Token1Amount),
-                Token0Name = "SGR-1",
-                Token1Name = "ELF",
+                Token0Name = SGR,
+                Token1Name = ELF,
                 CreateTime = now,
                 BizDate = bizDate
             }).ToList();
@@ -211,7 +214,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     
     private async Task<decimal> GetELFPrice(string chainId)
     {
-        var priceDto = await _awakenLiquidityProvider.GetPriceAsync("USDT", chainId, "0.0005");
+        var priceDto = await _awakenLiquidityProvider.GetPriceAsync(USDT, "tDVV", "0.0005");
         var price = priceDto.Items.FirstOrDefault().Price;
         AssertHelper.IsTrue(price != null && price > 0, "SGR price is null or zero");
         return price;
@@ -220,7 +223,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     
     private async Task<decimal> GetSGRPrice(string chainId)
     {
-        var priceDto = await _awakenLiquidityProvider.GetPriceAsync("SGR-1", chainId, "0.03");
+        var priceDto = await _awakenLiquidityProvider.GetPriceAsync(SGR, "tDVV", "0.03");
         var price = priceDto.Items.FirstOrDefault().Price;
         AssertHelper.IsTrue(price != null && price > 0, "SGR price is null or zero");
         return 1 / price;
