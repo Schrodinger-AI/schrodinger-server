@@ -86,7 +86,8 @@ public class PointAssemblyTransactionWorker : AsyncPeriodicBackgroundWorkerBase
             return;
         }
         var isBeforeExecuted =  await _pointDispatchProvider.GetDispatchAsync(PointDispatchConstants.SYNC_HOLDER_BALANCE_PREFIX, bizDate, pointName);
-        if (!isBeforeExecuted)
+        bool alwaysCheck =  _workerOptionsMonitor.CurrentValue.AlwaysCheck;
+        if (!isBeforeExecuted && !alwaysCheck)
         {
             _logger.LogInformation("SyncHolderBalanceWorker has not  executed for bizDate: {0} pointName:{1}", bizDate, pointName);
             return;

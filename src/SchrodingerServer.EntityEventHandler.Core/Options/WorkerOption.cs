@@ -7,6 +7,8 @@ public class WorkerOptions
 {
     public const string DefaultCron = "0 0/3 * * * ?";
 
+    public bool AlwaysCheck { get; set; } = false;
+        
     public string[] ChainIds { get; set; } = System.Array.Empty<string>();
     
     public string BizDate { get; set; }
