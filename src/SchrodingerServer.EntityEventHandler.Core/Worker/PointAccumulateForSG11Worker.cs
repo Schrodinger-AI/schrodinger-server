@@ -227,14 +227,30 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             var allSnapshots = await GetAllIndex(bizDate, pointName);
             _logger.LogInformation("PointAccumulateForSGR11Worker  snapshot counts: {cnt}", allSnapshots.Count);
 
-            var snapshotByAddress = allSnapshots.GroupBy(snapshot => snapshot.Address).Select(group => new AwakenLiquiditySnapshotIndex
+            var snapshotByAddress = allSnapshots.GroupBy(snapshot => snapshot.Address).Select(group =>
+            {
+                long token0Amount;
+                long token1Amount;
+                if (!isCurrent)
+                {
+                    token0Amount = group.Sum(item => item.Token0Amount);
+                    token1Amount = group.Sum(item => item.Token1Amount);
+                }
+                else
+                {
+                    token0Amount = group.Sum(item => item.Token0Amount) / SnapShotCount;
+                    token1Amount = group.Sum(item => item.Token1Amount) / SnapShotCount;
+                }
+                
+                return new AwakenLiquiditySnapshotIndex
                 {
                     Address = group.Key,
-                    Token0Amount = group.Sum(item => item.Token0Amount) / SnapShotCount,
-                    Token1Amount = group.Sum(item => item.Token1Amount) / SnapShotCount,
+                    Token0Amount = token0Amount,
+                    Token1Amount = token1Amount,
                     PointName = pointName,
                     BizDate = bizDate
-                });
+                };
+            });
             
             _logger.LogInformation("PointAccumulateForSGR11Worker  snapshot by address counts: {cnt}", snapshotByAddress.Count());
 
