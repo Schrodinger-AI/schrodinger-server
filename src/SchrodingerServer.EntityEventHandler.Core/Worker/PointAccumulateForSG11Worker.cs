@@ -143,6 +143,13 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     {
         _logger.LogInformation("PointAccumulateForSGR11Worker SGR11SnapshotForOnceAsync date:{date} begin...", 
             bizDate);
+        var isExecuted = await _pointDispatchProvider.GetDispatchAsync(PointDispatchConstants.SYNC_SGR11_PREFIX , bizDate, pointName);
+        if (isExecuted)
+        {
+            _logger.LogInformation("PointAccumulateForSGR11Worker has been executed for bizDate: {0} pointName:{1}", bizDate, pointName);
+            return;
+        }
+        
         var chainIds = _workerOptionsMonitor.CurrentValue.ChainIds;
         foreach (var chainId in chainIds)
         {
@@ -151,6 +158,8 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
 
         _logger.LogInformation("PointAccumulateForSGR11Worker SGR11SnapshotForOnceAsync date:{date} end...", 
             bizDate);
+        await _pointDispatchProvider.SetDispatchAsync(PointDispatchConstants.SYNC_SGR11_PREFIX, bizDate,
+            pointName, true);
     }
 
 
