@@ -24,6 +24,9 @@ public class PointTradeOptions
     }
     
     public int[] indexList { get; set; }
+    
+    
+    public string AwakenPoolId { get; set; }
 }
 
 public class ChainInfo

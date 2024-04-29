@@ -75,7 +75,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     {
         await using var handle = await _distributedLock.TryAcquireAsync(_lockKey);
         var openSwitch = _workerOptionsMonitor.CurrentValue.GetWorkerSwitch(_lockKey);
-        var poolId = _pointTradeOptions.CurrentValue.AwakenPooliId;
+        var poolId = _pointTradeOptions.CurrentValue.AwakenPoolId;
         _logger.LogInformation("PointAccumulateForSGR11Worker start openSwitch {openSwitch}, pool:{pool}", openSwitch, poolId);
         if (!openSwitch)
         {
@@ -133,7 +133,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             SkipCount = 0,
             MaxResultCount = MaxResultCount,
             ChainId = chainId,
-            Pair = _pointTradeOptions.CurrentValue.AwakenPooliId,
+            Pair = _pointTradeOptions.CurrentValue.AwakenPoolId,
             TimestampMax = TimeHelper.GetTimeStampInMilliseconds()
         };
 
