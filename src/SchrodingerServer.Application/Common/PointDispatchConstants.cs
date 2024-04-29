@@ -11,4 +11,5 @@ public class PointDispatchConstants
     public const string SGR11_SNAPSHOT_INDEX_CACHE_KEY_PREFIX = "SGR11SnapshotIndex:";
     
     public const string SYNC_SGR9_PREFIX = "SyncSGR9";
+    public const string SYNC_SGR11_PREFIX = "SyncSGR11";
 }
