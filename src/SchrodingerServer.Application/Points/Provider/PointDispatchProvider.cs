@@ -37,8 +37,9 @@ public class PointDispatchProvider : IPointDispatchProvider,ISingletonDependency
         {
             return bool.Parse(isDispatched);
         }
-        var re= await _clusterClient.GetGrain<IPointDailyDispatchGrain>(id).GetPointDailyDispatchGrainAsync();
-        return re.Data.Executed;
+        return  false;
+        // var re= await _clusterClient.GetGrain<IPointDailyDispatchGrain>(id).GetPointDailyDispatchGrainAsync();
+        // return re.Data.Executed;
     }
 
     public async Task SetDispatchAsync(string prefix, string bizDate, string pointName, bool isDispatched)
@@ -48,13 +49,13 @@ public class PointDispatchProvider : IPointDispatchProvider,ISingletonDependency
         {
             SlidingExpiration = TimeSpan.FromDays(7)
         });
-        await _clusterClient.GetGrain<IPointDailyDispatchGrain>(id).SavePointDailyDispatch(new PointDailyDispatchGrainDto
-        {
-            Id = id,
-            BizDate = bizDate,
-            CreateTime = DateTime.UtcNow,
-            Executed = isDispatched
-        });
+        // await _clusterClient.GetGrain<IPointDailyDispatchGrain>(id).SavePointDailyDispatch(new PointDailyDispatchGrainDto
+        // {
+        //     Id = id,
+        //     BizDate = bizDate,
+        //     CreateTime = DateTime.UtcNow,
+        //     Executed = isDispatched
+        // });
         
     }
 
