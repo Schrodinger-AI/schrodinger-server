@@ -174,6 +174,10 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         };
 
         var res = await _awakenLiquidityProvider.GetLiquidityRecordsAsync(request);
+        _logger.LogInformation("PointAccumulateForSGR11Worker GetLiquidityRecordsAsync request: {result}, result: {record}", 
+            JsonConvert.SerializeObject(request), JsonConvert.SerializeObject(res));
+        
+        
         var validRecord = res.Where(x => x.Type == "MINT" || x.Type == "BURN").ToList();
         validRecord.ForEach(x =>
         {
