@@ -133,7 +133,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         var chainIds = _workerOptionsMonitor.CurrentValue.ChainIds;
         foreach (var chainId in chainIds)
         {
-            await GenerateSnapshotAsync(chainId, bizDate, pointName, indexList.IndexOf(curIndex));
+            await GenerateSnapshotAsync(chainId, bizDate, pointName, indexList.IndexOf(curIndex), true);
         }
 
         _logger.LogInformation("PointAccumulateForSGR11Worker end...");
@@ -144,7 +144,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         var chainIds = _workerOptionsMonitor.CurrentValue.ChainIds;
         foreach (var chainId in chainIds)
         {
-            await GenerateSnapshotAsync(chainId, bizDate, pointName, 1);
+            await GenerateSnapshotAsync(chainId, bizDate, pointName, 1, false);
         }
 
         _logger.LogInformation("PointAccumulateForSGR11Worker SGR11SnapshotForOnceAsync date:{date} end...", 
@@ -152,15 +152,23 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     }
 
 
-    private async Task GenerateSnapshotAsync(string chainId, string bizDate, string pointName, int snapshotIndex)
+    private async Task GenerateSnapshotAsync(string chainId, string bizDate, string pointName, int snapshotIndex, bool isCurrent)
     {
+        var now = DateTime.UtcNow;
+        var ts = TimeHelper.GetTimeStampInMilliseconds();
+        if (!isCurrent)
+        {
+            var backThen = DateTime.ParseExact(bizDate, "yyyyMMdd", null);
+            ts = new DateTimeOffset(backThen).ToUnixTimeMilliseconds();
+        }
+        
         var request = new GetAwakenLiquidityRecordDto
         {
             SkipCount = 0,
             MaxResultCount = MaxResultCount,
             ChainId = chainId,
             Pair = _pointTradeOptions.CurrentValue.AwakenPoolId,
-            TimestampMax = TimeHelper.GetTimeStampInMilliseconds()
+            TimestampMax = ts
         };
 
         var res = await _awakenLiquidityProvider.GetLiquidityRecordsAsync(request);
@@ -175,8 +183,6 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                 (x.Token0Amount, x.Token1Amount) = (x.Token1Amount, x.Token0Amount);
             }
         });
-        
-        var now = DateTime.UtcNow;
         
         var snapshots = res.GroupBy(snapshot => snapshot.Address).Select(group => new AwakenLiquiditySnapshotIndex
             {
