@@ -141,6 +141,8 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     
     private async Task SGR11SnapshotForOnceAsync(string bizDate, string pointName)
     {
+        _logger.LogInformation("PointAccumulateForSGR11Worker SGR11SnapshotForOnceAsync date:{date} begin...", 
+            bizDate);
         var chainIds = _workerOptionsMonitor.CurrentValue.ChainIds;
         foreach (var chainId in chainIds)
         {
