@@ -114,12 +114,13 @@ public class SyncHolderBalanceWorker :  AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
-        var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + TimeHelper.GetUtcDaySeconds());
-        if (dateTime == null)
-        {
-            _logger.LogInformation("UniswapPriceSnapshotWorker has not executed today.");
-            return;
-        }
+        // var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + TimeHelper.GetUtcDaySeconds());
+        // if (dateTime == null)
+        // {
+        //     _logger.LogInformation("UniswapPriceSnapshotWorker has not executed today.");
+        //     return;
+        // }
+        
         var chainIds = _workerOptionsMonitor.CurrentValue.ChainIds;
         foreach (var chainId in chainIds)
         {
