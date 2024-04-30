@@ -77,28 +77,29 @@ public class SyncHolderBalanceWorker :  AsyncPeriodicBackgroundWorkerBase
             return;
         }
         //specify the point name to execute job
-        var txPointNames = _workerOptionsMonitor.CurrentValue.TxPointNames;
-        foreach (var pointName in txPointNames)
+        // var txPointNames = _workerOptionsMonitor.CurrentValue.TxPointNames;
+        
+        var pointName = _workerOptionsMonitor.CurrentValue.GetWorkerPointName(_lockKey);
+        
+        var bizDateList = _workerOptionsMonitor.CurrentValue.GetWorkerBizDateList(_lockKey);
+        if (!bizDateList.IsNullOrEmpty())
         {
-            var bizDateList = _workerOptionsMonitor.CurrentValue.GetWorkerBizDateList(_lockKey);
-            if (!bizDateList.IsNullOrEmpty())
+            foreach (var bizDate in bizDateList)
             {
-                foreach (var bizDate in bizDateList)
-                {
-                    await DoSyncHolderBalance(bizDate, pointName);
-                }
-            }
-            else
-            {
-                var bizDate = _workerOptionsMonitor.CurrentValue.GetWorkerBizDate(_lockKey);
-                if (bizDate.IsNullOrEmpty())
-                {
-                    bizDate = DateTime.UtcNow.AddDays(-1).ToString(TimeHelper.Pattern);
-                }
-
                 await DoSyncHolderBalance(bizDate, pointName);
             }
         }
+        else
+        {
+            var bizDate = _workerOptionsMonitor.CurrentValue.GetWorkerBizDate(_lockKey);
+            if (bizDate.IsNullOrEmpty())
+            {
+                bizDate = DateTime.UtcNow.AddDays(-1).ToString(TimeHelper.Pattern);
+            }
+
+            await DoSyncHolderBalance(bizDate, pointName);
+        }   
+        
         _logger.LogInformation("SyncHolderBalanceWorker end...");
     }
     
@@ -113,12 +114,13 @@ public class SyncHolderBalanceWorker :  AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
-        var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + TimeHelper.GetUtcDaySeconds());
-        if (dateTime == null)
-        {
-            _logger.LogInformation("UniswapPriceSnapshotWorker has not executed today.");
-            return;
-        }
+        // var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + TimeHelper.GetUtcDaySeconds());
+        // if (dateTime == null)
+        // {
+        //     _logger.LogInformation("UniswapPriceSnapshotWorker has not executed today.");
+        //     return;
+        // }
+        
         var chainIds = _workerOptionsMonitor.CurrentValue.ChainIds;
         foreach (var chainId in chainIds)
         {
@@ -140,7 +142,7 @@ public class SyncHolderBalanceWorker :  AsyncPeriodicBackgroundWorkerBase
         do
         {
             dailyChanges =
-                await _holderBalanceProvider.GetHolderDailyChangeListAsync(chainId, bizDate, skipCount, MaxResultCount);
+                await _holderBalanceProvider.GetHolderDailyChangeListAsync(chainId, bizDate, skipCount, MaxResultCount, _pointTradeOptions.CurrentValue.BaseCoin);
             _logger.LogInformation(
                 "GetHolderDailyChangeList chainId:{chainId} skipCount: {skipCount} bizDate:{bizDate} count: {count}",
                 chainId, skipCount,bizDate , dailyChanges?.Count);
@@ -207,6 +209,9 @@ public class SyncHolderBalanceWorker :  AsyncPeriodicBackgroundWorkerBase
         {
             holderBalanceIndices = await _holderBalanceProvider.GetPreHolderBalanceListAsync(chainId, bizDate,
                 skipCount, MaxResultCount);
+            _logger.LogInformation(
+                "GetHolderDailyChangeList before  chainId:{chainId} skipCount: {skipCount} bizDate:{bizDate} count: {count}",
+                chainId, skipCount,bizDate , holderBalanceIndices?.Count);
             var  realHolderBalanceIndices = holderBalanceIndices
                 .Where(t => !_pointTradeOptions.CurrentValue.BlackPointAddressList.Contains(t.Address)).ToList();
             if (realHolderBalanceIndices.IsNullOrEmpty())

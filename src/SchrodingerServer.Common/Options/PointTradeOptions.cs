@@ -22,6 +22,10 @@ public class PointTradeOptions
     {
         return PointMapping.TryGetValue(pointName, out var pointInfo) ? pointInfo.ActionName : null;
     }
+    
+    public int[] IndexList { get; set; }
+    
+    public string AwakenPoolId { get; set; }
 }
 
 public class ChainInfo

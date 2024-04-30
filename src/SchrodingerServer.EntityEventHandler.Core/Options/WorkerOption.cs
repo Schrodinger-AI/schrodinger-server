@@ -7,6 +7,8 @@ public class WorkerOptions
 {
     public const string DefaultCron = "0 0/3 * * * ?";
 
+    public bool AlwaysCheck { get; set; } = false;
+        
     public string[] ChainIds { get; set; } = System.Array.Empty<string>();
     
     public string BizDate { get; set; }
@@ -39,6 +41,12 @@ public class WorkerOptions
     {
         return Workers.TryGetValue(workerName, out var worker) && worker.OpenSwitch;
     }
+    
+    public string GetWorkerPointName(string workerName)
+    {
+        var pointName = Workers.TryGetValue(workerName, out var worker) ? worker.PointName : "";
+        return pointName;
+    }
 }
 
 
@@ -53,4 +61,5 @@ public class Worker
     public List<string> BizDateList { get; set; }
 
     public bool OpenSwitch { get; set; } = false;
+    public string PointName { get; set; }
 }

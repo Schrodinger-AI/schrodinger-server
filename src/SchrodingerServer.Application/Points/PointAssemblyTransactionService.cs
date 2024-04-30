@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Nest;
 using Orleans;
 using SchrodingerServer.Common;
 using SchrodingerServer.Grains.Grain.Points;
@@ -43,68 +44,59 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
 
     public async Task AssembleAsync(string chainId, string bizDate, string pointName)
     {
-        var skipCount = 0;
-        List<PointDailyRecordIndex> pointDailyRecords;
-        do
+        var pointDailyRecords = await _pointDailyRecordProvider.GetAllDailyRecordIndex(chainId, bizDate, pointName);
+        _logger.LogInformation(
+            "GetPointDailyRecords chainId:{chainId} bizDate: {bizDate} pointName: {pointName} count: {count}",
+            chainId, bizDate, pointName, pointDailyRecords?.Count);
+       
+        if (pointDailyRecords.IsNullOrEmpty())
         {
-            pointDailyRecords = await _pointDailyRecordProvider.GetPointDailyRecordsAsync(chainId, bizDate, pointName, skipCount);
-            _logger.LogInformation(
-                "GetPointDailyRecords chainId:{chainId} bizDate: {bizDate} pointName: {pointName} skipCount: {skipCount} count: {count}",
-                chainId, bizDate, pointName, skipCount, pointDailyRecords?.Count);
-            if (pointDailyRecords.IsNullOrEmpty())
-            {
-                break;
-            }
+            return;
+        }
 
-            var assemblyDict = pointDailyRecords.GroupBy(balance => balance.PointName)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group.ToList()
-                );
+        var assemblyDict = pointDailyRecords.GroupBy(balance => balance.PointName)
+            .ToDictionary(
+                group => group.Key,
+                group => group.ToList()
+            );
             
-            foreach (var (txPointName, records) in assemblyDict)
-            {
-                //Every pointName，Split batches to send transactions
-                await HandlePointRecords(chainId, bizDate, txPointName, records);
-            }
-
-            skipCount += pointDailyRecords.Count;
-        } while (!pointDailyRecords.IsNullOrEmpty());
+        foreach (var (txPointName, records) in assemblyDict)
+        {
+            //Every pointName，Split batches to send transactions
+            await HandlePointRecords(chainId, bizDate, txPointName, records);
+        }
     }
-
+    
     public async Task SendAsync(string chainId)
     {
-        var skipCount = 0;
-        List<PointDailyRecordIndex> pointDailyRecords;
-        do
+        var pointDailyRecords = await _pointDailyRecordProvider.GetPendingDailyRecordIndex(chainId);
+        _logger.LogInformation(
+            "GetPendingPointDailyRecordsAsync chainId:{chainId}  count: {count}", chainId, pointDailyRecords?.Count);
+        if (pointDailyRecords.IsNullOrEmpty())
         {
-            pointDailyRecords = await _pointDailyRecordProvider.GetPendingPointDailyRecordsAsync(chainId, skipCount);
-            _logger.LogInformation(
-                "GetPendingPointDailyRecordsAsync chainId:{chainId} skipCount: {skipCount} count: {count}",
-                chainId, skipCount, pointDailyRecords?.Count);
-            if (pointDailyRecords.IsNullOrEmpty())
-            {
-                break;
-            }
+            return;
+        }
 
-            var bizIds = pointDailyRecords.Select(record => record.BizId).ToHashSet();
+        var bizIds = pointDailyRecords.Select(record => record.BizId).ToHashSet();
 
-            foreach (var bizId in bizIds)
-            {
-                await HandleSendPointRecord(bizId);
-            }
-
-            skipCount += pointDailyRecords.Count;
-        } while (!pointDailyRecords.IsNullOrEmpty());
+        foreach (var bizId in bizIds)
+        {
+            await HandleSendPointRecord(bizId);
+        }
     }
 
     private async Task HandlePointRecords(string chainId, string bizDate, string pointName, List<PointDailyRecordIndex> records)
     {
+        _logger.LogInformation(
+            "HandlePointRecords begin chainId:{chainId}  count: {count}", chainId,  records.Count);
         var batchList = SplitList(records, _pointTradeOptions.CurrentValue.MaxBatchSize);
+        _logger.LogInformation("SplitList success count: {count}",  batchList.Count);
 
         foreach (var tradeList in batchList)
         {
             var bizId = IdGenerateHelper.GetPointBizId(chainId, bizDate, pointName, Guid.NewGuid().ToString());
+            _logger.LogInformation(
+                "Prepare to AssemblechainId:{chainId}  count: {count}  bizId: {bidId}", chainId,  tradeList.Count, bizId);
             try
             {
                 var pointSettleDto = PointSettleDto.Of(chainId, pointName, bizId, tradeList);
@@ -125,10 +117,14 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
                     string.Join(",", tradeList.Select(item => item.Id)));
             }
         }
+        
+        _logger.LogInformation("HandlePointRecords finish");
     }
     
     private async Task HandleSendPointRecord(string bizId)
     {
+        _logger.LogInformation(
+            "HandleSendPointRecord begin bizId:{bizId}", bizId);
         try
         {
             var pointAssemblyTransactionGrain = _clusterClient.GetGrain<IPointAssemblyTransactionGrain>(bizId);
@@ -143,6 +139,9 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
             await _pointSettleService.BatchSettleAsync(settleDto);
             
             await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(settleDto, PointRecordStatus.Success.ToString());
+            
+            _logger.LogInformation(
+                "HandleSendPointRecord finish bizId:{bizId}", bizId);
         }
         catch (Exception e)
         {

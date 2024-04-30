@@ -52,6 +52,10 @@ namespace SchrodingerServer.Common.GraphQL
                             client = new GraphQLHttpClient(_graphQlClientOptions.PointPlatformConfiguration,
                                 new NewtonsoftJsonSerializer());
                             break;
+                        case GraphQLClientEnum.AwakenClient:
+                            client = new GraphQLHttpClient(_graphQlClientOptions.AwakenConfiguration,
+                                new NewtonsoftJsonSerializer());
+                            break;
                     }
 
                     _clientDic[clientName] = client;
