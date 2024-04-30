@@ -201,9 +201,17 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             }
         });
         
-        var snapshots = res.GroupBy(snapshot => snapshot.Address).Select(group => new AwakenLiquiditySnapshotIndex
+        var snapshots = res.GroupBy(snapshot => snapshot.Address).Select(group =>
+        {
+            string snapshotId = IdGenerateHelper.GetId(group.Key, now.ToString("yyyy-MM-dd HH:mm"));
+            if (!isCurrent)
             {
-                Id = IdGenerateHelper.GetId(group.Key, now.ToString("yyyy-MM-dd HH:mm")),
+                snapshotId = IdGenerateHelper.GetId(group.Key, bizDate);
+            }   
+            
+            return new AwakenLiquiditySnapshotIndex
+            {
+                Id = snapshotId,
                 Address = group.Key,
                 Token0Amount = group.Sum(item => item.Token0Amount),
                 Token1Amount = group.Sum(item => item.Token1Amount),
@@ -211,7 +219,8 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                 Token1Name = ELF,
                 CreateTime = now,
                 BizDate = bizDate
-            }).ToList();
+            };
+        }).ToList();
         _logger.LogInformation("PointAccumulateForSGR11Worker  liquidity address record counts: {cnt}", snapshots.Count);
 
         var validSnapshots = snapshots.Where(x => x.Token0Amount >= 0 && x.Token1Amount >= 0).ToList();
