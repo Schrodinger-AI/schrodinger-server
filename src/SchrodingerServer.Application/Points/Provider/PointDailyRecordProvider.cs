@@ -2,10 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AElf.Indexing.Elasticsearch;
+using GraphQL;
 using Microsoft.Extensions.Logging;
 using Nest;
 using Orleans;
 using SchrodingerServer.Common;
+using SchrodingerServer.Common.GraphQL;
+using SchrodingerServer.Dto;
 using SchrodingerServer.Grains.Grain.Points;
 using SchrodingerServer.Users.Dto;
 using SchrodingerServer.Users.Eto;
@@ -28,6 +31,8 @@ public interface IPointDailyRecordProvider
     Task<List<PointDailyRecordIndex>> GetAllDailyRecordIndex(string chainId, string bizDate, string pointName);
     
     Task<List<PointDailyRecordIndex>> GetPendingDailyRecordIndex(string chainId);
+    
+    Task<List<PointsDetailDto>> GetPointsRecordByNameAsync(string pointsName);
 }
 
 public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDependency
@@ -37,9 +42,12 @@ public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDep
     private readonly IClusterClient _clusterClient;
     private readonly IDistributedEventBus _distributedEventBus;
     private readonly IObjectMapper _objectMapper;
+    private readonly IGraphQLClientFactory _graphQlClientFactory;
 
     public PointDailyRecordProvider(INESTRepository<PointDailyRecordIndex, string> pointDailyRecordIndexRepository, 
-        ILogger<PointDailyRecordProvider> logger, IClusterClient clusterClient, 
+        ILogger<PointDailyRecordProvider> logger, 
+        IClusterClient clusterClient, 
+        IGraphQLClientFactory graphQlClientFactory,
         IDistributedEventBus distributedEventBus, IObjectMapper objectMapper)
     {
         _pointDailyRecordIndexRepository = pointDailyRecordIndexRepository;
@@ -47,6 +55,7 @@ public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDep
         _clusterClient = clusterClient;
         _distributedEventBus = distributedEventBus;
         _objectMapper = objectMapper;
+        _graphQlClientFactory = graphQlClientFactory;
     }
 
     public async Task<List<PointDailyRecordIndex>> GetPointDailyRecordsAsync(string chainId, string bizDate, string pointName,
@@ -205,5 +214,40 @@ public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDep
         } while (!list.IsNullOrEmpty());
 
         return res;
+    }
+    
+    
+    public async Task<List<PointsDetailDto>> GetPointsRecordByNameAsync(
+        string pointsName)
+    {
+        var indexerResult = await _graphQlClientFactory.GetClient(GraphQLClientEnum.PointPlatform).SendQueryAsync<PointsDetailIndexerQueryDto>(new GraphQLRequest
+        {
+            Query =
+                @"query($dappId:String!, $pointsName:String!, $address:String!){
+                    getPointsRecordByName(input: {dappId:$dappId, pointsName:$pointsName, address:$address}){
+                        totalRecordCount,
+                        data{
+                        id,
+                        address,
+                        domain,
+                        role,
+                        dappId,
+    					pointsName,
+    					actionName,
+    					amount,
+    					createTime,
+    					updateTime
+                    }
+                }
+            }",
+            Variables = new
+            {
+                dappId = string.Empty,
+                address = string.Empty,
+                pointsName = pointsName
+            }
+        });
+
+        return indexerResult.Data.GetPointsRecordByName.Data;
     }
 }
