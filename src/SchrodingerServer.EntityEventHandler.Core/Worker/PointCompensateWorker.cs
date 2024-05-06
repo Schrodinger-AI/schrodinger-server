@@ -20,7 +20,7 @@ namespace SchrodingerServer.EntityEventHandler.Core.Worker;
 
 public class PointCompensateWorker : AsyncPeriodicBackgroundWorkerBase
 {
-    private readonly ILogger<PointAccumulateForSGR11Worker> _logger;
+    private readonly ILogger<PointCompensateWorker> _logger;
     private readonly IOptionsMonitor<WorkerOptions> _workerOptionsMonitor;
     private readonly IPointDispatchProvider _pointDispatchProvider;
 
@@ -34,7 +34,7 @@ public class PointCompensateWorker : AsyncPeriodicBackgroundWorkerBase
     public PointCompensateWorker(
         AbpAsyncTimer timer,
         IServiceScopeFactory serviceScopeFactory,
-        ILogger<PointAccumulateForSGR11Worker> logger,
+        ILogger<PointCompensateWorker> logger,
         IOptionsMonitor<WorkerOptions> workerOptionsMonitor,
         IPointDispatchProvider pointDispatchProvider,
         IAbpDistributedLock distributedLock,
@@ -67,7 +67,7 @@ public class PointCompensateWorker : AsyncPeriodicBackgroundWorkerBase
         var isExecuted = await _pointDispatchProvider.GetDispatchAsync(PointDispatchConstants.SYNC_COMPENSATE_PREFIX , bizDate, pointName);
         if (isExecuted)
         {
-            _logger.LogInformation("PointAccumulateForSGR9Worker has been executed for bizDate: {0} pointName:{1}", bizDate, pointName);
+            _logger.LogInformation("PointCompensateWorker has been executed for bizDate: {0} pointName:{1}", bizDate, pointName);
             return;
         }
         
