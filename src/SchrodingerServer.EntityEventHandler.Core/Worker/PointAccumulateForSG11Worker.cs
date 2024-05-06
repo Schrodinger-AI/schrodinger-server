@@ -223,7 +223,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         }).ToList();
         _logger.LogInformation("PointAccumulateForSGR11Worker  liquidity address record counts: {cnt}", snapshots.Count);
 
-        var validSnapshots = snapshots.Where(x => x.Token0Amount >= 0 && x.Token1Amount >= 0).ToList();
+        var validSnapshots = snapshots.Where(x => x.Token0Amount >= 0 || x.Token1Amount >= 0).ToList();
         
         _logger.LogInformation("PointAccumulateForSGR11Worker  valid record counts: {cnt}", validSnapshots.Count);
         await _pointSnapshotIndexRepository.BulkAddOrUpdateAsync(validSnapshots);
@@ -281,8 +281,13 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                 }
                 
                 var id = IdGenerateHelper.GetId(chainId, bizDate, pointName, snapshot.Address);
-                var pointAmount = (snapshot.Token0Amount * sgrPrice + snapshot.Token1Amount * elfPrice) * 99 /
-                                  100000000;
+                var pointAmount = (snapshot.Token0Amount * sgrPrice + snapshot.Token1Amount * elfPrice) * 99;
+                if (pointAmount <= 0)
+                {
+                    _logger.LogInformation("PointAccumulateForSGR11Worker Liquidity Has No Value, address: {address}", snapshot.Address);
+                    continue;
+                }
+                
                 var input = new PointDailyRecordGrainDto()
                 {
                     ChainId = chainId,
@@ -316,7 +321,6 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                     ChainId = chainId,
                     PointAmount = pointAmount
                 };
-                
                 
                 await  _distributedEventBus.PublishAsync(pointDailyRecordEto);
             }
@@ -365,7 +369,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         }).ToList();
         _logger.LogInformation("PointAccumulateForSGR11Worker get snapshot in ts: {ts} counts: {cnt}", milliseconds, snapshots.Count);
 
-        var validSnapshots = snapshots.Where(x => x.Token0Amount >= 0 && x.Token1Amount >= 0).ToList();
+        var validSnapshots = snapshots.Where(x => x.Token0Amount >= 0 || x.Token1Amount >= 0).ToList();
         _logger.LogInformation("PointAccumulateForSGR11Worker get valid snapshot in ts: {ts} counts: {cnt}", milliseconds, snapshots.Count);
         var address = validSnapshots.Select(x => x.Address).ToList();
         return address;
