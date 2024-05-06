@@ -112,13 +112,12 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
-        var priceDate = GetPriceBizDate(bizDate);
-        var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + priceDate);
-        if (dateTime == null)
-        {
-            _logger.LogInformation("UniswapPriceSnapshotWorker has not executed today.");
-            return;
-        }
+        // var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + TimeHelper.GetUtcDaySeconds());
+        // if (dateTime == null)
+        // {
+        //     _logger.LogInformation("UniswapPriceSnapshotWorker has not executed today.");
+        //     return;
+        // }
         
         DateTime now = DateTime.Now;
         int curIndex = now.Hour * 6 + now.Minute / 10;
