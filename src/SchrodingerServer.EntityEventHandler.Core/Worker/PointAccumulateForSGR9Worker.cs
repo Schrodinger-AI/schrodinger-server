@@ -223,16 +223,24 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
                 Balance = (long)group.Sum(item => item.Amount)/2,
                 Symbol = baseSymbol,
                 Date = bizDate
-            });
+            }).ToList();
+            _logger.LogInformation("PointAccumulateForSGR9Worker  snapshot by address counts: {cnt}", snapshotByAddress.Count);
             
-            _logger.LogInformation("PointAccumulateForSGR9Worker  snapshot by address counts: {cnt}", snapshotByAddress.Count());
+            
+            var  validSnapshots = snapshotByAddress
+                .Where(t => !_pointTradeOptions.CurrentValue.BlackPointAddressList.Contains(t.Address)).ToList();
+            if (validSnapshots.IsNullOrEmpty())
+            {
+                return;
+            }
+            
+            _logger.LogInformation("PointAccumulateForSGR9Worker  valid snapshot counts: {cnt}", validSnapshots.Count);
             
             var symbols = new List<string> { baseSymbol };
             var symbolPriceDict = await _symbolDayPriceProvider.GetSymbolPricesAsync(priceBizDate, symbols);
             var symbolPrice = DecimalHelper.GetValueFromDict(symbolPriceDict, baseSymbol, baseSymbol);
-            // var symbolPrice = (decimal)2.2;
             
-            foreach (var snapshot in snapshotByAddress)
+            foreach (var snapshot in validSnapshots)
             {
                 var dayBefore = TimeHelper.GetDateStrAddDays(bizDate, -1);
                 var excludeDate = new List<string> { dayBefore, bizDate };
