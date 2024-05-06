@@ -112,7 +112,8 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
-        var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + TimeHelper.GetUtcDaySeconds());
+        var priceDate = GetPriceBizDate(bizDate);
+        var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + priceDate);
         if (dateTime == null)
         {
             _logger.LogInformation("UniswapPriceSnapshotWorker has not executed today.");
@@ -191,6 +192,8 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             {
                 continue;
             }
+            
+            _logger.LogInformation("PointAccumulateForSGR9Worker realHolders cnt:{total}", realHolders.Count);
 
             var snapshots = _objectMapper.Map<List<SchrodingerIndexerDto>, List<PointsSnapshotIndex>>(realHolders);
             
@@ -223,24 +226,15 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
                 Balance = (long)group.Sum(item => item.Amount)/2,
                 Symbol = baseSymbol,
                 Date = bizDate
-            }).ToList();
-            _logger.LogInformation("PointAccumulateForSGR9Worker  snapshot by address counts: {cnt}", snapshotByAddress.Count);
+            });
             
-            
-            var  validSnapshots = snapshotByAddress
-                .Where(t => !_pointTradeOptions.CurrentValue.BlackPointAddressList.Contains(t.Address)).ToList();
-            if (validSnapshots.IsNullOrEmpty())
-            {
-                return;
-            }
-            
-            _logger.LogInformation("PointAccumulateForSGR9Worker  valid snapshot counts: {cnt}", validSnapshots.Count);
+            _logger.LogInformation("PointAccumulateForSGR9Worker  snapshot by address counts: {cnt}", snapshotByAddress.Count());
             
             var symbols = new List<string> { baseSymbol };
             var symbolPriceDict = await _symbolDayPriceProvider.GetSymbolPricesAsync(priceBizDate, symbols);
             var symbolPrice = DecimalHelper.GetValueFromDict(symbolPriceDict, baseSymbol, baseSymbol);
             
-            foreach (var snapshot in validSnapshots)
+            foreach (var snapshot in snapshotByAddress)
             {
                 var dayBefore = TimeHelper.GetDateStrAddDays(bizDate, -1);
                 var excludeDate = new List<string> { dayBefore, bizDate };
