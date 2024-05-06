@@ -112,7 +112,8 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
-        var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + TimeHelper.GetUtcDaySeconds());
+        var priceDate = GetPriceBizDate(bizDate);
+        var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + priceDate);
         if (dateTime == null)
         {
             _logger.LogInformation("UniswapPriceSnapshotWorker has not executed today.");
@@ -191,6 +192,8 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             {
                 continue;
             }
+            
+            _logger.LogInformation("PointAccumulateForSGR9Worker realHolders cnt:{total}", realHolders.Count);
 
             var snapshots = _objectMapper.Map<List<SchrodingerIndexerDto>, List<PointsSnapshotIndex>>(realHolders);
             
