@@ -126,6 +126,7 @@ public class ContractProvider : IContractProvider, ISingletonDependency
         string toAddress, string methodName, ByteString param)
     {
         var client = Client(chainId);
+        _logger.LogInformation("GetClient: client: {client} , id:{id}, clients: {clients}", client, chainId, _clients);
         var status = await client.GetChainStatusAsync();
         var height = status.BestChainHeight;
         var blockHash = status.BestChainHash;
