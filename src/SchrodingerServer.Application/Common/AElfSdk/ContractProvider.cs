@@ -131,6 +131,7 @@ public class ContractProvider : IContractProvider, ISingletonDependency
         var blockHash = status.BestChainHash;
 
         // create raw transaction
+        _logger.LogInformation("CreateTransactionAsync, status: {status}", JsonConvert.SerializeObject(status));
         var transaction = new Transaction
         {
             From = Address.FromPublicKey(ByteArrayHelper.HexStringToByteArray(senderPublicKey)),
@@ -141,9 +142,14 @@ public class ContractProvider : IContractProvider, ISingletonDependency
             RefBlockPrefix = ByteString.CopyFrom(Hash.LoadFromHex(blockHash).Value.Take(4).ToArray())
         };
         
+        _logger.LogInformation("CreateTransactionFinish, transaction: {transaction}", JsonConvert.SerializeObject(transaction));
+
+        
         transaction.Signature = senderPublicKey == _callTxSender.PublicKey.ToHex() 
             ? _callTxSender.GetSignatureWith(transaction.GetHash().ToByteArray()) 
             : ByteString.CopyFrom(ByteArrayHelper.HexStringToByteArray(await _secretProvider.GetSignatureAsync(senderPublicKey, transaction)));
+        _logger.LogInformation("CreateSignature, signature: {signature}", transaction.Signature.ToString());
+
 
         return (transaction.GetHash(), transaction);
     }
