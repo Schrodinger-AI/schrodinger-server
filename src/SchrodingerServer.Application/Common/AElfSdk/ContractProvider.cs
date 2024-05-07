@@ -131,7 +131,8 @@ public class ContractProvider : IContractProvider, ISingletonDependency
         var blockHash = status.BestChainHash;
 
         // create raw transaction
-        _logger.LogInformation("CreateTransactionAsync, status: {status}", JsonConvert.SerializeObject(status));
+        _logger.LogInformation("CreateTransactionAsync, status: {status}, publickey:{pk}, toaddress:{address}, methodName:{methodName}", 
+            JsonConvert.SerializeObject(status), senderPublicKey, toAddress, methodName);
         var transaction = new Transaction
         {
             From = Address.FromPublicKey(ByteArrayHelper.HexStringToByteArray(senderPublicKey)),
