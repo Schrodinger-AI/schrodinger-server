@@ -59,7 +59,8 @@ public class GateIoCirculationService : AbpRedisCache, IGateIoCirculationService
 
             var result = long.Parse(_sgrCirculationOptions.TotalSupply) -
                          long.Parse(ethApiResponse.Result) / (long)Math.Pow(10, 8) -
-                         long.Parse(_sgrCirculationOptions.Surplus);
+                         long.Parse(_sgrCirculationOptions.Surplus) - 
+                         long.Parse(_sgrCirculationOptions.AelfSideChainBalance);
 
             await RedisDatabase.StringSetAsync(SgrCirculationRedisKey, _serializer.Serialize(result),
                 new TimeSpan(0, 0, _sgrCirculationOptions.CacheExpiredTtl));
