@@ -10,4 +10,5 @@ public class SgrCirculationOptions
     
     public string TotalSupply { get; set; }
     public string Surplus{ get; set; }
+    public  string AelfSideChainBalance { get; set; }
 }
