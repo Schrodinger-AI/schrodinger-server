@@ -22,7 +22,7 @@ namespace SchrodingerServer.Awaken.Provider;
 public interface IAwakenLiquidityProvider
 {
     Task<List<AwakenLiquidityRecordDto>> GetLiquidityRecordsAsync(GetAwakenLiquidityRecordDto dto);
-    Task<GetAwakenPriceDto> GetPriceAsync(string token1Symbol, string chainId, string feeRate);
+    Task<GetAwakenPriceDto> GetPriceAsync(string token0Symbol, string token1Symbol, string chainId, string feeRate);
 }
 
 public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDependency
@@ -110,7 +110,7 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
     }
     
     
-    public async Task<GetAwakenPriceDto> GetPriceAsync(string token1Symbol, string chainId, string feeRate)
+    public async Task<GetAwakenPriceDto> GetPriceAsync(string token0Symbol, string token1Symbol, string chainId, string feeRate)
     {
         try
         {
@@ -118,7 +118,7 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
                 "https://awaken.finance", AwakenPrice, null,
                 new Dictionary<string, string>()
                 {
-                    ["token0Symbol"] = "ELF",
+                    ["token0Symbol"] = token0Symbol,
                     ["token1Symbol"] = token1Symbol,
                     ["feeRate"] = feeRate,
                     ["chainId"] = chainId
