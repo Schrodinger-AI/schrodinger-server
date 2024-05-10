@@ -54,7 +54,7 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
     }
     
     
-    public async Task<long> GetUnreadCountAsync(GetUnreadMessageCountInput input)
+    public async Task<UnreadMessageCountDto> GetUnreadCountAsync(GetUnreadMessageCountInput input)
     {
         _logger.LogDebug("GetUnreadCountAsync, input: {address}", JsonConvert.SerializeObject(input));
         var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
@@ -83,7 +83,10 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
 
         var unreadIds = soldIdList.Where(x => !readIdList.Contains(x)).ToList();
         
-        return unreadIds.Count;
+        return new UnreadMessageCountDto()
+        {
+            Count = unreadIds.Count
+        };
     }
 
     public async Task<MessageListDto> GetMessageListAsync(GetMessageListInput input)

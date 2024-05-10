@@ -22,7 +22,7 @@ public class MessageController : AbpController
     }
     
     [HttpPost("unread-count")]
-    public async Task<long> GetSchrodingerCatList(GetUnreadMessageCountInput input)
+    public async Task<UnreadMessageCountDto> GetSchrodingerCatList(GetUnreadMessageCountInput input)
     {
         return await _messageApplicationService.GetUnreadCountAsync(input);
     }

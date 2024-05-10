@@ -5,7 +5,7 @@ namespace SchrodingerServer.Message;
 
 public interface IMessageApplicationService
 {
-    Task<long> GetUnreadCountAsync(GetUnreadMessageCountInput input);
+    Task<UnreadMessageCountDto> GetUnreadCountAsync(GetUnreadMessageCountInput input);
 
     Task<MessageListDto> GetMessageListAsync(GetMessageListInput input);
 }
