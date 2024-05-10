@@ -118,7 +118,7 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
                 {
                     skipCount = input.SkipCount, 
                     maxResultCount = input.MaxResultCount,
-                    filterSymbol = input.FilterSymbol,
+                    filterSymbol = "",
                     address = input.Address,
                     timestampMin = StartTimestamp,
                     chainId = input.ChainId
