@@ -377,19 +377,19 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     
     private async Task<decimal> GetELFPrice()
     {
-        var priceDto = await _awakenLiquidityProvider.GetPriceAsync(USDT, "tDVV", "0.0005");
+        var priceDto = await _awakenLiquidityProvider.GetPriceAsync(ELF, USDT, "tDVV", "0.0005");
         var price = priceDto.Items.FirstOrDefault().Price;
-        AssertHelper.IsTrue(price != null && price > 0, "SGR price is null or zero");
+        AssertHelper.IsTrue(price != null && price > 0, "ELF price is null or zero");
         return price;
     }
     
     
     private async Task<decimal> GetSGRPrice()
     {
-        var priceDto = await _awakenLiquidityProvider.GetPriceAsync(SGR, "tDVV", "0.03");
+        var priceDto = await _awakenLiquidityProvider.GetPriceAsync(SGR, ELF,"tDVV", "0.03");
         var price = priceDto.Items.FirstOrDefault().Price;
         AssertHelper.IsTrue(price != null && price > 0, "SGR price is null or zero");
-        return 1 / price;
+        return price;
     }
     
     private  async Task<List<AwakenLiquiditySnapshotIndex>> GetAllIndex(string bizDate, string pointName)

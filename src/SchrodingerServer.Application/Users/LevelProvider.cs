@@ -85,8 +85,8 @@ public class LevelProvider : ApplicationService, ILevelProvider
             var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
                 PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
                 {
-                    ["token0Symbol"] = "ELF",
-                    ["token1Symbol"] = "SGR-1",
+                    ["token0Symbol"] = "SGR-1",
+                    ["token1Symbol"] = "ELF",
                     ["feeRate"] = "0.03",
                     ["chainId"] = _levelOptions.CurrentValue.ChainId
                 });
@@ -96,7 +96,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
                 return null;
             }
 
-            price = (double)(resp.Data.Items?.First().ValueLocked0 / resp.Data.Items?.First().ValueLocked1);
+            price = (double)(resp.Data.Items?.First().ValueLocked1 / resp.Data.Items?.First().ValueLocked0);
         }
         catch (Exception e)
         {
