@@ -54,13 +54,13 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
     }
     
     
-    public async Task<long> GetUnreadCountAsync(string address)
+    public async Task<long> GetUnreadCountAsync(GetUnreadMessageCountInput input)
     {
-        _logger.LogDebug("GetUnreadCountAsync, address: {address}", address);
+        _logger.LogDebug("GetUnreadCountAsync, input: {address}", JsonConvert.SerializeObject(input));
         var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
         if (currentAddress.IsNullOrEmpty())
         {
-            currentAddress = address;
+            currentAddress = input.Address;
         }
         
         var chainId = _levelOptions.CurrentValue.ChainIdForReal;
