@@ -63,7 +63,7 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
             currentAddress = address;
         }
         
-        var chainId = _levelOptions.CurrentValue.ChainId;
+        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
         
         currentAddress = FullAddressHelper.ToFullAddress(currentAddress, chainId);
         var getSoldListInput = new GetSchrodingerSoldListInput()
@@ -95,7 +95,7 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
             currentAddress = input.Address;
         }
 
-        var chainId = _levelOptions.CurrentValue.ChainId;
+        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
 
         currentAddress = FullAddressHelper.ToFullAddress(currentAddress, chainId);
       
