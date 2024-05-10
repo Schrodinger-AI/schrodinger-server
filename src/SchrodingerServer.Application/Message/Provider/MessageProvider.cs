@@ -30,7 +30,7 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
     private readonly INESTRepository<ReadMessageIndex, string> _readMessageIndexRepository;
     private readonly IGraphQLClientFactory _graphQlClientFactory;
     private readonly ILogger<MessageProvider> _logger;
-    private readonly long StartTimestamp = 1711929600000;
+    private readonly long StartTimestamp = 1715338800000;
     
     
     public MessageProvider(
@@ -118,7 +118,7 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
                 {
                     skipCount = input.SkipCount, 
                     maxResultCount = input.MaxResultCount,
-                    filterSymbol = "",
+                    filterSymbol = input.FilterSymbol,
                     address = input.Address,
                     timestampMin = StartTimestamp,
                     chainId = input.ChainId
