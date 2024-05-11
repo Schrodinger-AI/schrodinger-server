@@ -6,4 +6,5 @@ public class GraphQLOptions
     public string ForestConfiguration { get; set; }
     public string PointPlatformConfiguration { get; set; }
     public string AwakenConfiguration { get; set; }
+    public string Uniswap { get; set; }
 }
