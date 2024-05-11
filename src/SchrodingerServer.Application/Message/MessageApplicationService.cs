@@ -165,6 +165,13 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
                 messageInfoList.Add(messageInfo);
                 continue;
             }
+
+            if (detail.Level.IsNullOrEmpty())
+            {
+                _logger.LogInformation("not rare cat: {detail}", JsonConvert.SerializeObject(detail));
+                messageInfoList.Add(messageInfo);
+                continue;
+            }
             
             var levelInfoDto = await _levelProvider.GetItemLevelDicAsync(detail.Rank, price);
             
