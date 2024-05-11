@@ -30,7 +30,7 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
     private readonly INESTRepository<ReadMessageIndex, string> _readMessageIndexRepository;
     private readonly IGraphQLClientFactory _graphQlClientFactory;
     private readonly ILogger<MessageProvider> _logger;
-    private readonly long StartTimestamp = 1715338800000;
+    private readonly long StartTimestamp = 1715414400000;
     
     
     public MessageProvider(
