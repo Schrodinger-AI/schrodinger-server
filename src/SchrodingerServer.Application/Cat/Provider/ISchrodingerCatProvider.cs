@@ -15,6 +15,8 @@ public interface ISchrodingerCatProvider
     Task<SchrodingerSymbolIndexerListDto> GetSchrodingerAllCatsListAsync(GetCatListInput input);
 
     Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync(GetCatDetailInput input);
+    
+    Task<CatRankDto> GetSchrodingerCatRankAsync(GetCatRankInput input);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -150,6 +152,43 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "GetSchrodingerAllCatsListAsync Indexer error");
             return new SchrodingerDetailDto();
+        }
+    }
+
+    public async Task<CatRankDto> GetSchrodingerCatRankAsync(GetCatRankInput input)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerCatQueryDto>(new GraphQLRequest
+            {
+                Query =
+                    @"query($chainId:String!, $symbol:String!){
+                    getSchrodingerRank(input: {chainId:$chainId, symbol:$symbol}){
+                        symbol,
+                        tokenName,
+                        inscriptionImageUri,
+                        amount,
+                        generation,
+                        grade,
+                        rank,
+                        rarity,
+                        star,
+                        level
+                }
+            }",
+                Variables = new
+                {
+                    chainId = input.ChainId ?? "",
+                    symbol = input.Symbol ?? ""
+                }
+            });
+
+            return indexerResult.GetSchrodingerRank;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getSchrodingerRank error");
+            return new CatRankDto();
         }
     }
 }
