@@ -24,6 +24,8 @@ public interface IUniswapLiquidityProvider
 
     double CalculateToken0Amount(string liquidity, double priceA, double priceB);
     double CalculateToken1Amount(string liquidity, double priceA, double priceB);
+    
+    Task<List<UniswapPositionSnapshotIndex>> GetAllSnapshotAsync(string bizDate);
 }
 
 public class UniswapLiquidityProvider : IUniswapLiquidityProvider, ISingletonDependency
@@ -51,7 +53,7 @@ public class UniswapLiquidityProvider : IUniswapLiquidityProvider, ISingletonDep
     public async Task<GetUniswapLiquidityDto> GetPositionsSnapshotAsync(DateTime snapshotTime)
     {
         var mustQuery = new List<Func<QueryContainerDescriptor<UniswapPositionSnapshotIndex>, QueryContainer>>();
-        mustQuery.Add(q => q.Terms(i => i.Field(f => f.SnapshotTime).Terms(snapshotTime)));
+        mustQuery.Add(q => q.Terms(i => i.Field(f => f.BizDate).Terms(snapshotTime)));
 
         QueryContainer Filter(QueryContainerDescriptor<UniswapPositionSnapshotIndex> f) =>
             f.Bool(b => b.Must(mustQuery));
@@ -229,5 +231,33 @@ public class UniswapLiquidityProvider : IUniswapLiquidityProvider, ISingletonDep
     private double PriceToSqrtp(double price)
     {
         return Math.Pow(price, 0.5) * Q96;
+    }
+
+    public async Task<List<UniswapPositionSnapshotIndex>> GetAllSnapshotAsync(string bizDate)
+    {
+        var res = new List<UniswapPositionSnapshotIndex>();
+        List<UniswapPositionSnapshotIndex> list;
+        var skipCount = 0;
+        var mustQuery = new List<Func<QueryContainerDescriptor<UniswapPositionSnapshotIndex>, QueryContainer>>();
+        
+        mustQuery.Add(q => q.Term(i
+            => i.Field(index => index.BizDate).Value(bizDate)));
+        
+        QueryContainer Filter(QueryContainerDescriptor<UniswapPositionSnapshotIndex> f) =>
+            f.Bool(b => b.Must(mustQuery));
+
+        do
+        {
+            list = (await _uniswapPositionSnapshotRepository.GetListAsync(filterFunc: Filter, skip: skipCount, limit: 10000)).Item2;
+            var count = list.Count;
+            res.AddRange(list);
+            if (list.IsNullOrEmpty() || count < 10000)
+            {
+                break;
+            }
+            skipCount += count;
+        } while (!list.IsNullOrEmpty());
+
+        return res;
     }
 }

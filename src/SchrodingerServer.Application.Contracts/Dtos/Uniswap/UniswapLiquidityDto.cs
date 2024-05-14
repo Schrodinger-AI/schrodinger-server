@@ -74,3 +74,18 @@ public class Position
         public string TickIdx { get; set; }
     }
 }
+
+public class ValidPosition
+{
+    public Position Position { get; set; }
+    public List<double> IntersectionPrices { get; set; }
+}
+
+
+public class PositionPointDto
+{
+    public decimal PointAmount { get; set; }
+    public string PositionOwner { get; set; }
+    public string BizDate { get; set; }
+    public string Positin { get; set; }
+}

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
-using AElf;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -20,6 +20,10 @@ public interface IUniswapLiquidityService
 {
     Task CreateSnapshotOfPool(string poolId, DateTime snapshotTime);
     Task<GetUniswapLiquidityDto> GetSnapshotAsync(GetUniswapLiquidityInput input);
+
+    Task CreateSnapshotForOnceAsync(string bizDate, string poolId);
+    Task<List<string>> GetValidPositionIdsAsync(string poolId, string bizDate);
+    Task CreateSnapshotAsync(string bizDate, string poolId);
 }
 
 public class UniswapLiquidityService : IUniswapLiquidityService, ISingletonDependency
@@ -100,8 +104,6 @@ public class UniswapLiquidityService : IUniswapLiquidityService, ISingletonDepen
                 CurrentPrice = pool.Token1Price,
                 PositionLowPrice = position.TickLower.Price0,
                 PositionHighPrice = position.TickUpper.Price0,
-                PositionValueUSD = value,
-                SnapshotTime = snapshotTime,
                 CreateTime = DateTime.UtcNow
             };
             snapshotIndexList.Add(snapshot);
@@ -110,17 +112,12 @@ public class UniswapLiquidityService : IUniswapLiquidityService, ISingletonDepen
         await _uniswapLiquidityProvider.AddPositionsSnapshotAsync(snapshotIndexList);
     }
     
-    
-    
-    public async Task CreateSnapshotForOnce(string bizDate, string poolId, string pointName)
+    public async Task CreateSnapshotForOnceAsync(string bizDate, string poolId)
     {
         var postisons = new List<Position>();
         
-        
         var datetime = DateTime.ParseExact(bizDate, "yyyyMMdd", null);
         var snapshotTs = new DateTimeOffset(datetime).ToUnixTimeSeconds();
-        
-        // var snapshotTs = ((DateTimeOffset)snapshotTime).ToUnixTimeSeconds();
 
         var blockNo = await _etherscanProvider.GetBlockNoByTimeAsync(snapshotTs);
         int blockNoInt = int.Parse(blockNo);
@@ -140,42 +137,54 @@ public class UniswapLiquidityService : IUniswapLiquidityService, ISingletonDepen
             return;
         }
         
-        var ts = snapshotTs;
-        
-        var poolDatas = await _uniswapLiquidityProvider.GetPoolDayDataAsync(poolId, ts);
-        if (poolDatas.PoolDayDatas.Count < 1)
-        {
-            _logger.LogError("empty Pool Data");
-            return;
-        } 
-
-        var poolData = poolDatas.PoolDayDatas[0];
-        _logger.LogDebug("pool day data {ts}", JsonConvert.SerializeObject(poolData));
-
-        var validPositions = postisons.Where(position => long.Parse(position.Liquidity) > 0 && IsPositionValid(poolData, position)).ToList();
-        _logger.LogDebug("valid position count: {cnt}", validPositions.Count);
-
         var poolDto = await _uniswapLiquidityProvider.GetPoolAsync(poolId, blockNoInt);
         var pool = poolDto.Pool;
         _logger.LogDebug("pool data {ts}", JsonConvert.SerializeObject(pool));
+
+        var validPositions = new List<ValidPosition>();
+
+        foreach (var position in postisons)
+        {
+            if (double.Parse(position.Liquidity) <= 0)
+            {
+                continue;
+            }
+            
+            var intersection = GetIntersectionPrices(pool, position);
+            if (intersection.Count < 2)
+            {
+                continue;
+            }
+
+            var validPosition = new ValidPosition
+            {
+                Position = position,
+                IntersectionPrices = intersection
+            };
+            
+            validPositions.Add(validPosition);
+
+        }
+        
+        _logger.LogDebug("valid position count: {cnt}", validPositions.Count);
         
         var snapshotIndexList = new List<UniswapPositionSnapshotIndex>();
-        foreach (var position in validPositions)
+        foreach (var validPosition in validPositions)
         {
-            var value = CalculatePositionValue(position, pool);
+            var value = CalculatePositionValueV2(validPosition, pool);
             var snapshot = new UniswapPositionSnapshotIndex()
             {   
-                Id = GetId(pool.Id, position.Id, bizDate),
+                Id = GetId(pool.Id, validPosition.Position.Id, bizDate),
                 PoolId = pool.Id,
                 Token0Symbol = pool.Token0.Symbol,
                 Token1Symbol = pool.Token1.Symbol,
-                PositionOwner = position.Owner,
-                PositionId = position.Id,
+                PositionOwner = validPosition.Position.Owner,
+                PositionId = validPosition.Position.Id,
                 CurrentPrice = pool.Token1Price,
-                PositionLowPrice = position.TickLower.Price0,
-                PositionHighPrice = position.TickUpper.Price0,
-                PositionValueUSD = value,
-                // SnapshotTime = snapshotTime,
+                PositionLowPrice = validPosition.Position.TickLower.Price0,
+                PositionHighPrice = validPosition.Position.TickUpper.Price0,
+                PointAmount = value.ToString(CultureInfo.InvariantCulture),
+                BizDate = bizDate,
                 CreateTime = DateTime.UtcNow
             };
             snapshotIndexList.Add(snapshot);
@@ -185,7 +194,89 @@ public class UniswapLiquidityService : IUniswapLiquidityService, ISingletonDepen
     }
     
     
+    public async Task CreateSnapshotAsync(string bizDate, string poolId)
+    {
+        var postisons = new List<Position>();
+        
+        var now = DateTime.UtcNow;
+        DateTime snapshotTime = now.AddMinutes(-5);  // calculate snapshot time 5 minutes earlier in case we don't have data
+        var snapshotTs = new DateTimeOffset(snapshotTime).ToUnixTimeSeconds();
 
+        var blockNo = await _etherscanProvider.GetBlockNoByTimeAsync(snapshotTs);
+        int blockNoInt = int.Parse(blockNo);
+        
+        var cnt = 0;
+        var offset = 0;
+        while (cnt == Step || offset == 0)
+        {
+            var next = await _uniswapLiquidityProvider.GetPositionsAsync(poolId, blockNoInt, offset, Step);
+            cnt = next.Positions.Count;
+            postisons.AddRange(next.Positions);
+            offset += Step;
+        } 
+        _logger.LogDebug("total position count: {cnt}", postisons.Count);
+        if (postisons.IsNullOrEmpty())
+        {
+            return;
+        }
+        
+        var poolDto = await _uniswapLiquidityProvider.GetPoolAsync(poolId, blockNoInt);
+        var pool = poolDto.Pool;
+        _logger.LogDebug("pool data {ts}", JsonConvert.SerializeObject(pool));
+
+        var validPositions = new List<ValidPosition>();
+
+        foreach (var position in postisons)
+        {
+            if (double.Parse(position.Liquidity) <= 0)
+            {
+                continue;
+            }
+            
+            var intersection = GetIntersectionPrices(pool, position);
+            if (intersection.Count < 2)
+            {
+                continue;
+            }
+
+            var validPosition = new ValidPosition
+            {
+                Position = position,
+                IntersectionPrices = intersection
+            };
+            
+            validPositions.Add(validPosition);
+
+        }
+        
+        _logger.LogDebug("valid position count: {cnt}", validPositions.Count);
+        
+        var snapshotIndexList = new List<UniswapPositionSnapshotIndex>();
+        foreach (var validPosition in validPositions)
+        {
+            var value = CalculatePositionValueV2(validPosition, pool);
+            var snapshot = new UniswapPositionSnapshotIndex()
+            {   
+                Id = GetId(pool.Id, validPosition.Position.Id, snapshotTs),
+                PoolId = pool.Id,
+                Token0Symbol = pool.Token0.Symbol,
+                Token1Symbol = pool.Token1.Symbol,
+                PositionOwner = validPosition.Position.Owner,
+                PositionId = validPosition.Position.Id,
+                CurrentPrice = pool.Token1Price,
+                PositionLowPrice = validPosition.Position.TickLower.Price0,
+                PositionHighPrice = validPosition.Position.TickUpper.Price0,
+                PointAmount = value.ToString(CultureInfo.InvariantCulture),
+                BizDate = bizDate,
+                CreateTime = DateTime.UtcNow
+            };
+            snapshotIndexList.Add(snapshot);
+        }
+
+        await _uniswapLiquidityProvider.AddPositionsSnapshotAsync(snapshotIndexList);
+    }
+    
+    
     public async Task<GetUniswapLiquidityDto> GetSnapshotAsync(GetUniswapLiquidityInput input)
     {
         
@@ -271,41 +362,38 @@ public class UniswapLiquidityService : IUniswapLiquidityService, ISingletonDepen
         return false;
     }
     
-    private bool IsPositionValidV2(PoolDayData poolDayData, Position position)
+    private List<double> GetIntersectionPrices(Pool pool, Position position)
     {
-        Console.WriteLine($"low: {_optionsMonitor.CurrentValue.LowerShift}");
-        Console.WriteLine($"upp: {_optionsMonitor.CurrentValue.UpperShift}");
-        var positionLow = decimal.Parse(position.TickLower.Price0)*(decimal)Math.Pow(10, UniswapConstants.SGRDecimal-UniswapConstants.USDTDecimal);
+        var positionLow = double.Parse(position.TickLower.Price0);
+        var positionHigh = double.Parse(position.TickUpper.Price0);
         
-        // the high price of full range positionHigh may be so large that parse to decimal could fail
-        decimal positionHigh;
-        try
-        {
-            positionHigh = decimal.Parse(position.TickUpper.Price0)*(decimal)Math.Pow(10, UniswapConstants.SGRDecimal-UniswapConstants.USDTDecimal);
-        }
-        catch (OverflowException ex)
-        {
-            positionHigh = decimal.MaxValue;
-        }
-
-        decimal poolLow;
-        decimal poolHigh;
-        
-        var currentPrice = decimal.Parse(poolDayData.Token1Price);
+        var currentPrice = double.Parse(pool.Token1Price)/Math.Pow(10, UniswapConstants.SGRDecimal-UniswapConstants.USDTDecimal);
         var currentValue = _optionsMonitor.CurrentValue;
-        poolHigh = currentPrice * (decimal)(1+currentValue.UpperShift);
-        poolLow = currentPrice * (decimal)(1-currentValue.LowerShift);
+        double targetHigh = currentPrice * (1+currentValue.UpperShift);
+        double targetLow = currentPrice * (1-currentValue.LowerShift);
         
-        _logger.LogDebug("poolLow: {poolLow}, poolHigh: {poolHigh}, positionLow: {positionLow}, positionHigh: {positionHigh}", 
-            poolLow, poolHigh, positionLow, positionHigh);
+        // var intersection = GetIntersectionPrices(targetLow, targetHigh, positionLow, positionHigh);
+        _logger.LogDebug("targetLow: {targetLow}, targetHigh: {targetHigh}, positionLow: {positionLow}, positionHigh: {positionHigh}", 
+            targetLow, targetHigh, positionLow, positionHigh);
         
-        if ((poolLow < positionHigh && poolHigh > positionHigh) || (poolLow < positionLow && poolHigh > positionLow) || 
-            (poolLow > positionLow && poolHigh < positionHigh))
+        var ret = new List<double>();
+
+        if (targetLow >= positionHigh || positionLow >= targetHigh)
         {
-            return true;
+            return ret;
         }
 
-        return false;
+        var intersectionLow = Math.Max(targetLow, positionLow);
+        var intersectionHigh = Math.Min(targetHigh, positionHigh);
+        
+        ret.Add(intersectionLow);
+
+        if (intersectionHigh != intersectionLow)
+        {
+            ret.Add(intersectionHigh);
+        }
+        
+        return ret;
     }
 
     private double CalculatePositionValue(Position position, Pool pool)
@@ -341,41 +429,117 @@ public class UniswapLiquidityService : IUniswapLiquidityService, ISingletonDepen
     }
     
     
-    private double CalculatePositionValueV2(Position position, Pool pool)
+    private double CalculatePositionValueV2(ValidPosition validPosition, Pool pool)
     {
-        var currentTickIdx = decimal.Parse(pool.Tick);
-        var positionLowTickIdx = decimal.Parse(position.TickLower.TickIdx);
-        var positionHighTickIdx = decimal.Parse(position.TickUpper.TickIdx);
+        var position = validPosition.Position;
+        var intersectionPrices = validPosition.IntersectionPrices;
+        
         var liquidity = position.Liquidity;
         double value;
+        
+        var positionLowPrice = double.Parse(position.TickLower.Price0);
+        var positionHighPrice = double.Parse(position.TickUpper.Price0);
 
-        var lowPrice = double.Parse(position.TickLower.Price0);
-        var highPrice = double.Parse(position.TickUpper.Price0);
-        var currentPrice = double.Parse(pool.Token1Price)/Math.Pow(10, UniswapConstants.SGRDecimal-UniswapConstants.USDTDecimal);
-        if (currentTickIdx < positionLowTickIdx)
+
+        var tokensAmountAtLowPrice = GetTokensAmountAtPrice(liquidity, positionLowPrice, positionHighPrice,intersectionPrices[0]);
+        var tokensAmountAtHighPrice = GetTokensAmountAtPrice(liquidity, positionLowPrice, positionHighPrice,intersectionPrices[1]);
+
+
+        var deltaAmount0 = tokensAmountAtLowPrice[0] - tokensAmountAtHighPrice[0];
+        var deltaAmount1 = tokensAmountAtHighPrice[1] - tokensAmountAtLowPrice[1];
+
+        var valueInUSD = deltaAmount0 * double.Parse(pool.Token1Price) + deltaAmount1;
+
+        var amountOfPoint10 = valueInUSD * Math.Pow(10, UniswapConstants.SGRDecimal) * 99;
+        
+        return amountOfPoint10;
+    }
+    
+    
+    private List<double> GetTokensAmountAtPrice(string liquidity, double positionLowPrice, double positionHighPrice, double targetPrice)
+    {
+        var ret = new List<double>();
+        if (targetPrice <= positionLowPrice)
         {
-            var token0Amount = _uniswapLiquidityProvider.CalculateToken0Amount(liquidity, lowPrice, highPrice) / Math.Pow(10, UniswapConstants.SGRDecimal);
-
-            value = token0Amount * double.Parse(pool.Token1Price);
+            var token0Amount = _uniswapLiquidityProvider.CalculateToken0Amount(liquidity, positionLowPrice, positionHighPrice) / Math.Pow(10, UniswapConstants.SGRDecimal);
+            ret.Add(token0Amount);
+            ret.Add(0);
         }
-        else if (currentTickIdx > positionHighTickIdx)
+        else if (targetPrice >= positionHighPrice)
         {
-            var token1Amount = _uniswapLiquidityProvider.CalculateToken1Amount(liquidity, lowPrice, highPrice) / Math.Pow(10, UniswapConstants.USDTDecimal) ;
-            value = token1Amount;
+            var token1Amount = _uniswapLiquidityProvider.CalculateToken1Amount(liquidity, positionLowPrice, positionHighPrice) / Math.Pow(10, UniswapConstants.USDTDecimal) ;
+            ret.Add(0);
+            ret.Add(token1Amount);
         }
         else
         {
-            var token0Amount = _uniswapLiquidityProvider.CalculateToken0Amount(liquidity, currentPrice, highPrice) / Math.Pow(10, UniswapConstants.SGRDecimal);
-            var token1Amount = _uniswapLiquidityProvider.CalculateToken1Amount(liquidity, lowPrice, currentPrice) / Math.Pow(10, UniswapConstants.USDTDecimal);
-            value = token0Amount  * double.Parse(pool.Token1Price) + token1Amount;
+            var token0Amount = _uniswapLiquidityProvider.CalculateToken0Amount(liquidity, targetPrice, positionHighPrice) / Math.Pow(10, UniswapConstants.SGRDecimal);
+            var token1Amount = _uniswapLiquidityProvider.CalculateToken1Amount(liquidity, positionLowPrice, targetPrice) / Math.Pow(10, UniswapConstants.USDTDecimal);
+            ret.Add(token0Amount);
+            ret.Add(token1Amount);
         }
 
-        return value;
+        return ret;
     }
 
     private string GetId(params object[] inputs)
     {
         var rawId = inputs.JoinAsString("-");
-        return HashHelper.ComputeFrom(rawId).ToHex();
+        return rawId;
     }
+
+    
+    public async Task<List<string>> GetValidPositionIdsAsync(string poolId, string bizDate)
+    {
+        DateTime currentUtc = DateTime.ParseExact(bizDate, "yyyyMMdd", null); 
+        DateTime targetUtc = currentUtc.AddHours(-24).Date;
+
+        var snapshotTs = new DateTimeOffset(targetUtc).ToUnixTimeSeconds();
+
+        var blockNo = await _etherscanProvider.GetBlockNoByTimeAsync(snapshotTs);
+        int blockNoInt = int.Parse(blockNo);
+        
+        var cnt = 0;
+        var offset = 0;
+        var postisons = new List<Position>();
+        var ret = new  List<string>();
+        while (cnt == Step || offset == 0)
+        {
+            var next = await _uniswapLiquidityProvider.GetPositionsAsync(poolId, blockNoInt, offset, Step);
+            cnt = next.Positions.Count;
+            postisons.AddRange(next.Positions);
+            offset += Step;
+        } 
+        
+        if (postisons.IsNullOrEmpty())
+        {
+            return ret;
+        }
+        
+        ret = postisons.Where(position => long.Parse(position.Liquidity) > 0).Select(position => position.Id).ToList();
+        _logger.LogDebug("valid position count: {cnt}", ret.Count);
+        return ret;
+    }
+
+    // private List<double> GetIntersectionPrices(double targetLow, double targetHigh, double positionLow, double positionHigh)
+    // {
+    //     var ret = new List<double>();
+    //
+    //     if (targetLow >= positionHigh || positionLow >= targetHigh)
+    //     {
+    //         return ret;
+    //     }
+    //
+    //     var intersectionLow = Math.Max(targetLow, positionLow);
+    //     var intersectionHigh = Math.Min(targetHigh, positionHigh);
+    //     
+    //     ret.Add(intersectionLow);
+    //
+    //     if (intersectionHigh != intersectionLow)
+    //     {
+    //         ret.Add(intersectionHigh);
+    //     }
+    //     
+    //     return ret;
+    // }
 }

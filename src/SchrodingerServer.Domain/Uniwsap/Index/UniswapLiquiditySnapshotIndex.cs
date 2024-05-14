@@ -19,9 +19,8 @@ public class UniswapPositionSnapshotIndex : SchrodingerEntity<string>, IIndexBui
     [Keyword] public string PositionHighPrice { get; set; }
     
     [Keyword] public string BizDate { get; set; }
-    public double PositionValueUSD { get; set; }
+    [Keyword] public string PointAmount { get; set; }
     
-    public DateTime SnapshotTime { get; set; }
     public DateTime CreateTime { get; set; }
     
     public Extra ExtraData { get; set; }
