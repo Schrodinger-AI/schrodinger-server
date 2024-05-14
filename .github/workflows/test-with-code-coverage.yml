@@ -33,9 +33,6 @@ jobs:
       #  run: |
       #    echo $ELASTIC_SEARCH_URL
       #    curl -fsSL "$ELASTIC_SEARCH_URL/_cat/health?h=status"
-      - name: 'Download AElf build tools'
-        run: bash scripts/download_binary.sh
-              
       - name: Install dependencies
         run: dotnet restore --verbosity quiet
 
