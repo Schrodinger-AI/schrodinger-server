@@ -185,7 +185,7 @@ public class PointAccumulateForSGR10Worker :  AsyncPeriodicBackgroundWorkerBase
     
     private async Task SGR10SnapshotWorkAsync(string bizDate, string poolId, string pointName)
     {
-        DateTime now = DateTime.Now;
+        DateTime now = DateTime.UtcNow;;
         int curIndex = now.Hour * 6 + now.Minute / 10;
         var indexList = await _distributedCache.GetAsync(PointDispatchConstants.SGR10_SNAPSHOT_INDEX_CACHE_KEY_PREFIX + bizDate);
         if (indexList == null)
@@ -196,10 +196,10 @@ public class PointAccumulateForSGR10Worker :  AsyncPeriodicBackgroundWorkerBase
         _logger.LogInformation("PointAccumulateForSGR10Worker Index Judgement, {index1}, {index2}, {curIndex}", 
             indexList[0], indexList[1], curIndex);
         
-        var manualiIndexList =  _pointTradeOptions.CurrentValue.IndexList;
-        if (!manualiIndexList.IsNullOrEmpty())
+        var fixedIndexList =  _pointTradeOptions.CurrentValue.IndexList;
+        if (!fixedIndexList.IsNullOrEmpty())
         {
-            indexList = manualiIndexList.ToList();
+            indexList = fixedIndexList.ToList();
             _logger.LogInformation("PointAccumulateForSGR10Worker change snap index list to {index1}", indexList);
         }
         
