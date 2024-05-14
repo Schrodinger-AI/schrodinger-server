@@ -18,9 +18,6 @@ namespace SchrodingerServer.Uniswap;
 
 public interface IUniswapLiquidityService
 {
-    Task CreateSnapshotOfPool(string poolId, DateTime snapshotTime);
-    Task<GetUniswapLiquidityDto> GetSnapshotAsync(GetUniswapLiquidityInput input);
-
     Task CreateSnapshotForOnceAsync(string bizDate, string poolId);
     Task<List<string>> GetValidPositionIdsAsync(string poolId, string bizDate);
     Task CreateSnapshotAsync(string bizDate, string poolId);
@@ -44,72 +41,6 @@ public class UniswapLiquidityService : IUniswapLiquidityService, ISingletonDepen
         _etherscanProvider = etherscanProvider;
         _uniswapLiquidityProvider = uniswapLiquidityProvider;
         _optionsMonitor = optionsMonitor;
-    }
-    
-    public async Task CreateSnapshotOfPool(string poolId, DateTime snapshotTime)
-    {
-        var postisons = new List<Position>();
-        var snapshotTs = ((DateTimeOffset)snapshotTime).ToUnixTimeSeconds();
-
-        var blockNo = await _etherscanProvider.GetBlockNoByTimeAsync(snapshotTs);
-        int blockNoInt = int.Parse(blockNo);
-        
-        var cnt = 0;
-        var offset = 0;
-        while (cnt == Step || offset == 0)
-        {
-            var next = await _uniswapLiquidityProvider.GetPositionsAsync(poolId, blockNoInt, offset, Step);
-            cnt = next.Positions.Count;
-            postisons.AddRange(next.Positions);
-            offset += Step;
-        } 
-        _logger.LogDebug("total position count: {cnt}", postisons.Count);
-        if (postisons.IsNullOrEmpty())
-        {
-            return;
-        }
-        
-        var ts = GetYesterdayTimestamp();
-        _logger.LogDebug("yesterday ts：{ts}", ts);
-        
-        var poolDatas = await _uniswapLiquidityProvider.GetPoolDayDataAsync(poolId, ts);
-        if (poolDatas.PoolDayDatas.Count < 1)
-        {
-            _logger.LogError("empty Pool Data");
-            return;
-        } 
-
-        var poolData = poolDatas.PoolDayDatas[0];
-        _logger.LogDebug("pool day data {ts}", JsonConvert.SerializeObject(poolData));
-
-        var validPositions = postisons.Where(position => long.Parse(position.Liquidity) > 0 && IsPositionValid(poolData, position)).ToList();
-        _logger.LogDebug("valid position count: {cnt}", validPositions.Count);
-
-        var poolDto = await _uniswapLiquidityProvider.GetPoolAsync(poolId, blockNoInt);
-        var pool = poolDto.Pool;
-        _logger.LogDebug("pool data {ts}", JsonConvert.SerializeObject(pool));
-        
-        var snapshotIndexList = new List<UniswapPositionSnapshotIndex>();
-        foreach (var position in validPositions)
-        {
-            var value = CalculatePositionValue(position, pool);
-            var snapshot = new UniswapPositionSnapshotIndex()
-            {   
-                Id = GetId(pool.Id, position.Id, snapshotTime),
-                PoolId = pool.Id,
-                Token0Symbol = pool.Token0.Symbol,
-                Token1Symbol = pool.Token1.Symbol,
-                PositionOwner = position.Owner,
-                PositionId = position.Id,
-                CurrentPrice = pool.Token1Price,
-                PositionLowPrice = position.TickLower.Price0,
-                PositionHighPrice = position.TickUpper.Price0,
-                CreateTime = DateTime.UtcNow
-            };
-            snapshotIndexList.Add(snapshot);
-        }
-
-        await _uniswapLiquidityProvider.AddPositionsSnapshotAsync(snapshotIndexList);
     }
     
     public async Task CreateSnapshotForOnceAsync(string bizDate, string poolId)
@@ -274,40 +205,6 @@ public class UniswapLiquidityService : IUniswapLiquidityService, ISingletonDepen
         }
 
         await _uniswapLiquidityProvider.AddPositionsSnapshotAsync(snapshotIndexList);
-    }
-    
-    
-    public async Task<GetUniswapLiquidityDto> GetSnapshotAsync(GetUniswapLiquidityInput input)
-    {
-        
-        DateTime dateObj;
-        if (!DateTime.TryParseExact(input.Date, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out dateObj))
-        {
-            
-            _logger.LogError("wrong date format: {date}", input.Date);
-            throw new UserFriendlyException("wrong date format");
-        }
-        DateTime snapshotTime = new DateTime(dateObj.Year, dateObj.Month, dateObj.Day, 0, 0, 0, DateTimeKind.Utc);
-            
-        var now = DateTime.UtcNow.Date;
-        bool afterNow = DateTime.Compare(snapshotTime, now) > 0;
-            
-        var poolCreatedDate = new DateTime(2024, 3, 21, 0, 0, 0, DateTimeKind.Utc);
-        bool beforePoolEverCreated = DateTime.Compare(snapshotTime, poolCreatedDate) < 0;
-            
-        if (afterNow || beforePoolEverCreated)
-        {
-            _logger.LogError("invalid date: {date}", snapshotTime);
-            throw new UserFriendlyException("invalid date");
-        }
-            
-        var ret =  await _uniswapLiquidityProvider.GetPositionsSnapshotAsync(snapshotTime);
-        if (ret.TotalCount == 0)
-        {
-            await CreateSnapshotOfPool(UniswapConstants.PoolId, snapshotTime);
-        }
-            
-        return ret;
     }
 
     private long GetYesterdayTimestamp()
@@ -520,26 +417,4 @@ public class UniswapLiquidityService : IUniswapLiquidityService, ISingletonDepen
         _logger.LogDebug("valid position count: {cnt}", ret.Count);
         return ret;
     }
-
-    // private List<double> GetIntersectionPrices(double targetLow, double targetHigh, double positionLow, double positionHigh)
-    // {
-    //     var ret = new List<double>();
-    //
-    //     if (targetLow >= positionHigh || positionLow >= targetHigh)
-    //     {
-    //         return ret;
-    //     }
-    //
-    //     var intersectionLow = Math.Max(targetLow, positionLow);
-    //     var intersectionHigh = Math.Min(targetHigh, positionHigh);
-    //     
-    //     ret.Add(intersectionLow);
-    //
-    //     if (intersectionHigh != intersectionLow)
-    //     {
-    //         ret.Add(intersectionHigh);
-    //     }
-    //     
-    //     return ret;
-    // }
 }
