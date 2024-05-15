@@ -3,6 +3,7 @@ using AElf.Client.Service;
 using AElf.Types;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using Orleans;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.ApplicationHandler;
@@ -99,8 +100,8 @@ public class ContractInvokeGrain : Grain<ContractInvokeState>, IContractInvokeGr
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred during job execution and will be retried bizId:{bizId} txHash: {TxHash}",
-                State.BizId, State.TransactionId);
+            _logger.LogError(ex, "An error occurred during job execution and will be retried bizId:{bizId} txHash: {TxHash} err: {err}",
+                State.BizId, State.TransactionId,  ex.ToString());
             return OfContractInvokeGrainResultDto(false);
         }
     }
@@ -116,6 +117,7 @@ public class ContractInvokeGrain : Grain<ContractInvokeState>, IContractInvokeGr
 
         var rawTxResult = await _contractProvider.CreateTransactionAsync(State.ChainId, chainInfo.PointTxPublicKey,
             State.ContractAddress, State.ContractMethod, State.Param);
+        _logger.LogInformation("rawTxResult: {result}",  JsonConvert.SerializeObject(rawTxResult));
 
         //save txId info
         var oriStatus = State.Status;
@@ -220,7 +222,7 @@ public class ContractInvokeGrain : Grain<ContractInvokeState>, IContractInvokeGr
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "SendTransaction error, txId:{txId}", signedTransaction.GetHash().ToHex());
+            _logger.LogError(e, "SendTransaction error, txId:{txId}, err:{err}", signedTransaction.GetHash().ToHex(), e.ToString());
         }
     }
     

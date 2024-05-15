@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SchrodingerServer.Extension;
 using Serilog;
 using Serilog.Events;
 
@@ -34,7 +35,9 @@ namespace SchrodingerServer.Worker
             {
                 Log.Information("Starting Worker.");
                 var builder = WebApplication.CreateBuilder(args);
+                builder.Configuration.AddJsonFile("apollo.appsettings.json");
                 builder.Host.AddAppSettingsSecretsJson()
+                    .UseApollo()
                     .UseAutofac()
                     .UseSerilog();
                 await builder.AddApplicationAsync<SchrodingerServerWorkerModule>();

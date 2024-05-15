@@ -1,11 +1,10 @@
 {
-  "ClientId": "SchrodingerServer_HttpApi_001",
   "apollo": {
     "UseApollo" : false,
     "AppId": "SchrodingerServer",
     "MetaServer": "http://127.0.0.1:8090",
     "Namespaces": [
-      "HttpApi.Host.json"
+      "Background.json"
     ]
   }
 }

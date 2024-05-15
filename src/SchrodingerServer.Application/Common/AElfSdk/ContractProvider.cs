@@ -126,11 +126,14 @@ public class ContractProvider : IContractProvider, ISingletonDependency
         string toAddress, string methodName, ByteString param)
     {
         var client = Client(chainId);
+        _logger.LogInformation("GetClient: client: {client} , id:{id}, clients: {clients}", client, chainId, _clients);
         var status = await client.GetChainStatusAsync();
         var height = status.BestChainHeight;
         var blockHash = status.BestChainHash;
 
         // create raw transaction
+        _logger.LogInformation("CreateTransactionAsync, status: {status}, publickey:{pk}, toaddress:{address}, methodName:{methodName}", 
+            JsonConvert.SerializeObject(status), senderPublicKey, toAddress, methodName);
         var transaction = new Transaction
         {
             From = Address.FromPublicKey(ByteArrayHelper.HexStringToByteArray(senderPublicKey)),
@@ -141,9 +144,14 @@ public class ContractProvider : IContractProvider, ISingletonDependency
             RefBlockPrefix = ByteString.CopyFrom(Hash.LoadFromHex(blockHash).Value.Take(4).ToArray())
         };
         
+        _logger.LogInformation("CreateTransactionFinish, transaction: {transaction}", JsonConvert.SerializeObject(transaction));
+
+        
         transaction.Signature = senderPublicKey == _callTxSender.PublicKey.ToHex() 
             ? _callTxSender.GetSignatureWith(transaction.GetHash().ToByteArray()) 
             : ByteString.CopyFrom(ByteArrayHelper.HexStringToByteArray(await _secretProvider.GetSignatureAsync(senderPublicKey, transaction)));
+        _logger.LogInformation("CreateSignature, signature: {signature}", transaction.Signature.ToString());
+
 
         return (transaction.GetHash(), transaction);
     }
