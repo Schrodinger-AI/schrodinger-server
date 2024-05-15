@@ -25,7 +25,7 @@ public class Program
         {
             Log.Information("Starting SchrodingerServer.AuthServer");
             var builder = WebApplication.CreateBuilder(args);
-            builder.Configuration.AddJsonFile("apollosettings.json");
+            builder.Configuration.AddJsonFile("apollo.appsettings.json");
             builder.Host.AddAppSettingsSecretsJson()
                 .UseApollo()
                 .UseAutofac()
