@@ -21,6 +21,8 @@ public interface IUniswapLiquidityService
     Task CreateSnapshotForOnceAsync(string bizDate, string poolId);
     Task<List<string>> GetValidPositionIdsAsync(string poolId, string bizDate);
     Task CreateSnapshotAsync(string bizDate, string poolId);
+    
+    // Task CompensateForNewBinding(string bizDate, string poolId, string fromBlock, string toBlock);
 }
 
 public class UniswapLiquidityService : IUniswapLiquidityService, ISingletonDependency

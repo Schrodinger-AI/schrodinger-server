@@ -33,6 +33,8 @@ public interface IPointDailyRecordProvider
     Task<List<PointDailyRecordIndex>> GetPendingDailyRecordIndex(string chainId);
     
     Task<List<PointsDetailDto>> GetPointsRecordByNameAsync(string pointsName);
+
+    Task<List<PointDailyRecordIndex>> GetDailyRecordsByAddressAndPointNameAsync(string address, string pointName);
 }
 
 public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDependency
@@ -249,5 +251,29 @@ public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDep
         });
 
         return indexerResult.Data.GetPointsRecordByName.Data;
+    }
+
+
+    public async Task<List<PointDailyRecordIndex>> GetDailyRecordsByAddressAndPointNameAsync(string address, string pointName)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<PointDailyRecordIndex>, QueryContainer>>();
+        
+        mustQuery.Add(q => q.Term(i =>
+            i.Field(f => f.Address).Value(address)));
+        mustQuery.Add(q => q.Range(i =>
+            i.Field(f => f.PointAmount).GreaterThan(0)));
+        mustQuery.Add(q => q.Term(i =>
+            i.Field(f => f.PointName).Value(pointName)));
+        mustQuery.Add(q => 
+            !q.Exists(e => e.Field(f => f.BizId)));
+        
+        QueryContainer Filter(QueryContainerDescriptor<PointDailyRecordIndex> f) =>
+            f.Bool(b => b.Must(mustQuery));
+        
+        var sorting = new Func<SortDescriptor<PointDailyRecordIndex>, IPromise<IList<ISort>>>(s =>
+            s.Ascending(t => t.CreateTime));
+        
+        var tuple = await _pointDailyRecordIndexRepository.GetSortListAsync(Filter, skip: 0, limit: 10000, sortFunc: sorting);
+        return tuple.Item2;
     }
 }

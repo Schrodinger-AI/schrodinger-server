@@ -92,8 +92,6 @@ public class PointCompensateWorker : AsyncPeriodicBackgroundWorkerBase
 
         var batchList = SplitList(pointDetailList, 20);
         _logger.LogInformation("PointCompensateWorker compensate batch size:{size}", batchList.Count);
-
-        
         
         foreach (var tradeList in batchList)
         {
