@@ -5,11 +5,13 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nest;
+using Newtonsoft.Json;
 using Orleans;
 using SchrodingerServer.Common;
 using SchrodingerServer.Grains.Grain.Points;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Points.Provider;
+using SchrodingerServer.Users;
 using SchrodingerServer.Users.Dto;
 using SchrodingerServer.Users.Index;
 using Volo.Abp.DependencyInjection;
@@ -30,16 +32,19 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
     private readonly IPointSettleService _pointSettleService;
     private readonly IPointDailyRecordProvider _pointDailyRecordProvider;
     private readonly IClusterClient _clusterClient;
+    private readonly IAddressRelationshipProvider _addressRelationshipProvider;
     
     public PointAssemblyTransactionService(IPointSettleService pointSettleService,
         ILogger<PointAssemblyTransactionService> logger, IPointDailyRecordProvider pointDailyRecordProvider, 
-        IOptionsMonitor<PointTradeOptions> pointTradeOptions, IClusterClient clusterClient)
+        IOptionsMonitor<PointTradeOptions> pointTradeOptions, IClusterClient clusterClient, 
+        IAddressRelationshipProvider addressRelationshipProvider)
     {
         _pointSettleService = pointSettleService;
         _logger = logger;
         _pointDailyRecordProvider = pointDailyRecordProvider;
         _pointTradeOptions = pointTradeOptions;
         _clusterClient = clusterClient;
+        _addressRelationshipProvider = addressRelationshipProvider;
     }
 
     public async Task AssembleAsync(string chainId, string bizDate, string pointName)
@@ -52,6 +57,31 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
         if (pointDailyRecords.IsNullOrEmpty())
         {
             return;
+        }
+        
+        if (pointName.EndsWith("-10"))
+        {
+            var recordsWithAddressBound = new  List<PointDailyRecordIndex>();
+            foreach (var record in pointDailyRecords)
+            {
+                var evmAddress = record.Address;
+                
+                var aelfAddress = await _addressRelationshipProvider.GetAelfAddressByEvmAddressAsync(evmAddress);
+                if (!aelfAddress.IsNullOrEmpty())
+                {
+                    record.Address = aelfAddress;
+                    recordsWithAddressBound.Add(record);
+                    _logger.LogInformation("Binding address found for record: {record}", JsonConvert.SerializeObject(record));
+                }
+            }
+
+            if (recordsWithAddressBound.IsNullOrEmpty())
+            {
+                _logger.LogInformation("record with binding address is empty");
+                return;
+            }
+            
+            pointDailyRecords = recordsWithAddressBound;
         }
 
         var assemblyDict = pointDailyRecords.GroupBy(balance => balance.PointName)

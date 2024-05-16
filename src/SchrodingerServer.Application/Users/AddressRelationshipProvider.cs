@@ -54,6 +54,11 @@ public class AddressRelationshipProvider : IAddressRelationshipProvider, ISingle
 
     public async Task<bool> CheckBindingExistsAsync(string aelfAddress, string evmAddress)
     {
+        if (aelfAddress.IsNullOrEmpty() && evmAddress.IsNullOrEmpty())
+        {
+            return false;
+        }
+        
         var shouldQuery = new List<Func<QueryContainerDescriptor<AddressRelationshipIndex>, QueryContainer>>();
         shouldQuery.Add(q => q.Term(i => i.Field(f => f.AelfAddress).Value(aelfAddress)));
         shouldQuery.Add(q => q.Term(i => i.Field(f => f.EvmAddress).Value(evmAddress)));

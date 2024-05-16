@@ -7,6 +7,5 @@ public class BindAddressInput
     [Required] public string AelfAddress { get; set; }
     [Required] public string EvmAddress { get; set; }
     [Required] public string Signature { get; set; }
-    // [Required] public long Timestamp { get; set; }
     [Required] public string PublicKey { get; set; }
 }

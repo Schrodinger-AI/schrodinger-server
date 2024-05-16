@@ -5,49 +5,48 @@ using System.Threading.Tasks;
 using AElf;
 using AElf.Cryptography;
 using Microsoft.Extensions.Logging;
-using SchrodingerServer.Adopts;
+using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using SchrodingerServer.Common;
-using SchrodingerServer.Dto;
+using SchrodingerServer.Options;
 using SchrodingerServer.Points;
 using SchrodingerServer.Points.Provider;
 using SchrodingerServer.Users;
 using SchrodingerServer.Users.Dto;
 using SchrodingerServer.Users.Index;
 using Volo.Abp.Application.Services;
-using Volo.Abp.ObjectMapping;
 
 namespace SchrodingerServer.AddressRelationship;
 
 public class AddressRelationshipApplicationService : ApplicationService, IAddressRelationshipApplicationService
 {
     private readonly IAddressRelationshipProvider _addressRelationshipProvider;
-    private readonly IObjectMapper _objectMapper;
     private readonly ILogger<AddressRelationshipApplicationService> _logger;
     private readonly IPointSettleService _pointSettleService;
     private readonly IPointDailyRecordProvider _pointDailyRecordProvider;
+    private readonly IOptionsMonitor<LevelOptions> _levelOptions;
     
     public AddressRelationshipApplicationService(
         IAddressRelationshipProvider addressRelationshipProvider,
-        IObjectMapper objectMapper,
         ILogger<AddressRelationshipApplicationService> logger, 
         IPointSettleService pointSettleService, 
-        IPointDailyRecordProvider pointDailyRecordProvider)
+        IPointDailyRecordProvider pointDailyRecordProvider, 
+        IOptionsMonitor<LevelOptions> levelOptions)
     {
         _addressRelationshipProvider = addressRelationshipProvider;
-        _objectMapper = objectMapper;
         _logger = logger;
         _pointSettleService = pointSettleService;
         _pointDailyRecordProvider = pointDailyRecordProvider;
+        _levelOptions = levelOptions;
     }
     
     public async Task BindAddressAsync(BindAddressInput input)
     {
+        _logger.LogInformation("BindAddress input:{input}", JsonConvert.SerializeObject(input));
         var publicKeyVal = input.PublicKey;
         var signatureVal = input.Signature;
-        // var timestamp = input.Timestamp.ToString();
         var aelfAddress = input.AelfAddress;
         var evmAddress = input.EvmAddress;
-        
         
         var publicKey = ByteArrayHelper.HexStringToByteArray(publicKeyVal);
         var signature = ByteArrayHelper.HexStringToByteArray(signatureVal);
@@ -65,50 +64,57 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
         }
         
         await  _addressRelationshipProvider.BindAddressAsync(aelfAddress, evmAddress);
+        await SettlePointsAsync(aelfAddress, evmAddress);
+
+        _logger.LogInformation("BindAddress finished");
     }
 
     private async Task SettlePointsAsync(string aelfAddress, string evmAddress)
     {
-        var pointName = "XPSGR-10";
-        var chainId = "tDVV";
+        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
+        var pointName = chainId == "tDVV" ? "XPSGR-10" : "XPSGRTEST-10";
         var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
-        var pointDailyRecordList = await _pointDailyRecordProvider.GetDailyRecordsByAddressAndPointNameAsync(aelfAddress, pointName);
-        _logger.LogInformation("PointCompensateWorker compensate user size:{size}", pointDailyRecordList.Count);
+        var pointDailyRecordList = await _pointDailyRecordProvider.GetDailyRecordsByAddressAndPointNameAsync(evmAddress, pointName);
+        _logger.LogInformation("SettlePoints record  size:{size}", pointDailyRecordList.Count);
+
+        if (pointDailyRecordList.IsNullOrEmpty())
+        {
+            _logger.LogInformation("{address} has no XGR-10 point", aelfAddress);
+            return;
+        }
         
-        var bizId = IdGenerateHelper.GetPointBizId(chainId, bizDate, pointName, Guid.NewGuid().ToString());
-        _logger.LogInformation("PointCompensateWorker process for bizId:{id}", bizId);
+        var batchList = SplitList(pointDailyRecordList, 20);
+        _logger.LogInformation("SettlePoints batch size:{size}", batchList.Count);
         
-        
-        
-        
-        // var totalPointAmount = pointDailyRecordList.Sum(x => x.PointAmount);
-        // var userInfos = new List<UserPointInfo>
-        // {
-        //     new UserPointInfo
-        //     {
-        //         Id = bizId,
-        //         Address = evmAddress,
-        //         PointAmount = totalPointAmount
-        //     }
-        // };
-        //
-        // try
-        // {
-        //     var pointSettleDto = new PointSettleDto
-        //     {
-        //         ChainId = chainId,
-        //         PointName = pointName,
-        //         BizId = bizId,
-        //         UserPointsInfos = userInfos
-        //     }; 
-        //     await _pointSettleService.BatchSettleAsync(pointSettleDto);
-        // }
-        // catch (Exception e)
-        // {
-        //     _logger.LogError(e, "SettlePointsAsync error, bizId:{bizId}, evmAddress:{evmAddress}, " +
-        //                         "aelfAddress:{aelfAddress}", bizId, evmAddress, aelfAddress);
-        // }
-        
+        foreach (var tradeList in batchList)
+        {
+            var bizId = IdGenerateHelper.GetPointBizId(chainId, bizDate, pointName, Guid.NewGuid().ToString());
+            _logger.LogInformation("SettlePoints process for bizId:{id}", bizId);
+
+            try
+            {
+                var pointSettleDto = new PointSettleDto
+                {
+                    ChainId = chainId,
+                    PointName = pointName,
+                    BizId = bizId,
+                    UserPointsInfos = tradeList.Select(item => new UserPointInfo
+                    {
+                        Id = item.Id,
+                        Address = aelfAddress,
+                        PointAmount = item.PointAmount
+                    }).ToList()
+                }; 
+                await _pointSettleService.BatchSettleAsync(pointSettleDto);
+                
+                await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(pointSettleDto, PointRecordStatus.Success.ToString());
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "SettlePoints error, bizId:{bizId} ids:{ids}", bizId, 
+                    string.Join(",", tradeList.Select(item => item.Id)));
+            }
+        }
     }
     
     

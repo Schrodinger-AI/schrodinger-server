@@ -25,10 +25,13 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
     private readonly IDistributedCache<string> _checkDomainCache;
     private readonly IOptionsMonitor<AccessVerifyOptions> _accessVerifyOptions;
     private readonly IUserInformationProvider _userInformationProvider;
+    private readonly IAddressRelationshipProvider _addressRelationshipProvider; 
+    
 
     public UserActionProvider(IClusterClient clusterClient, IPointServerProvider pointServerProvider,
         ILogger<UserActionProvider> logger, IDistributedCache<string> checkDomainCache,
-        IOptionsMonitor<AccessVerifyOptions> accessVerifyOptions, IUserInformationProvider userInformationProvider)
+        IOptionsMonitor<AccessVerifyOptions> accessVerifyOptions, IUserInformationProvider userInformationProvider, 
+        IAddressRelationshipProvider addressRelationshipProvider)
     {
         _clusterClient = clusterClient;
         _pointServerProvider = pointServerProvider;
@@ -36,6 +39,7 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
         _checkDomainCache = checkDomainCache;
         _accessVerifyOptions = accessVerifyOptions;
         _userInformationProvider = userInformationProvider;
+        _addressRelationshipProvider = addressRelationshipProvider;
     }
 
 
@@ -108,7 +112,13 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
 
         input.Domain = info.RegisterDomain;
         _logger.Info("GetMyPoints by {0} {1}", input.Address, input.Domain);
-        return await _pointServerProvider.GetMyPointsAsync(input);
+        
+        var res = await _pointServerProvider.GetMyPointsAsync(input);
+        
+        var hasBoundAddress = await _addressRelationshipProvider.CheckBindingExistsAsync(info.AelfAddress, "");
+        res.HasBoundAddress = hasBoundAddress;
+        
+        return res;
     }
     public async Task<string> GetCurrentUserAddressAsync(string chainId)
     {

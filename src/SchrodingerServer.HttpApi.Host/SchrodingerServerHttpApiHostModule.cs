@@ -75,6 +75,7 @@ namespace SchrodingerServer
             Configure<AwsS3Option>(configuration.GetSection("AwsS3"));
             Configure<StableDiffusionOption>(configuration.GetSection("StableDiffusionOption"));
             Configure<LevelOptions>(configuration.GetSection("LevelOptions"));
+            Configure<PointTradeOptions>(configuration.GetSection("PointTradeOptions"));
 
             ConfigureConventionalControllers();
             ConfigureAuthentication(context, configuration);
