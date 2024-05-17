@@ -14,6 +14,7 @@ using SchrodingerServer.Points.Provider;
 using SchrodingerServer.Users;
 using SchrodingerServer.Users.Dto;
 using SchrodingerServer.Users.Index;
+using Volo.Abp;
 using Volo.Abp.Application.Services;
 
 namespace SchrodingerServer.AddressRelationship;
@@ -60,7 +61,7 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
         if (bindingExist)
         {
             _logger.LogError("Binding already exists for aelfAddress: {aelfAddress} and evmAddress: {evmAddress}", aelfAddress, evmAddress);
-            return;
+            throw new UserFriendlyException("Binding already exists for aelfAddress: {aelfAddress} and evmAddress: {evmAddress}", aelfAddress, evmAddress);
         }
         
         await  _addressRelationshipProvider.BindAddressAsync(aelfAddress, evmAddress);
