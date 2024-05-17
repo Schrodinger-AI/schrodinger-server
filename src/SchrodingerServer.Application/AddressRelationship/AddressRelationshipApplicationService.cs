@@ -61,7 +61,7 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
         if (bindingExist)
         {
             _logger.LogError("Binding already exists for aelfAddress: {aelfAddress} and evmAddress: {evmAddress}", aelfAddress, evmAddress);
-            throw new UserFriendlyException("Binding already exists for aelfAddress: {aelfAddress} and evmAddress: {evmAddress}", aelfAddress, evmAddress);
+            throw new UserFriendlyException("Binding already exists for address: " + aelfAddress + " and " + evmAddress);
         }
         
         await  _addressRelationshipProvider.BindAddressAsync(aelfAddress, evmAddress);
@@ -73,10 +73,10 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
     private async Task SettlePointsAsync(string aelfAddress, string evmAddress)
     {
         var chainId = _levelOptions.CurrentValue.ChainIdForReal;
-        var pointName = chainId == "tDVV" ? "XPSGR-10" : "XPSGRTEST-10";
+        var pointName = "XPSGR-10";
         var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
         var pointDailyRecordList = await _pointDailyRecordProvider.GetDailyRecordsByAddressAndPointNameAsync(evmAddress, pointName);
-        _logger.LogInformation("SettlePoints record  size:{size}", pointDailyRecordList.Count);
+        _logger.LogInformation("SettlePoints record size:{size}", pointDailyRecordList.Count);
 
         if (pointDailyRecordList.IsNullOrEmpty())
         {
