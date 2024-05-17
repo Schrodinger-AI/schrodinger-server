@@ -4,6 +4,7 @@ namespace SchrodingerServer.Users.Dto;
 
 public class MyPointDetailsDto
 {
+    public bool HasBoundAddress { get; set; }
     public List<EarnedPointDto> PointDetails { get; set; } = new();
 }
 
