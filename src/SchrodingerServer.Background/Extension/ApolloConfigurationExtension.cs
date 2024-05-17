@@ -12,7 +12,6 @@ public static class ApolloConfigurationExtension
         return builder
             .ConfigureAppConfiguration((config) =>
             {
-                Log.Information("ConfigureAppConfiguration, config:{config}", config.Build().GetSection("apollo").ToString());
                 var apolloOption = config.Build().GetSection("apollo");
                 if (apolloOption.GetSection("UseApollo").Get<bool>())
                 {
@@ -20,7 +19,7 @@ public static class ApolloConfigurationExtension
                         apolloOption.GetSection("AppId").Get<string>(),
                         apolloOption.GetSection("MetaServer").Get<string>(),
                         string.Join(",", apolloOption.GetSection("Namespaces").Get<List<string>>())
-                        );
+                    );
                     config.AddApollo(apolloOption);
                 }
             });

@@ -5,9 +5,7 @@
     "AppId": "SchrodingerServer",
     "MetaServer": "http://127.0.0.1:8090",
     "Namespaces": [
-      "eventHandler_appsettings.json",
-      "orleans.json",
-      "chains.json"
+      "EntityEventHandler.json"
     ]
   }
 }

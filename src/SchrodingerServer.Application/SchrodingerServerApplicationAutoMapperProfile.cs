@@ -11,6 +11,8 @@ using SchrodingerServer.Grains.Grain.Faucets;
 using SchrodingerServer.Grains.Grain.Points;
 using SchrodingerServer.Grains.Grain.ZealyScore.Dtos;
 using SchrodingerServer.Grains.State.ZealyScore;
+using SchrodingerServer.Message.Dtos;
+using SchrodingerServer.Message.Provider.Dto;
 using SchrodingerServer.ScoreRepair.Dtos;
 using SchrodingerServer.Uniswap.Index;
 using SchrodingerServer.Users;
@@ -44,9 +46,8 @@ public class SchrodingerServerApplicationAutoMapperProfile : Profile
         CreateMap<SchrodingerSymbolIndexerDto, SchrodingerDto>();
         CreateMap<SchrodingerDto, SchrodingerDetailDto>()
             .ForMember(des => des.Traits, opt
-                => opt.MapFrom(source => source.Traits.IsNullOrEmpty()?null:source.Traits.Select(item => new TraitDto { TraitType = item.TraitType, Value = item.Value }).ToList()))
-            ;
+                => opt.MapFrom(source => source.Traits.IsNullOrEmpty()?null:source.Traits.Select(item => new TraitDto { TraitType = item.TraitType, Value = item.Value }).ToList()));
+        CreateMap<NFTActivityIndexDto, MessageInfo>();
         CreateMap<UniswapPositionSnapshotIndex, UniswapLiquidityDto>();
-
     }
 }

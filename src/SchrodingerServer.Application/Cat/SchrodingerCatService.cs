@@ -182,7 +182,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
         var isInWhiteList = await _levelProvider.CheckAddressIsInWhiteListAsync(input.Address);
         _logger.LogInformation("calculate rank info for user: {address}", input.Address);
-        foreach (var schrodingerDto in list.Where(schrodingerDto => schrodingerDto.Generation == 9))
+        foreach (var schrodingerDto in list.Where(schrodingerDto => (schrodingerDto.Generation == 9 && !schrodingerDto.Level.IsNullOrEmpty())))
         {
             //get levelInfo
             var levelInfoDto = await _levelProvider.GetItemLevelDicAsync(schrodingerDto.Rank, price);

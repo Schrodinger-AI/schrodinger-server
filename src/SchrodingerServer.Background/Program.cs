@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using SchrodingerServer.Extension;
 using Serilog;
 
 namespace SchrodingerServer.Background;
@@ -40,6 +41,8 @@ public class Program
     internal static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
             .ConfigureServices((hostContext, services) => { services.AddApplication<SchrodingerServerBackgroundModule>(); })
+            .ConfigureAppConfiguration((h,c)=>c.AddJsonFile("apollo.appsettings.json")) 
+            .UseApollo()
             .UseAutofac()
             .UseSerilog();
 }
