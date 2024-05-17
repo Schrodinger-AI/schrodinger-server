@@ -106,7 +106,23 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
                         PointAmount = item.PointAmount
                     }).ToList()
                 }; 
-                await _pointSettleService.BatchSettleAsync(pointSettleDto);
+                
+                var aggPointSettleDto = new PointSettleDto
+                    {
+                        ChainId = chainId,
+                        PointName = pointName,
+                        BizId = bizId,
+                        UserPointsInfos = new List<UserPointInfo>()
+                        {
+                            new UserPointInfo
+                            {
+                                Id = tradeList.First().Id,
+                                Address = aelfAddress,
+                                PointAmount = tradeList.Sum(item => item.PointAmount)
+                            }
+                        }
+                    }; 
+                await _pointSettleService.BatchSettleAsync(aggPointSettleDto);
                 
                 await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(pointSettleDto, PointRecordStatus.Success.ToString());
             }
