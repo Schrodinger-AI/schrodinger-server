@@ -26,6 +26,7 @@ public class AddressController : AbpController
     
     
     [HttpPost("bind-address")]
+    [Authorize]
     public Task BindAddressAsync(BindAddressInput input)
     {
         return  _addressRelationshipApplicationService.BindAddressAsync(input);
