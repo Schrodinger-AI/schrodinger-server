@@ -63,7 +63,7 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
         if (bindingExist)
         {
             _logger.LogError("Binding already exists for aelfAddress: {aelfAddress} and evmAddress: {evmAddress}", aelfAddress, evmAddressToLower);
-            throw new UserFriendlyException("Binding already exists for address: " + aelfAddress + " and " + evmAddressToLower);
+            throw new UserFriendlyException("This EVM address has been bound to an aelf address and cannot be bound again");
         }
         
         await  _addressRelationshipProvider.BindAddressAsync(aelfAddress, evmAddressToLower);
