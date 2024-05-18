@@ -77,6 +77,7 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
         var chainId = _levelOptions.CurrentValue.ChainIdForReal;
         var pointName = "XPSGR-10";
         var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
+        _logger.LogInformation("check point records for  address:{address}, point:{point}", evmAddress, pointName);
         var pointDailyRecordList = await _pointDailyRecordProvider.GetDailyRecordsByAddressAndPointNameAsync(evmAddress, pointName);
         _logger.LogInformation("SettlePoints record size:{size}", pointDailyRecordList.Count);
 
