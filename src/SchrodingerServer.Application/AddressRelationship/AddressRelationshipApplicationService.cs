@@ -56,16 +56,18 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
             HashHelper.ComputeFrom(string.Join("-", aelfAddress, evmAddress)).ToByteArray(),
             out var managerPublicKey), "Invalid signature.");
         AssertHelper.IsTrue(managerPublicKey.ToHex() == publicKeyVal, "Invalid publicKey or signature.");
-        
-        var bindingExist = await _addressRelationshipProvider.CheckBindingExistsAsync(aelfAddress, evmAddress);
+
+
+        var evmAddressToLower = evmAddress.ToLower();
+        var bindingExist = await _addressRelationshipProvider.CheckBindingExistsAsync(aelfAddress, evmAddressToLower);
         if (bindingExist)
         {
-            _logger.LogError("Binding already exists for aelfAddress: {aelfAddress} and evmAddress: {evmAddress}", aelfAddress, evmAddress);
-            throw new UserFriendlyException("Binding already exists for address: " + aelfAddress + " and " + evmAddress);
+            _logger.LogError("Binding already exists for aelfAddress: {aelfAddress} and evmAddress: {evmAddress}", aelfAddress, evmAddressToLower);
+            throw new UserFriendlyException("Binding already exists for address: " + aelfAddress + " and " + evmAddressToLower);
         }
         
-        await  _addressRelationshipProvider.BindAddressAsync(aelfAddress, evmAddress);
-        await SettlePointsAsync(aelfAddress, evmAddress);
+        await  _addressRelationshipProvider.BindAddressAsync(aelfAddress, evmAddressToLower);
+        await SettlePointsAsync(aelfAddress, evmAddressToLower);
 
         _logger.LogInformation("BindAddress finished");
     }
