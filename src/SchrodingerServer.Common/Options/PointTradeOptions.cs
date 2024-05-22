@@ -27,6 +27,8 @@ public class PointTradeOptions
     
     public string AwakenPoolId { get; set; }
     
+    public List<string> AwakenPoolIdList { get; set; }
+    
     public string UniswapPoolId { get; set; }
 }
 
