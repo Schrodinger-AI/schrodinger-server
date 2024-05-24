@@ -21,6 +21,8 @@ public interface IPointServerProvider
     Task<bool> CheckDomainAsync(string domain);
 
     Task<MyPointDetailsDto> GetMyPointsAsync(GetMyPointsInput input);
+    
+    Task<EcoEarnRewardDto> GetEcoEarnRewardsAsync(string address);
 }
 
 public class PointServerProvider : IPointServerProvider, ISingletonDependency
@@ -32,6 +34,7 @@ public class PointServerProvider : IPointServerProvider, ISingletonDependency
         public static ApiInfo CatsRank = new(HttpMethod.Post, "/api/probability/catsRank");
         public static ApiInfo GetAwakenPrice = new(HttpMethod.Get, "/api/app/trade-pairs");
         public static ApiInfo CheckIsInWhiteList = new(HttpMethod.Get, "/api/probability/isAddressValid");
+        public static ApiInfo GetMyRewards = new(HttpMethod.Post, "/api/app/points/staking/rewards/info");
     }
 
     private readonly ILogger<PointServerProvider> _logger;
@@ -102,5 +105,26 @@ public class PointServerProvider : IPointServerProvider, ISingletonDependency
         var source = ObjectHelper.ConvertObjectToSortedString(obj, "Signature");
         source += _pointServiceOptions.CurrentValue.DappSecret;
         return HashHelper.ComputeFrom(source).ToHex();
+    }
+
+    public async Task<EcoEarnRewardDto> GetEcoEarnRewardsAsync(string address)
+    {
+        try
+        {
+            var resp = await _httpProvider.InvokeAsync<CommonResponseDto<EcoEarnRewardDto>>(
+                _pointServiceOptions.CurrentValue.EcoEarnUrl, Api.GetMyRewards, body: JsonConvert.SerializeObject(new GetEcoEarnRewardRequest()
+                {
+                    Address = address
+                })
+                );
+            AssertHelper.NotNull(resp, "Response empty");
+            AssertHelper.NotNull(resp.Success, "Response failed, {}", resp.Message);
+            return resp.Data ?? new EcoEarnRewardDto();
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Points domain get points failed");
+            return new EcoEarnRewardDto();
+        }
     }
 }

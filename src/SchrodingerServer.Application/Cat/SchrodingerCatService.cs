@@ -126,9 +126,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         var amount = symbolIndexerListDto.Data[0].Amount;
         _logger.LogInformation("GetSchrodingerCatDetailAsync address:{address}",address);
-        if (address.IsNullOrEmpty())
+        if (input.Address.IsNullOrEmpty())
         {
-
             detail = holderDetail ?? _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
             detail.Amount = amount;
             _logger.LogInformation("GetSchrodingerCatDetailAsync detail:{detail}",JsonConvert.SerializeObject(detail));

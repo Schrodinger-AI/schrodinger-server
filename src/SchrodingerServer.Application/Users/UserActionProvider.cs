@@ -104,19 +104,32 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
 
     public async Task<MyPointDetailsDto> GetMyPointsAsync(GetMyPointsInput input)
     {
-        var info = await _userInformationProvider.GetUserById(CurrentUser.GetId());
-        if (info == null || String.IsNullOrEmpty(info.RegisterDomain))
-        {
-            return new MyPointDetailsDto();
-        }
+        // var info = await _userInformationProvider.GetUserById(CurrentUser.GetId());
+        // if (info == null || String.IsNullOrEmpty(info.RegisterDomain))
+        // {
+        //     return new MyPointDetailsDto();
+        // }
 
-        input.Domain = info.RegisterDomain;
+        // input.Domain = info.RegisterDomain;
         _logger.Info("GetMyPoints by {0} {1}", input.Address, input.Domain);
         
         var res = await _pointServerProvider.GetMyPointsAsync(input);
+
+        var ecoEarnRewards = await _pointServerProvider.GetEcoEarnRewardsAsync(input.Address);
+        res.PointDetails.ForEach(detail =>
+        {
+            if (ecoEarnRewards.Reward.TryGetValue(detail.Symbol, out var value))
+            {
+                detail.EcoEarnReward = decimal.Parse(value);
+            }
+            else
+            {
+                detail.EcoEarnReward = 0;   
+            }
+        });
         
-        var hasBoundAddress = await _addressRelationshipProvider.CheckBindingExistsAsync(info.AelfAddress, "");
-        res.HasBoundAddress = hasBoundAddress;
+        // var hasBoundAddress = await _addressRelationshipProvider.CheckBindingExistsAsync(info.AelfAddress, "");
+        // res.HasBoundAddress = hasBoundAddress;
         
         return res;
     }
