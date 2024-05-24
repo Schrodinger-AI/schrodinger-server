@@ -104,13 +104,13 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
 
     public async Task<MyPointDetailsDto> GetMyPointsAsync(GetMyPointsInput input)
     {
-        // var info = await _userInformationProvider.GetUserById(CurrentUser.GetId());
-        // if (info == null || String.IsNullOrEmpty(info.RegisterDomain))
-        // {
-        //     return new MyPointDetailsDto();
-        // }
+        var info = await _userInformationProvider.GetUserById(CurrentUser.GetId());
+        if (info == null || String.IsNullOrEmpty(info.RegisterDomain))
+        {
+            return new MyPointDetailsDto();
+        }
 
-        // input.Domain = info.RegisterDomain;
+        input.Domain = info.RegisterDomain;
         _logger.Info("GetMyPoints by {0} {1}", input.Address, input.Domain);
         
         var res = await _pointServerProvider.GetMyPointsAsync(input);
@@ -128,8 +128,8 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
             }
         });
         
-        // var hasBoundAddress = await _addressRelationshipProvider.CheckBindingExistsAsync(info.AelfAddress, "");
-        // res.HasBoundAddress = hasBoundAddress;
+        var hasBoundAddress = await _addressRelationshipProvider.CheckBindingExistsAsync(info.AelfAddress, "");
+        res.HasBoundAddress = hasBoundAddress;
         
         return res;
     }
