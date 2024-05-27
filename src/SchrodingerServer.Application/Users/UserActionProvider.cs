@@ -128,6 +128,19 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
             }
         });
         
+        res.PointDetails = res.PointDetails.OrderByDescending(o =>
+        {
+            var symbol = o.Symbol;
+            var symbolData = o.Symbol.Split("-");
+            if (symbolData.Length != 2)
+            {
+                return 0;
+            }
+
+            return int.Parse(symbolData[1]);
+        }).ToList();
+        
+        
         var hasBoundAddress = await _addressRelationshipProvider.CheckBindingExistsAsync(info.AelfAddress, "");
         res.HasBoundAddress = hasBoundAddress;
         
