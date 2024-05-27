@@ -1,7 +1,9 @@
 using System.Linq;
 using AutoMapper;
 using Microsoft.IdentityModel.Tokens;
+using SchrodingerServer.AddressRelationship.Dto;
 using SchrodingerServer.Cat.Provider.Dtos;
+using SchrodingerServer.Common.Options;
 using SchrodingerServer.ContractInvoke.Eto;
 using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Dtos.Faucets;
@@ -49,5 +51,6 @@ public class SchrodingerServerApplicationAutoMapperProfile : Profile
                 => opt.MapFrom(source => source.Traits.IsNullOrEmpty()?null:source.Traits.Select(item => new TraitDto { TraitType = item.TraitType, Value = item.Value }).ToList()));
         CreateMap<NFTActivityIndexDto, MessageInfo>();
         CreateMap<UniswapPositionSnapshotIndex, UniswapLiquidityDto>();
+        CreateMap<ActivityInfo, ActivityDto>();
     }
 }
