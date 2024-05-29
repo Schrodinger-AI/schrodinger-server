@@ -51,7 +51,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         
         activityDtoList.ForEach(activity =>
         {
-            var beginTime = DateTimeOffset.FromUnixTimeSeconds(activity.BeginTime).UtcDateTime;
+            var beginTime = DateTimeOffset.FromUnixTimeMilliseconds(activity.BeginTime).UtcDateTime;
             var timeDiff = DateTime.UtcNow - beginTime;
             if (timeDiff.TotalSeconds > activityOptions.NewTagInterval)
             {
@@ -76,7 +76,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
 
         var hasNewActivity = activityOptions.ActivityList.Any(activity =>
         {
-            var beginTime = DateTimeOffset.FromUnixTimeSeconds(activity.BeginTime).UtcDateTime;
+            var beginTime = DateTimeOffset.FromUnixTimeMilliseconds(activity.BeginTime).UtcDateTime;
             var timeDiff = DateTime.UtcNow - beginTime;
             return timeDiff.TotalSeconds < activityOptions.NewTagInterval;
         });
