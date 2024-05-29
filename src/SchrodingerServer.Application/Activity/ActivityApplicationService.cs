@@ -61,7 +61,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
 
         var res = new ActivityListDto
         {
-            TotalCount = activityDtoList.Count,
+            TotalCount = activityList.Count,
             Items = activityDtoList.ToList()
         };
 
