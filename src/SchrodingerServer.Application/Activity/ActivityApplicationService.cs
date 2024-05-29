@@ -39,14 +39,15 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     public async Task<List<ActivityDto>> GetActivityListAsync(GetActivityListInput input)
     {
         var activityOptions = _activityOptions.CurrentValue;
-        
-        var activityDtoList = _objectMapper.Map<List<ActivityInfo>, List<ActivityDto>>(activityOptions.ActivityList).Skip(input.SkipCount).Take(input.MaxResultCount);
+
+        var activityList = activityOptions.ActivityList.Where(a => a.IsShow).ToList();
+        var activityDtoList = _objectMapper.Map<List<ActivityInfo>, List<ActivityDto>>(activityList).Skip(input.SkipCount).Take(input.MaxResultCount);
         
         activityDtoList.ForEach(activity =>
         {
             var beginTime = DateTimeOffset.FromUnixTimeSeconds(activity.BeginTime).UtcDateTime;
             var timeDiff = DateTime.UtcNow - beginTime;
-            if (timeDiff.TotalHours < 48)
+            if (timeDiff.TotalSeconds < activityOptions.NewTagInterval)
             {
                 activity.IsNew = true;
             }
@@ -63,7 +64,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         {
             var beginTime = DateTimeOffset.FromUnixTimeSeconds(activity.BeginTime).UtcDateTime;
             var timeDiff = DateTime.UtcNow - beginTime;
-            return timeDiff.TotalHours < 48;
+            return timeDiff.TotalSeconds < activityOptions.NewTagInterval;
         });
         
         return new ActivityInfoDto
