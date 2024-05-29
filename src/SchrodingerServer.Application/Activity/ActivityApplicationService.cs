@@ -103,7 +103,10 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     public async Task<ActivityAddressDto> GetActivityAddressAsync(GetActivityAddressInput input)
     {
         _logger.LogInformation("GetActivityAddress input:{input}", JsonConvert.SerializeObject(input));
-        var res = new  ActivityAddressDto();
+        var res = new  ActivityAddressDto
+        {
+            SourceChainAddress = ""
+        };
         var activityAddressIndex = await _addressRelationshipProvider.GetActivityAddressAsync(input.AelfAddress, input.ActivityId);
 
         if (activityAddressIndex != null && !activityAddressIndex.Id.IsNullOrEmpty())

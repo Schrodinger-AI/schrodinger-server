@@ -117,11 +117,7 @@ public class AddressRelationshipProvider : IAddressRelationshipProvider, ISingle
         QueryContainer Filter(QueryContainerDescriptor<ActivityAddressIndex> f) => f.Bool(b => b.Must(mustQuery));
         
         var res = await _activityAddressRepository.GetAsync(Filter);
-        if (res != null && !res.Id.IsNullOrEmpty())
-        {
-            return new ActivityAddressIndex();
-        }
-
+        
         return res;
     }
     
