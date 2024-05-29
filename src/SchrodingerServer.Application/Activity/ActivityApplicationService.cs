@@ -57,6 +57,8 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             {
                 activity.IsNew = false;
             }
+
+            activity.LinkUrl = activity.LinkUrl + "?activityId=" + activity.ActivityId;
         });
 
         var res = new ActivityListDto
