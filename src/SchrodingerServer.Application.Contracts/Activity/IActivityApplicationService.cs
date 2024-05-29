@@ -7,7 +7,7 @@ namespace SchrodingerServer.Activity;
 
 public interface IActivityApplicationService
 {
-    Task<List<ActivityDto>> GetActivityListAsync(GetActivityListInput input);
+    Task<ActivityListDto> GetActivityListAsync(GetActivityListInput input);
     
     Task<ActivityInfoDto> GetActivityInfoAsync();
     

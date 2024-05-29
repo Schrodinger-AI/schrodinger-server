@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using SchrodingerServer.Users.Index;
 
 namespace SchrodingerServer.AddressRelationship.Dto;
@@ -12,4 +13,11 @@ public class ActivityDto
     public long BeginTime { get; set; }
     public long EndTime { get; set; }
     public bool IsNew { get; set; }
+}
+
+
+public class ActivityListDto
+{
+    public List<ActivityDto> Items { get; set; }
+    public long TotalCount { get; set; }
 }

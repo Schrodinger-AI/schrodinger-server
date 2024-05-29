@@ -25,7 +25,7 @@ public class ActivityController : AbpController
     }
     
     [HttpGet("list")]
-    public Task<List<ActivityDto>> GetActivityListAsync(GetActivityListInput input)
+    public Task<ActivityListDto> GetActivityListAsync(GetActivityListInput input)
     {
         return  _activityApplicationService.GetActivityListAsync(input);
     }

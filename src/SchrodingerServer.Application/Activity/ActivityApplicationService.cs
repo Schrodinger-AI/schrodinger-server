@@ -6,6 +6,7 @@ using AElf;
 using AElf.Cryptography;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using NUglify.Helpers;
 using SchrodingerServer.AddressRelationship.Dto;
@@ -36,12 +37,17 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         _objectMapper = objectMapper;
     }
 
-    public async Task<List<ActivityDto>> GetActivityListAsync(GetActivityListInput input)
+    public async Task<ActivityListDto> GetActivityListAsync(GetActivityListInput input)
     {
         var activityOptions = _activityOptions.CurrentValue;
 
         var activityList = activityOptions.ActivityList.Where(a => a.IsShow).ToList();
-        var activityDtoList = _objectMapper.Map<List<ActivityInfo>, List<ActivityDto>>(activityList).Skip(input.SkipCount).Take(input.MaxResultCount);
+        if (activityList.Count == 0)
+        {
+            return new ActivityListDto();
+        }
+        
+        var activityDtoList = _objectMapper.Map<List<ActivityInfo>, List<ActivityDto>>(activityList).Skip(input.SkipCount).Take(input.MaxResultCount).ToList();
         
         activityDtoList.ForEach(activity =>
         {
@@ -53,7 +59,13 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             }
         });
 
-        return activityDtoList.ToList();
+        var res = new ActivityListDto
+        {
+            TotalCount = activityDtoList.Count,
+            Items = activityDtoList.ToList()
+        };
+
+        return res;
     }
 
     public async Task<ActivityInfoDto> GetActivityInfoAsync()
