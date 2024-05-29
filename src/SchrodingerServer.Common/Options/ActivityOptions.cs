@@ -17,4 +17,5 @@ public class ActivityInfo
     public long BeginTime { get; set; }
     public long EndTime { get; set; }
     public bool IsShow { get; set; }
+    public bool IsNew { get; set; } = true;
 }

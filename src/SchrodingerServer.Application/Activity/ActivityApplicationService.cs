@@ -53,9 +53,9 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         {
             var beginTime = DateTimeOffset.FromUnixTimeSeconds(activity.BeginTime).UtcDateTime;
             var timeDiff = DateTime.UtcNow - beginTime;
-            if (timeDiff.TotalSeconds < activityOptions.NewTagInterval)
+            if (timeDiff.TotalSeconds > activityOptions.NewTagInterval)
             {
-                activity.IsNew = true;
+                activity.IsNew = false;
             }
         });
 
