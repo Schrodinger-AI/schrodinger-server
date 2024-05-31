@@ -76,6 +76,7 @@ namespace SchrodingerServer
             Configure<StableDiffusionOption>(configuration.GetSection("StableDiffusionOption"));
             Configure<LevelOptions>(configuration.GetSection("LevelOptions"));
             Configure<PointTradeOptions>(configuration.GetSection("PointTradeOptions"));
+            Configure<ActivityOptions>(configuration.GetSection("ActivityOptions"));
 
             ConfigureConventionalControllers();
             ConfigureAuthentication(context, configuration);
