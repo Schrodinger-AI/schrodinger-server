@@ -13,5 +13,6 @@ public enum GraphQLClientEnum
     SchrodingerClient,
     PointPlatform,
     AwakenClient,
-    Uniswap
+    Uniswap,
+    PortkeyClient
 }

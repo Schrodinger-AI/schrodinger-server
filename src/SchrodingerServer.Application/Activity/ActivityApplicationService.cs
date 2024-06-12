@@ -4,18 +4,21 @@ using System.Linq;
 using System.Threading.Tasks;
 using AElf;
 using AElf.Cryptography;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
-using NUglify.Helpers;
+using SchrodingerServer.Activity.Eto;
 using SchrodingerServer.AddressRelationship.Dto;
+using SchrodingerServer.Adopts.provider;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Users;
 using SchrodingerServer.Users.Index;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Caching;
+using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.ObjectMapping;
 
 namespace SchrodingerServer.Activity;
@@ -25,19 +28,36 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     private readonly IAddressRelationshipProvider _addressRelationshipProvider;
     private readonly ILogger<ActivityApplicationService> _logger;
     private IOptionsMonitor<ActivityOptions> _activityOptions;
+    private IOptionsMonitor<ActivityRankOptions> _activityRankOptions;
     private readonly IObjectMapper _objectMapper;
+    private readonly IDistributedEventBus _distributedEventBus;
+    private readonly IDistributedCache<string> _distributedCache;
+    private readonly IAdoptGraphQLProvider _adoptGraphQlProvider;
+    private readonly IPortkeyProvider _portkeyProvider;
     
-    public ActivityApplicationService(IAddressRelationshipProvider addressRelationshipProvider, 
-        ILogger<ActivityApplicationService> logger, IOptionsMonitor<ActivityOptions> activityOptions, 
-        IObjectMapper objectMapper)
+    public ActivityApplicationService(
+        IAddressRelationshipProvider addressRelationshipProvider, 
+        ILogger<ActivityApplicationService> logger, 
+        IOptionsMonitor<ActivityOptions> activityOptions, 
+        IObjectMapper objectMapper, 
+        IDistributedEventBus distributedEventBus,
+        IAdoptGraphQLProvider adoptGraphQlProvider, 
+        IPortkeyProvider portkeyProvider,
+        IDistributedCache<string> distributedCache,
+        IOptionsMonitor<ActivityRankOptions> activityRankOptions)
     {
         _addressRelationshipProvider = addressRelationshipProvider;
         _logger = logger;
         _activityOptions = activityOptions;
         _objectMapper = objectMapper;
+        _distributedEventBus = distributedEventBus;
+        _adoptGraphQlProvider = adoptGraphQlProvider;
+        _portkeyProvider = portkeyProvider;
+        _distributedCache = distributedCache;
+        _activityRankOptions = activityRankOptions;
     }
 
-    public async Task<ActivityListDto> GetActivityListAsync(GetActivityListInput input)
+    public async Task<ActivityListDto>GetActivityListAsync(GetActivityListInput input)
     {
         var activityOptions = _activityOptions.CurrentValue;
 
@@ -130,5 +150,112 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         }
 
         return res;
+    }
+    
+    public async Task<RankDto> GetRankAsync(GetRankInput input)
+    {
+        _logger.LogInformation("GetRank input:{input}", JsonConvert.SerializeObject(input));
+
+        var rankOptions = _activityRankOptions.CurrentValue;
+        var beginTime = rankOptions.BeginTime;
+        var endTIme = TimeHelper.GetTimeStampInSeconds();
+        if (input.UpdateAddressCache)
+        {
+            await _distributedEventBus.PublishAsync(new UpdateAddressCacheEto
+            {
+                BeginTime = beginTime,
+                EndTime = endTIme
+            });
+
+            return new RankDto();
+        }
+
+        var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(beginTime, endTIme);
+        if (res.IsNullOrEmpty())
+        {
+            _logger.LogInformation("GetRank empty");
+            return new RankDto();
+        }
+        
+        var rankDataDict = new Dictionary<string, long>();
+        foreach (var adopt in res)
+        {
+            var address = adopt.Adopter;
+            if (address.IsNullOrEmpty())
+            {
+                continue;
+            }
+            var amount = adopt.InputAmount;
+            rankDataDict[address] = rankDataDict.TryGetValue(address, out var value) ? value + amount : amount;
+        }
+        
+        var rankDataList = rankDataDict.Select(kvp => 
+                new ActivityRankData
+                {
+                    Address = kvp.Key, 
+                    Scores = (long) (kvp.Value * 1314 / Math.Pow(10, 8))
+                })
+            .OrderByDescending(rd => rd.Scores)
+            .ToList();
+
+        var header = new List<RankHeader>(rankOptions.Header);
+        if (!input.IsFinal)
+        {
+            header.RemoveAt(header.Count-1);
+        }
+        
+        var result = new RankDto
+        {
+            Data = new  List<ActivityRankData>(),
+            Header = header
+        };
+
+        var displayNumbers = input.IsFinal ? rankOptions.FinalDisplayNumber : rankOptions.NormalDisplayNumber;
+        var index = 0;
+        foreach (var rankData in rankDataList)
+        {
+            var address = rankData.Address;
+            var key = IdGenerateHelper.GetEOAAddressCacheKey(address);
+            var cache = await _distributedCache.GetAsync(key);
+            var isEoa = false;
+            if (cache == null)
+            {
+                var response = await _portkeyProvider.IsEOAAddress(address);
+                if (response != null)
+                {
+                    isEoa = response.IsEOAAddress;
+                    _logger.LogInformation("{address} is EOA Address: {isEoa}", address, isEoa);
+                    await _distributedCache.SetAsync(key, isEoa.ToString(),  new DistributedCacheEntryOptions()
+                    {
+                        SlidingExpiration = TimeSpan.FromDays(300)
+                    });
+                }
+                else
+                {
+                    _logger.LogError("IsEOAAddress judgment for {address} failed", address);
+                }
+            }
+            else
+            {
+                isEoa = bool.Parse(cache);
+            }
+            
+            if (!isEoa)
+            {
+                if (input.IsFinal)
+                {
+                    rankData.Reward = "10 $SGR";
+                }
+                result.Data.Add(rankData);
+                index++;
+            }
+
+            if (index >= displayNumbers)
+            {
+                break;
+            }
+        }
+        
+        return result;
     }
 }

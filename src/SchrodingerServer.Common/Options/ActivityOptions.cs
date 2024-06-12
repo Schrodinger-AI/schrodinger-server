@@ -19,3 +19,24 @@ public class ActivityInfo
     public bool IsShow { get; set; }
     public bool IsNew { get; set; } = true;
 }
+
+
+public class ActivityRankOptions
+{
+    public  List<RankHeader> Header { get; set; }
+    
+    public long BeginTime { get; set; }
+    
+    public long NormalDisplayNumber { get; set; }
+    
+    public  long FinalDisplayNumber { get; set; }
+}
+
+public class RankHeader
+{
+    public string Key { get; set; }
+    public string Type { get; set; }
+    public string Title { get; set; }
+    public long Width { get; set; }
+    public List<string> Tooltip { get; set; }
+}

@@ -60,6 +60,10 @@ namespace SchrodingerServer.Common.GraphQL
                             client = new GraphQLHttpClient(_graphQlClientOptions.Uniswap,
                                 new NewtonsoftJsonSerializer());
                             break;
+                        case GraphQLClientEnum.PortkeyClient:
+                            client = new GraphQLHttpClient(_graphQlClientOptions.PortkeyConfiguration,
+                                new NewtonsoftJsonSerializer());
+                            break;
                     }
 
                     _clientDic[clientName] = client;

@@ -49,4 +49,10 @@ public class ActivityController : AbpController
     {
         return  _activityApplicationService.GetActivityAddressAsync(input);
     }
+    
+    [HttpPost("rank")]
+    public Task<RankDto> GetRankAsync(GetRankInput input)
+    {
+        return _activityApplicationService.GetRankAsync(input);
+    }
 }
