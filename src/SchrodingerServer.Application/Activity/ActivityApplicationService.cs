@@ -215,8 +215,18 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                     Address = kvp.Key, 
                     Scores = (long) (kvp.Value * 1314 / Math.Pow(10, 8))
                 })
-            .OrderByDescending(rd => rd.Scores)
             .ToList();
+        
+        rankDataList.Sort((item1, item2) =>
+        { 
+            int scoreComparison = item2.Scores.CompareTo(item1.Scores);
+            if (scoreComparison != 0)
+            {
+                return scoreComparison;
+            }
+
+            return item1.Address.CompareTo(item2.Address); 
+        });
 
         var displayNumbers = input.IsFinal ? rankOptions.FinalDisplayNumber : rankOptions.NormalDisplayNumber;
         var rank = 0;
