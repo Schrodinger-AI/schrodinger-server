@@ -164,6 +164,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         {
             beginTime = rankOptions.DisplayBeginTime;
             endTime = rankOptions.DisplayEndTime;
+            _logger.LogInformation("Final Time, begin:{begin}, end:{end}", beginTime, endTime);
         }
         
         var cur = TimeHelper.GetTimeStampInSeconds();
