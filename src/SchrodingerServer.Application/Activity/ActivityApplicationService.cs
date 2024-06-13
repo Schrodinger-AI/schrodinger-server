@@ -167,6 +167,18 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             endTime = cur;
         }
         
+        var header = new List<RankHeader>(rankOptions.Header);
+        if (!input.IsFinal)
+        {
+            header.RemoveAt(header.Count-1);
+        }
+        
+        var result = new RankDto
+        {
+            Data = new  List<ActivityRankData>(),
+            Header = header
+        };
+        
         if (input.UpdateAddressCache)
         {
             await _distributedEventBus.PublishAsync(new UpdateAddressCacheEto
@@ -175,14 +187,14 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 EndTime = endTime
             });
 
-            return new RankDto();
+            return result;
         }
 
         var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(beginTime, endTime);
         if (res.IsNullOrEmpty())
         {
             _logger.LogInformation("GetRank empty");
-            return new RankDto();
+            return result;
         }
         
         var rankDataDict = new Dictionary<string, long>();
@@ -205,18 +217,6 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 })
             .OrderByDescending(rd => rd.Scores)
             .ToList();
-
-        var header = new List<RankHeader>(rankOptions.Header);
-        if (!input.IsFinal)
-        {
-            header.RemoveAt(header.Count-1);
-        }
-        
-        var result = new RankDto
-        {
-            Data = new  List<ActivityRankData>(),
-            Header = header
-        };
 
         var displayNumbers = input.IsFinal ? rankOptions.FinalDisplayNumber : rankOptions.NormalDisplayNumber;
         var rank = 0;
