@@ -21,4 +21,9 @@ public class IdGenerateHelper
     {
         return GetId(chainId, symbol, address);
     }
+    
+    public  static string GetEOAAddressCacheKey( string address)
+    {
+        return "iseoaaddress:" + address;
+    }
 }

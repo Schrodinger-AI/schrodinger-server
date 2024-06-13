@@ -7,4 +7,5 @@ public class GraphQLOptions
     public string PointPlatformConfiguration { get; set; }
     public string AwakenConfiguration { get; set; }
     public string Uniswap { get; set; }
+    public string PortkeyConfiguration { get; set; }
 }

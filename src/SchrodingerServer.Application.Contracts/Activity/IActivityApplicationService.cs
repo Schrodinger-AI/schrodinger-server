@@ -14,4 +14,6 @@ public interface IActivityApplicationService
     Task BindActivityAddressAsync(BindActivityAddressInput input);
     
     Task<ActivityAddressDto> GetActivityAddressAsync(GetActivityAddressInput input);
+
+    Task<RankDto> GetRankAsync(GetRankInput input);
 }

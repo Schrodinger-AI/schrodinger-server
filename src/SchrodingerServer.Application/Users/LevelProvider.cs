@@ -112,7 +112,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
                 levelInfo.Token = "";
                 levelInfo.AwakenPrice = "";
             }
-            else //use min token price 
+            else if (isInWhiteList) 
             {
                 levelInfo.AwakenPrice = (double.Parse(levelInfo.Token) * price).ToString();
             }

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using GraphQL;
 using Microsoft.Extensions.Logging;
 using SchrodingerServer.Common.GraphQL;
+using SchrodingerServer.Dto;
 using Volo.Abp.DependencyInjection;
 using Attribute = SchrodingerServer.Dtos.Adopts.Attribute;
 
@@ -13,6 +14,8 @@ namespace SchrodingerServer.Adopts.provider;
 public interface IAdoptGraphQLProvider
 {
     Task<AdoptInfo> QueryAdoptInfoAsync(string adoptId);
+    Task<List<AdpotInfoDto>> GetAdoptInfoByTime(long beginTime, long endTime);
+    Task<List<string>> GetAdoptAddressByTime(long beginTime, long endTime);
 }
 
 public class AdoptGraphQLProvider : IAdoptGraphQLProvider, ISingletonDependency
@@ -71,44 +74,75 @@ public class AdoptGraphQLProvider : IAdoptGraphQLProvider, ISingletonDependency
             Generation = adpotInfoDto.GetAdoptInfo.Gen
         };
     }
+    
+    
+    public async Task<List<AdpotInfoDto>> GetAdoptInfoByTime(long beginTime, long endTime)
+    {
+        var adpotInfoDto = await _graphQlHelper.QueryAsync<AdoptInfoByTimeQuery>(new GraphQLRequest
+        {
+            Query =
+                @"query($beginTime:Long!, 
+                        $endTime:Long!
+                ){
+                       getAdoptInfoByTime(input: {
+                          beginTime:$beginTime, 
+                          endTime:$endTime})
+                   {
+                       inputAmount,
+        		       outputAmount,
+                       adoptId,
+                       adopter,,
+                       adoptTime
+                   }
+              }",
+            Variables = new
+            {
+                beginTime = beginTime,
+                endTime = endTime
+            }
+        });
+        if (adpotInfoDto == null || adpotInfoDto.GetAdoptInfoByTime == null)
+        {
+            _logger.LogError("query adopt info by time failed");
+            return null;
+        }
+
+        return adpotInfoDto.GetAdoptInfoByTime;
+    }
+    
+    
+    public async Task<List<string>> GetAdoptAddressByTime(long beginTime, long endTime)
+    {
+        var adpotInfoDto = await _graphQlHelper.QueryAsync<AdoptInfoByTimeQuery>(new GraphQLRequest
+        {
+            Query =
+                @"query($beginTime:Long!, 
+                        $endTime:Long!
+                ){
+                    getAdoptInfoByTime(input: {
+                           beginTime:$beginTime, 
+                           endTime:$endTime})
+                   {
+                       adopter
+                   }
+            }",
+            Variables = new
+            {
+                beginTime = beginTime,
+                endTime = endTime
+            }
+        });
+        if (adpotInfoDto == null || adpotInfoDto.GetAdoptInfoByTime == null)
+        {
+            _logger.LogError("query adopt address by time failed");
+            return null;
+        }
+
+        return adpotInfoDto.GetAdoptInfoByTime.Select(x => x.Adopter).Where(x => !x.IsNullOrEmpty()).ToList();
+    }
 }
 
-public class AdoptInfoQuery
-{
-    public AdpotInfoDto GetAdoptInfo { get; set; }
 
-}
 
-public class AdpotInfoDto
-{
-    public string AdoptId { get; set; }
-    public string Parent { get; set; }
-    public string Ancestor { get; set; }
-    public string Symbol { get; set; }
-    public string Issuer { get; set; }
-    public string Owner { get; set; }
-    public string Deployer { get; set; }
-    public string Adopter { get; set; }
-    public string TokenName { get; set; }
 
-    public List<Trait> Attributes { get; set; }
 
-    public Dictionary<string, string> AdoptExternalInfo { get; set; } = new();
-    public long InputAmount { get; set; }
-    public long LossAmount { get; set; }
-    public long CommissionAmount { get; set; }
-    public long OutputAmount { get; set; }
-    public int ImageCount { get; set; }
-    public long TotalSupply { get; set; }
-    public int IssueChainId { get; set; }
-    public int Gen { get; set; }
-    public int ParentGen { get; set; }
-    public int Decimals { get; set; }
-}
-
-public class Trait
-{
-    public string TraitType { get; set; }
-    public string Value { get; set; }
-    public string Percent { get; set; }
-}
