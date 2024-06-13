@@ -31,6 +31,10 @@ public class ActivityRankOptions
     
     public long EndTime { get; set; }
     
+    public long DisplayBeginTime { get; set; }
+    
+    public long DisplayEndTime { get; set; }
+    
     public long NormalDisplayNumber { get; set; }
     
     public  long FinalDisplayNumber { get; set; }

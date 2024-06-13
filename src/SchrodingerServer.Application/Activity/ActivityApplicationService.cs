@@ -159,6 +159,12 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         var rankOptions = _activityRankOptions.CurrentValue;
         var beginTime = rankOptions.BeginTime;
         var endTime = rankOptions.EndTime;
+
+        if (input.IsFinal)
+        {
+            beginTime = rankOptions.DisplayBeginTime;
+            endTime = rankOptions.DisplayEndTime;
+        }
         
         var cur = TimeHelper.GetTimeStampInSeconds();
 
