@@ -25,6 +25,8 @@ public class ActivityRankOptions
 {
     public  List<RankHeader> Header { get; set; }
     
+    public  List<RankRewardItem> RankRewards { get; set; }
+    
     public long BeginTime { get; set; }
     
     public long NormalDisplayNumber { get; set; }
@@ -39,4 +41,11 @@ public class RankHeader
     public string Title { get; set; }
     public long Width { get; set; }
     public List<string> Tooltip { get; set; }
+}
+
+public class RankRewardItem
+{
+    public int Rank { get; set; }
+   
+    public long Reward { get; set; }
 }

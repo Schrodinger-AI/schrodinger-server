@@ -211,7 +211,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         };
 
         var displayNumbers = input.IsFinal ? rankOptions.FinalDisplayNumber : rankOptions.NormalDisplayNumber;
-        var index = 0;
+        var rank = 0;
         foreach (var rankData in rankDataList)
         {
             var address = rankData.Address;
@@ -242,20 +242,36 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             
             if (!isEoa)
             {
+                rank++;
                 if (input.IsFinal)
                 {
-                    rankData.Reward = "10 $SGR";
+                    var reward = GetRankReward(rank);
+                    rankData.Reward = reward.ToString();
                 }
                 result.Data.Add(rankData);
-                index++;
             }
 
-            if (index >= displayNumbers)
+            if (rank >= displayNumbers)
             {
                 break;
             }
         }
         
         return result;
+    }
+
+    
+    private long GetRankReward(int rank)
+    {
+        var rankRewards = _activityRankOptions.CurrentValue.RankRewards;
+        foreach (var rankReward in rankRewards)
+        {
+            if (rank <= rankReward.Rank)
+            {
+                return rankReward.Reward;
+            }
+        }
+
+        return 0;
     }
 }
