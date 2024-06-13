@@ -158,19 +158,27 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
 
         var rankOptions = _activityRankOptions.CurrentValue;
         var beginTime = rankOptions.BeginTime;
-        var endTIme = TimeHelper.GetTimeStampInSeconds();
+        var endTime = rankOptions.EndTime;
+        
+        var cur = TimeHelper.GetTimeStampInSeconds();
+
+        if (cur < endTime)
+        {
+            endTime = cur;
+        }
+        
         if (input.UpdateAddressCache)
         {
             await _distributedEventBus.PublishAsync(new UpdateAddressCacheEto
             {
                 BeginTime = beginTime,
-                EndTime = endTIme
+                EndTime = endTime
             });
 
             return new RankDto();
         }
 
-        var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(beginTime, endTIme);
+        var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(beginTime, endTime);
         if (res.IsNullOrEmpty())
         {
             _logger.LogInformation("GetRank empty");
