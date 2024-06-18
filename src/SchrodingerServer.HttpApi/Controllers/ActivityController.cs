@@ -55,4 +55,10 @@ public class ActivityController : AbpController
     {
         return _activityApplicationService.GetRankAsync(input);
     }
+    
+    [HttpGet("stage")]
+    public Task<StageDto> GetStageAsync()
+    {
+        return  _activityApplicationService.GetStageAsync();
+    }
 }

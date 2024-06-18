@@ -157,15 +157,10 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         _logger.LogInformation("GetRank input:{input}", JsonConvert.SerializeObject(input));
 
         var rankOptions = _activityRankOptions.CurrentValue;
-        var beginTime = rankOptions.BeginTime;
-        var endTime = rankOptions.EndTime;
-
-        if (input.IsFinal)
-        {
-            beginTime = rankOptions.DisplayBeginTime;
-            endTime = rankOptions.DisplayEndTime;
-            _logger.LogInformation("Final Time, begin:{begin}, end:{end}", beginTime, endTime);
-        }
+        
+        var inprogressStageTime = GetInProgressStageTime();
+        var beginTime = TimeHelper.ToUtcSeconds(inprogressStageTime.StartTime);
+        var endTime = TimeHelper.ToUtcSeconds(inprogressStageTime.EndTime);
         
         var cur = TimeHelper.GetTimeStampInSeconds();
 
@@ -204,7 +199,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             return result;
         }
         
-        var rankDataDict = new Dictionary<string, long>();
+        var rankDataDict = new Dictionary<string, RankItem>();
         foreach (var adopt in res)
         {
             var address = adopt.Adopter;
@@ -213,14 +208,33 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 continue;
             }
             var amount = adopt.InputAmount;
-            rankDataDict[address] = rankDataDict.TryGetValue(address, out var value) ? value + amount : amount;
+            var adoptTime = adopt.AdoptTime;
+
+            // var value;
+            var exist = rankDataDict.TryGetValue(address, out var value);
+            if (exist)
+            {
+                var totalAmount = value.TotalAmount + amount;
+                var updateTime = value.UpdateTime > adoptTime ? value.UpdateTime : adoptTime;
+                rankDataDict[address].TotalAmount = totalAmount;
+                rankDataDict[address].UpdateTime = updateTime;
+            }
+            else
+            {
+                rankDataDict[address] = new RankItem
+                {
+                    TotalAmount = amount,
+                    UpdateTime = adoptTime
+                };
+            }
         }
         
         var rankDataList = rankDataDict.Select(kvp => 
                 new ActivityRankData
                 {
                     Address = kvp.Key, 
-                    Scores = (long) (kvp.Value * 1314 / Math.Pow(10, 8))
+                    Scores = (long) (kvp.Value.TotalAmount * 1314 / Math.Pow(10, 8)),
+                    UpdateTime = kvp.Value.UpdateTime
                 })
             .ToList();
         
@@ -230,6 +244,12 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             if (scoreComparison != 0)
             {
                 return scoreComparison;
+            }
+
+            int timeComparison = item1.UpdateTime.CompareTo(item2.UpdateTime);
+            if (timeComparison != 0)
+            {
+                return timeComparison;
             }
 
             return item1.Address.CompareTo(item2.Address); 
@@ -285,6 +305,24 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         return result;
     }
 
+    public async Task<StageDto> GetStageAsync()
+    {
+        var inprogressStageTime = GetInProgressStageTime();
+        var displayedStageTime = GetDisplayedStageTime();
+        return new StageDto
+        {
+            InProgress = new StageTime
+            {
+                StartTime = TimeHelper.ToUtcMilliSeconds(inprogressStageTime.StartTime),
+                EndTime = TimeHelper.ToUtcMilliSeconds(inprogressStageTime.EndTime)
+            },
+            Displayed = new StageTime
+            {
+                StartTime = TimeHelper.ToUtcMilliSeconds(displayedStageTime.StartTime),
+                EndTime = TimeHelper.ToUtcMilliSeconds(displayedStageTime.EndTime)
+            },
+        };
+    }
     
     private long GetRankReward(int rank)
     {
@@ -298,5 +336,64 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         }
 
         return 0;
+    }
+
+    private StageTimeInDateTime GetInProgressStageTime()
+    {
+        DateTime today = DateTime.UtcNow;
+
+        DateTime startTime, endTime;
+
+        // Check if the current time is on or before this Wednesday 23:59:59 UTC
+        if (today.DayOfWeek < DayOfWeek.Wednesday || (today.DayOfWeek == DayOfWeek.Wednesday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
+        {
+            // Set startTime to last Thursday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek).AddDays(-7);
+            // Set endTime to this Tuesday 23:59:59 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Tuesday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
+        }
+        else
+        {
+            // Set startTime to this Thursday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek);
+            // Set endTime to next Tuesday 23:59:59 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Tuesday - today.DayOfWeek + 7).Add(new TimeSpan(23, 59, 59));
+        }
+        
+        return  new StageTimeInDateTime
+        {
+            StartTime = startTime,
+            EndTime = endTime
+        };
+    }
+    
+    
+    private StageTimeInDateTime GetDisplayedStageTime()
+    {
+        DateTime today = DateTime.UtcNow;
+
+        DateTime startTime, endTime;
+
+        // Check if the current time is on or before Wednesday 23:59:59 UTC
+        if (today.DayOfWeek < DayOfWeek.Wednesday || (today.DayOfWeek == DayOfWeek.Wednesday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
+        {
+            // Set startTime to this Wednesday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek);
+            // Set startTime to this Wednesday 23:59:59 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
+        }
+        else
+        {
+            // Set startTime to next Wednesday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek + 7);
+            // Set startTime to next Wednesday 00:00:00 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek + 7).Add(new TimeSpan(23, 59, 59));
+        }
+        
+        return  new StageTimeInDateTime
+        {
+            StartTime = startTime,
+            EndTime = endTime
+        };
     }
 }

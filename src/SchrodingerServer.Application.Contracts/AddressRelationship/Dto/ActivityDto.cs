@@ -13,6 +13,7 @@ public class ActivityDto
     public long BeginTime { get; set; }
     public long EndTime { get; set; }
     public bool IsNew { get; set; }
+    public string TimeDescription { get; set; }
 }
 
 

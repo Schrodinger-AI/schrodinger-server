@@ -16,4 +16,6 @@ public interface IActivityApplicationService
     Task<ActivityAddressDto> GetActivityAddressAsync(GetActivityAddressInput input);
 
     Task<RankDto> GetRankAsync(GetRankInput input);
+    
+    Task<StageDto> GetStageAsync();
 }
