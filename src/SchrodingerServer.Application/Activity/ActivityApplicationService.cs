@@ -347,7 +347,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         DateTime startTime, endTime;
 
         // Check if the current time is on or before this Wednesday 23:59:59 UTC
-        if (today.DayOfWeek < DayOfWeek.Wednesday || (today.DayOfWeek == DayOfWeek.Wednesday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
+        if (today.DayOfWeek < DayOfWeek.Tuesday || (today.DayOfWeek == DayOfWeek.Tuesday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
         {
             // Set startTime to last Thursday 00:00:00 UTC
             startTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek).AddDays(-7);
@@ -377,7 +377,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         DateTime startTime, endTime;
 
         // Check if the current time is on or before Wednesday 23:59:59 UTC
-        if (today.DayOfWeek < DayOfWeek.Wednesday || (today.DayOfWeek == DayOfWeek.Wednesday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
+        if (today.DayOfWeek < DayOfWeek.Tuesday || (today.DayOfWeek == DayOfWeek.Tuesday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
         {
             // Set startTime to this Wednesday 00:00:00 UTC
             startTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek);
