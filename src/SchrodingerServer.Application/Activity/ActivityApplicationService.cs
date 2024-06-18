@@ -162,6 +162,8 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         var beginTime = TimeHelper.ToUtcSeconds(inprogressStageTime.StartTime);
         var endTime = TimeHelper.ToUtcSeconds(inprogressStageTime.EndTime);
         
+        _logger.LogInformation("GetRank inprogress stage time, being:{begin}, end:{end}", beginTime, endTime);
+        
         var cur = TimeHelper.GetTimeStampInSeconds();
 
         if (cur < endTime)
