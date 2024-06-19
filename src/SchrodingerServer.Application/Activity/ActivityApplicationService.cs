@@ -352,7 +352,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             // Set startTime to last Thursday 00:00:00 UTC
             startTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek).AddDays(-7);
             // Set endTime to this Tuesday 23:59:59 UTC
-            endTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
+            endTime = today.Date.AddDays(DayOfWeek.Tuesday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
         }
         else
         {
