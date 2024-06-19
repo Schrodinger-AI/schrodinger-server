@@ -18,6 +18,7 @@ public class ActivityInfo
     public long EndTime { get; set; }
     public bool IsShow { get; set; }
     public bool IsNew { get; set; } = true;
+    public string TimeDescription { get; set; }
 }
 
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using SchrodingerServer.Common.Options;
 
@@ -14,5 +15,14 @@ public class ActivityRankData
     public string Address { get; set; }
     public long Scores { get; set; }
     public string Reward { get; set; }
+    
+    public DateTime UpdateTime { get; set; }
+}
+
+
+public class RankItem
+{
+    public DateTime UpdateTime { get; set; }
+    public long TotalAmount { get; set; }
 }
 
