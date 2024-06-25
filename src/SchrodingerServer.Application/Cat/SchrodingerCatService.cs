@@ -349,7 +349,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         var rankList = await  _schrodingerCatProvider.GetHoldingRankAsync();
         return new HoldingRankDto
         {
-            Items = rankList
+            Items = _objectMapper.Map<List<RankItem>, List<RankItemDto>>(rankList)
         };
     }
     
@@ -358,7 +358,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         var rankList = await  _schrodingerCatProvider.GetRarityRankAsync();
         return new RarityRankDto()
         {
-            Items = rankList
+            Items =  _objectMapper.Map<List<RarityRankItem>, List<RarityRankItemDto>>(rankList)
         };
     }
     
