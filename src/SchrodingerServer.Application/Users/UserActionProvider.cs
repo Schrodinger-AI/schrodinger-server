@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
@@ -25,7 +26,13 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
     private readonly IDistributedCache<string> _checkDomainCache;
     private readonly IOptionsMonitor<AccessVerifyOptions> _accessVerifyOptions;
     private readonly IUserInformationProvider _userInformationProvider;
-    private readonly IAddressRelationshipProvider _addressRelationshipProvider; 
+    private readonly IAddressRelationshipProvider _addressRelationshipProvider;
+
+    private readonly Dictionary<string, string> _domainDict = new Dictionary<string, string>
+    {
+        { "app.schrodingerai.com", "schrodingerai.com" },
+        { "app.schrodingernft.ai", "schrodingernft.ai" }
+    };
     
 
     public UserActionProvider(IClusterClient clusterClient, IPointServerProvider pointServerProvider,
@@ -45,6 +52,11 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
 
     public async Task<bool> CheckDomainAsync(string domain)
     {
+        if (_domainDict.TryGetValue(domain, out var value))
+        {
+            domain = value;
+        }
+        
         // 1. The domain name must not be empty and matched pattern
         // 2. The domain name exists on the whitelist or on the points platform.
         return domain.NotNullOrEmpty() &&
