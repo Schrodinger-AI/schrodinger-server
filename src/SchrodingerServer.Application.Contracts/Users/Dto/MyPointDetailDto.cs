@@ -26,7 +26,7 @@ public class EarnedPointDto : ActionPoints
     public long ThirdFollowersNumber { get; set; }
     public long UpdateTime { get; set; }
     public string DisplayName { get; set; }
-    public double EcoEarnReward { get; set; }
+    public decimal EcoEarnReward { get; set; }
 }
 
 public class EcoEarnRewardDto
