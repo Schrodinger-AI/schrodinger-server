@@ -21,6 +21,7 @@ using SchrodingerServer.Users;
 using SchrodingerServer.Users.Dto;
 using SchrodingerServer.Users.Eto;
 using SchrodingerServer.Zealy;
+using RankItem = SchrodingerServer.Dtos.Cat.RankItem;
 
 namespace SchrodingerServer;
 
@@ -52,5 +53,7 @@ public class SchrodingerServerApplicationAutoMapperProfile : Profile
         CreateMap<NFTActivityIndexDto, MessageInfo>();
         CreateMap<UniswapPositionSnapshotIndex, UniswapLiquidityDto>();
         CreateMap<ActivityInfo, ActivityDto>();
+        CreateMap<RankItem, RankItemDto>();
+        CreateMap<RarityRankItem, RarityRankItemDto>();
     }
 }

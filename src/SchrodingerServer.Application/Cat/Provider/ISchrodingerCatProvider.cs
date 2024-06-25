@@ -204,11 +204,10 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             var indexerResult = await _graphQlHelper.QueryAsync<HoldingRankQueryDto>(new GraphQLRequest
             {
                 Query =
-                    @"query($$rankNumber:Int!){
-                    getHoldingRank(input: {ranNumber:$rankNumber}){
+                    @"query($rankNumber:Int!){
+                    getHoldingRank(input: {rankNumber:$rankNumber}){
                         address,
-                        amount
-                   }   
+                        amount        
                 }
             }",
                 Variables = new
@@ -221,7 +220,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "getSchrodingerRank error");
+            _logger.LogError(e, "getHoldingRank error");
             return new List<RankItem>();
         }
     }
@@ -234,7 +233,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             {
                 Query =
                     @"query($rankNumber:Int!){
-                    getRarityRank(input: {ranNumber:$rankNumber}){
+                    getRarityRank(input: {rankNumber:$rankNumber}){
                         address,
         			    diamond,
         			    emerald,
@@ -242,7 +241,6 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         			    gold,
         			    silver,
         			    bronze
-                    }     
                 }
             }",
                 Variables = new
@@ -255,7 +253,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "getSchrodingerRank error");
+            _logger.LogError(e, "getRarityRank error");
             return new List<RarityRankItem>();
         }
     }
