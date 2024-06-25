@@ -10,5 +10,8 @@ public interface ISchrodingerCatService
     Task<SchrodingerListDto> GetSchrodingerAllCatsListAsync(GetCatListInput input);
     
     Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync (GetCatDetailInput input);
+    
+    Task<HoldingRankDto> GetHoldingRankAsync ();
 
+    Task<RarityRankDto> GetRarityRankAsync ();
 }

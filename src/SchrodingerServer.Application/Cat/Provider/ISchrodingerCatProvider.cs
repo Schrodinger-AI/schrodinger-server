@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using GraphQL;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,10 @@ public interface ISchrodingerCatProvider
     Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync(GetCatDetailInput input);
     
     Task<CatRankDto> GetSchrodingerCatRankAsync(GetCatRankInput input);
+    
+    Task<List<RankItem>> GetHoldingRankAsync();
+    
+    Task<List<RarityRankItem>> GetRarityRankAsync();
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -189,6 +194,69 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "getSchrodingerRank error");
             return new CatRankDto();
+        }
+    }
+
+    public async Task<List<RankItem>> GetHoldingRankAsync()
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<HoldingRankQueryDto>(new GraphQLRequest
+            {
+                Query =
+                    @"query($$rankNumber:Int!){
+                    getHoldingRank(input: {ranNumber:$rankNumber}){
+                        address,
+                        amount
+                   }   
+                }
+            }",
+                Variables = new
+                {
+                    rankNumber = 100
+                }
+            });
+
+            return indexerResult.GetHoldingRank;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getSchrodingerRank error");
+            return new List<RankItem>();
+        }
+    }
+    
+    public async Task<List<RarityRankItem>> GetRarityRankAsync()
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<RarityRankQueryDto>(new GraphQLRequest
+            {
+                Query =
+                    @"query($rankNumber:Int!){
+                    getRarityRank(input: {ranNumber:$rankNumber}){
+                        address,
+        			    diamond,
+        			    emerald,
+        			    platinum,
+        			    gold,
+        			    silver,
+        			    bronze
+                    }     
+                }
+            }",
+                Variables = new
+                {
+                    rankNumber = 100
+                }
+            });
+
+            return indexerResult.GetRarityRank;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getSchrodingerRank error");
+            return new List<RarityRankItem>();
         }
     }
 }
