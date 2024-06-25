@@ -120,7 +120,7 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
         {
             if (ecoEarnRewards.Reward.TryGetValue(detail.Symbol, out var value))
             {
-                detail.EcoEarnReward = decimal.Parse(value);
+                detail.EcoEarnReward = double.Parse(value) * 0.9;
             }
             else
             {
@@ -140,9 +140,12 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
             return int.Parse(symbolData[1]);
         }).ToList();
         
-        
-        var hasBoundAddress = await _addressRelationshipProvider.CheckBindingExistsAsync(info.AelfAddress, "");
-        res.HasBoundAddress = hasBoundAddress;
+        var evmAddress = await  _addressRelationshipProvider.GetEvmAddressByAelfAddressAsync(info.AelfAddress);
+        if (!evmAddress.IsNullOrEmpty())
+        {
+            res.EvmAddress = evmAddress;
+            res.HasBoundAddress = true;
+        }
         
         return res;
     }
