@@ -19,6 +19,8 @@ public interface IAddressRelationshipProvider
     Task<bool> CheckBindingExistsAsync(string aelfAddress, string evmAddress);
     
     Task<string> GetAelfAddressByEvmAddressAsync(string evmAddress);
+    
+    Task<string> GetEvmAddressByAelfAddressAsync(string alefAddress);
 }
 
 
@@ -81,5 +83,15 @@ public class AddressRelationshipProvider : IAddressRelationshipProvider, ISingle
         
         var res = await _addressRelationshipRepository.GetAsync(Filter);
         return  res?.AelfAddress;
+    }
+    
+    public async Task<string>  GetEvmAddressByAelfAddressAsync(string alefAddress)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<AddressRelationshipIndex>, QueryContainer>>();
+        mustQuery.Add(q => q.Term(i => i.Field(f => f.AelfAddress).Value(alefAddress)));
+        QueryContainer Filter(QueryContainerDescriptor<AddressRelationshipIndex> f) => f.Bool(b => b.Must(mustQuery));
+        
+        var res = await _addressRelationshipRepository.GetAsync(Filter);
+        return  res?.EvmAddress;
     }
 }
