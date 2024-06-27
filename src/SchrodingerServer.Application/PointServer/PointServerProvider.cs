@@ -109,6 +109,15 @@ public class PointServerProvider : IPointServerProvider, ISingletonDependency
 
     public async Task<EcoEarnRewardDto> GetEcoEarnRewardsAsync(string address)
     {
+        if (!_pointServiceOptions.CurrentValue.EcoEarnReady)
+        {
+            _logger.LogInformation("EcoEarnRewards is not ready");
+            return new EcoEarnRewardDto
+            {
+                Reward = new Dictionary<string, string>()
+            };
+        }
+        
         try
         {
             var resp = await _httpProvider.InvokeAsync<CommonResponseDto<EcoEarnRewardDto>>(
@@ -124,7 +133,10 @@ public class PointServerProvider : IPointServerProvider, ISingletonDependency
         catch (Exception e)
         {
             _logger.LogWarning(e, "Points domain get points failed");
-            return new EcoEarnRewardDto();
+            return new EcoEarnRewardDto
+            {
+                Reward = new Dictionary<string, string>()
+            };
         }
     }
 }
