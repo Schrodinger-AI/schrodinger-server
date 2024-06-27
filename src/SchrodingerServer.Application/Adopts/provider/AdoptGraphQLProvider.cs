@@ -38,7 +38,8 @@ public class AdoptGraphQLProvider : IAdoptGraphQLProvider, ISingletonDependency
                           attributes{
                             traitType,
                             value,
-                            percent
+                            percent,
+                            isRare
                           }
                           adopter,
                           imageCount,
