@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using GraphQL;
 using Microsoft.Extensions.Logging;
 using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.Common.GraphQL;
 using SchrodingerServer.Dtos.Cat;
+using SchrodingerServer.Message.Dtos;
+using SchrodingerServer.Message.Provider.Dto;
 using Volo.Abp.DependencyInjection;
 
 namespace SchrodingerServer.Cat.Provider;
@@ -17,6 +20,8 @@ public interface ISchrodingerCatProvider
     Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync(GetCatDetailInput input);
     
     Task<CatRankDto> GetSchrodingerCatRankAsync(GetCatRankInput input);
+
+    Task<List<NFTActivityIndexDto>> GetSchrodingerSoldListAsync(GetSchrodingerSoldInput input);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -189,6 +194,55 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "getSchrodingerRank error");
             return new CatRankDto();
+        }
+    }
+    
+    
+    public async Task<List<NFTActivityIndexDto>> GetSchrodingerSoldListAsync(GetSchrodingerSoldInput input)
+    {
+        try
+        {
+            var res = await _graphQlHelper.QueryAsync<SchrodingerSoldListQueryDto>(new GraphQLRequest
+            {
+                Query = @"query (
+                    $filterSymbol:String!,
+                    $timestampMin:Long!,
+                    $timestampMin:Long!,
+                    $chainId:String!
+                ){
+                  getSchrodingerSoldList(
+                    input:{
+                      filterSymbol:$filterSymbol,
+                      timestampMin:$timestampMax,
+                      timestampMin:$timestampMin,
+                      chainId:$chainId
+                    }
+                  ){
+                        id,
+                        from,
+                        to,
+                        type,
+                        nftInfoId,
+                        amount,
+                        price,
+                        timestamp,
+                        transactionHash
+                  }
+                }",
+                Variables = new
+                {
+                    filterSymbol = input.FilterSymbol,
+                    timestampMin = input.TimestampMin,
+                    timestampMax = input.TimestampMax,
+                    chainId = input.ChainId
+                }
+            });
+            return res.GetSchrodingerSoldList;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getSchrodingerSoldList query GraphQL error");
+            throw;
         }
     }
 }
