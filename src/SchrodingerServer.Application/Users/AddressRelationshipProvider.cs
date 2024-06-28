@@ -24,6 +24,7 @@ public interface IAddressRelationshipProvider
     
     Task<ActivityAddressIndex> GetActivityAddressAsync(string aelfAddress, string activityId);
     Task<bool> CheckActivityBindingExistsAsync(string aelfAddress, string sourceChainAddress, string activityId);
+    Task<string> GetEvmAddressByAelfAddressAsync(string alefAddress);
 }
 
 
@@ -120,25 +121,26 @@ public class AddressRelationshipProvider : IAddressRelationshipProvider, ISingle
         
         return res;
     }
-    
-    public async Task<bool> CheckActivityBindingExistsAsync(string aelfAddress, string sourceChainAddress, string activityId)
+
+    public async Task<bool> CheckActivityBindingExistsAsync(string aelfAddress, string sourceChainAddress,
+        string activityId)
     {
         if (aelfAddress.IsNullOrEmpty() && sourceChainAddress.IsNullOrEmpty() && activityId.IsNullOrEmpty())
         {
             return false;
         }
-        
+
         var shouldQuery = new List<Func<QueryContainerDescriptor<ActivityAddressIndex>, QueryContainer>>();
         shouldQuery.Add(q => q.Term(i => i.Field(f => f.AelfAddress).Value(aelfAddress)));
         shouldQuery.Add(q => q.Term(i => i.Field(f => f.SourceChainAddress).Value(sourceChainAddress)));
-        
+
         var mustQuery = new List<Func<QueryContainerDescriptor<ActivityAddressIndex>, QueryContainer>>
-        { 
+        {
             q => q.Term(i => i.Field(f => f.ActivityId).Value(activityId)),
             q => q.Bool(b => b.Should(shouldQuery))
         };
         QueryContainer Filter(QueryContainerDescriptor<ActivityAddressIndex> f) => f.Bool(b => b.Must(mustQuery));
-        
+
         var res = await _activityAddressRepository.GetAsync(Filter);
         if (res != null && !res.Id.IsNullOrEmpty())
         {
@@ -146,5 +148,15 @@ public class AddressRelationshipProvider : IAddressRelationshipProvider, ISingle
         }
 
         return false;
+    }
+
+    public async Task<string>  GetEvmAddressByAelfAddressAsync(string alefAddress)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<AddressRelationshipIndex>, QueryContainer>>();
+        mustQuery.Add(q => q.Term(i => i.Field(f => f.AelfAddress).Value(alefAddress)));
+        QueryContainer Filter(QueryContainerDescriptor<AddressRelationshipIndex> f) => f.Bool(b => b.Must(mustQuery));
+        
+        var res = await _addressRelationshipRepository.GetAsync(Filter);
+        return  res?.EvmAddress;
     }
 }

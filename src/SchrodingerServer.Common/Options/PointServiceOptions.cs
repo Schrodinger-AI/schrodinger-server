@@ -6,4 +6,8 @@ public class PointServiceOptions
     public string DappName { get; set; }
     public string DappSecret { get; set; }
     public string DappId { get; set; }
+    
+    public string EcoEarnUrl { get; set; }
+
+    public bool EcoEarnReady { get; set; } = false;
 }

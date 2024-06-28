@@ -114,9 +114,40 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
         _logger.Info("GetMyPoints by {0} {1}", input.Address, input.Domain);
         
         var res = await _pointServerProvider.GetMyPointsAsync(input);
+
+        var ecoEarnRewards = await _pointServerProvider.GetEcoEarnRewardsAsync(input.Address);
+        res.PointDetails.ForEach(detail =>
+        {
+            if (ecoEarnRewards.Reward.TryGetValue(detail.Symbol, out var value))
+            {
+                detail.EcoEarnReward = decimal.Parse(value) * (decimal)0.9;
+            }
+            else
+            {
+                detail.EcoEarnReward = 0;   
+            }
+        });
+        
+        res.PointDetails = res.PointDetails.OrderByDescending(o =>
+        {
+            var symbol = o.Symbol;
+            var symbolData = o.Symbol.Split("-");
+            if (symbolData.Length != 2)
+            {
+                return 0;
+            }
+
+            return int.Parse(symbolData[1]);
+        }).ToList();
         
         var hasBoundAddress = await _addressRelationshipProvider.CheckBindingExistsAsync(info.AelfAddress, "");
         res.HasBoundAddress = hasBoundAddress;
+        var evmAddress = await  _addressRelationshipProvider.GetEvmAddressByAelfAddressAsync(info.AelfAddress);
+        if (!evmAddress.IsNullOrEmpty())
+        {
+            res.EvmAddress = evmAddress;
+            res.HasBoundAddress = true;
+        }
         
         return res;
     }

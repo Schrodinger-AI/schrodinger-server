@@ -14,5 +14,6 @@ public class Attribute
     public string TraitType { get; set; }
     public string Value { get; set; }
     public string Percent { get; set; }
+    public bool IsRare { get; set; }
 }
 

@@ -41,7 +41,8 @@ public class AdoptGraphQLProvider : IAdoptGraphQLProvider, ISingletonDependency
                           attributes{
                             traitType,
                             value,
-                            percent
+                            percent,
+                            isRare
                           }
                           adopter,
                           imageCount,
@@ -67,7 +68,8 @@ public class AdoptGraphQLProvider : IAdoptGraphQLProvider, ISingletonDependency
             {
                 TraitType = a.TraitType,
                 Value = a.Value,
-                Percent = a.Percent
+                Percent = a.Percent,
+                IsRare =  a.IsRare
             }).ToList(),
             Adopter = adpotInfoDto.GetAdoptInfo.Adopter,
             ImageCount = adpotInfoDto.GetAdoptInfo.ImageCount,
@@ -141,8 +143,3 @@ public class AdoptGraphQLProvider : IAdoptGraphQLProvider, ISingletonDependency
         return adpotInfoDto.GetAdoptInfoByTime.Select(x => x.Adopter).Where(x => !x.IsNullOrEmpty()).ToList();
     }
 }
-
-
-
-
-

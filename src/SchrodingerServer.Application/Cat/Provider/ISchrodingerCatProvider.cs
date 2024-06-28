@@ -134,7 +134,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         generation,
                         address,
                         decimals
-                        traits{traitType,value,percent}
+                        traits{traitType,value,percent,isRare}
                     
                 }
             }",
