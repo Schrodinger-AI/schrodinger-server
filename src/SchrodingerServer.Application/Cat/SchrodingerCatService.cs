@@ -125,6 +125,11 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
         
         var amount = symbolIndexerListDto.Data[0].Amount;
+        detail.LevelInfo = new LevelInfoDto
+        {
+            Describe = symbolIndexerListDto.Data[0].Describe
+        };
+        
         _logger.LogInformation("GetSchrodingerCatDetailAsync address:{address}",address);
         if (input.Address.IsNullOrEmpty())
         {

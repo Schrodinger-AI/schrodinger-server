@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using SchrodingerServer.Common;
+using SchrodingerServer.Dto;
 
 namespace SchrodingerServer.Dtos.Cat;
 public class SchrodingerDetailQueryDto
@@ -17,6 +18,7 @@ public class SchrodingerDetailDto
     public string Address { get; set; }
     public List<TraitDto> Traits { get; set; }
     public long HolderAmount{ get; set; }
+    public LevelInfoDto LevelInfo { get; set; }
 }
 
 public class TraitDto
