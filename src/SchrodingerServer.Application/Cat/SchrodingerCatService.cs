@@ -125,9 +125,12 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
         
         var amount = symbolIndexerListDto.Data[0].Amount;
-        detail.LevelInfo = new LevelInfoDto
+        var levelInfoDto = new LevelInfoDto
         {
-            Describe = symbolIndexerListDto.Data[0].Describe
+            Describe = symbolIndexerListDto.Data[0].Describe,
+            Level = symbolIndexerListDto.Data[0].Level,
+            AwakenPrice = symbolIndexerListDto.Data[0].AwakenPrice,
+            Token = symbolIndexerListDto.Data[0].Token
         };
         
         _logger.LogInformation("GetSchrodingerCatDetailAsync address:{address}",address);
@@ -135,6 +138,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             detail = holderDetail ?? _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
             detail.Amount = amount;
+            detail.LevelInfo = levelInfoDto;
             _logger.LogInformation("GetSchrodingerCatDetailAsync detail:{detail}",JsonConvert.SerializeObject(detail));
             return detail;
         }
@@ -144,6 +148,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             detail = holderDetail ?? _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
             detail.Amount = amount;
             detail.HolderAmount = 0;
+            detail.LevelInfo = levelInfoDto;
             return detail;
         }
 
@@ -151,6 +156,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         detail.HolderAmount = detail.Amount;
         detail.Amount = amount;
+        detail.LevelInfo = levelInfoDto;
         return detail;
     }
 
