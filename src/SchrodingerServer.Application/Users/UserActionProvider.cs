@@ -140,6 +140,8 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
             return int.Parse(symbolData[1]);
         }).ToList();
         
+        var hasBoundAddress = await _addressRelationshipProvider.CheckBindingExistsAsync(info.AelfAddress, "");
+        res.HasBoundAddress = hasBoundAddress;
         var evmAddress = await  _addressRelationshipProvider.GetEvmAddressByAelfAddressAsync(info.AelfAddress);
         if (!evmAddress.IsNullOrEmpty())
         {
