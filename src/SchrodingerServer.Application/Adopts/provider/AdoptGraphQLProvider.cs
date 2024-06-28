@@ -143,19 +143,3 @@ public class AdoptGraphQLProvider : IAdoptGraphQLProvider, ISingletonDependency
         return adpotInfoDto.GetAdoptInfoByTime.Select(x => x.Adopter).Where(x => !x.IsNullOrEmpty()).ToList();
     }
 }
-
-
-
-
-
-
-
-
-public class Trait
-{
-    public string TraitType { get; set; }
-    public string Value { get; set; }
-    public string Percent { get; set; }
-    
-    public bool IsRare { get; set; }
-}
