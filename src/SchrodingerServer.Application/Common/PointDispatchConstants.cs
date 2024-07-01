@@ -15,4 +15,5 @@ public class PointDispatchConstants
     public const string SYNC_SGR11_PREFIX = "SyncSGR11";
     public const string SYNC_COMPENSATE_PREFIX = "SyncCompensate";
     public const string SYNC_SGR10_PREFIX = "SyncSGR10";
+    public const string SYNC_SGR7_PREFIX = "SyncSGR7";
 }
