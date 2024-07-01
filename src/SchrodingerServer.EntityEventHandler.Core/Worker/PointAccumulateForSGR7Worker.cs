@@ -105,8 +105,8 @@ public class PointAccumulateForSGR7Worker : AsyncPeriodicBackgroundWorkerBase
      
      private async Task CalculatePointAsync(long beginTime, long endTime, string bizDate)
      {
-         _logger.LogInformation("PointAccumulateForSGR7Worker CalculatePointAsync date:{date} begin...", 
-             bizDate);
+         _logger.LogInformation("PointAccumulateForSGR7Worker CalculatePointAsync date:{date}, from:{from}, to:{to} begin...", 
+             bizDate, beginTime, endTime);
          var isExecuted = await _pointDispatchProvider.GetDispatchAsync(PointDispatchConstants.SYNC_SGR7_PREFIX , bizDate, pointName);
          if (isExecuted)
          {
