@@ -206,14 +206,14 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             {
                 Query = @"query (
                     $filterSymbol:String!,
-                    $timestampMin:Long!,
+                    $timestampMax:Long!,
                     $timestampMin:Long!,
                     $chainId:String!
                 ){
                   getSchrodingerSoldList(
                     input:{
                       filterSymbol:$filterSymbol,
-                      timestampMin:$timestampMax,
+                      timestampMax:$timestampMax,
                       timestampMin:$timestampMin,
                       chainId:$chainId
                     }
