@@ -22,6 +22,8 @@ public interface ISchrodingerCatProvider
     Task<List<RankItem>> GetHoldingRankAsync();
     
     Task<List<RarityRankItem>> GetRarityRankAsync();
+    
+    Task<HomeDataDto> GetHomeDataAsync(string chainId);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -255,6 +257,35 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "getRarityRank error");
             return new List<RarityRankItem>();
+        }
+    }
+
+    public async Task<HomeDataDto> GetHomeDataAsync(string chainId)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<HomeDataQueryDto>(new GraphQLRequest
+            {
+                Query =
+                    @"query($chainId:String!){
+                    getHomeData(input: {chainId:$chainId}){
+                        symbolCount,
+                        holdingCount,
+        		        tradeVolume
+                }
+            }",
+                Variables = new
+                {
+                    chainId = chainId
+                }
+            });
+
+            return indexerResult.GetHomeData;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getRarityRank error");
+            return new HomeDataDto();
         }
     }
 }
