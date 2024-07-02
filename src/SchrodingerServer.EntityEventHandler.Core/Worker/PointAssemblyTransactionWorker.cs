@@ -85,11 +85,11 @@ public class PointAssemblyTransactionWorker : AsyncPeriodicBackgroundWorkerBase
             _logger.LogInformation("PointAssemblyTransactionWorker has been executed for bizDate: {0} pointName: {1}", bizDate, pointName);
             return;
         }
-        var isBeforeExecuted =  await _pointDispatchProvider.GetDispatchAsync(PointDispatchConstants.SYNC_HOLDER_BALANCE_PREFIX, bizDate, pointName);
-        bool alwaysCheck =  _workerOptionsMonitor.CurrentValue.AlwaysCheck;
-        if (!isBeforeExecuted && !alwaysCheck)
+        var readyForExecute =  await _pointDispatchProvider.GetDispatchAsync(PointDispatchConstants.CAL_FINISH_PREFIX, bizDate, pointName);
+        bool alwaysCheck = IsAlwaysCheck(pointName);
+        if (!readyForExecute && !alwaysCheck)
         {
-            _logger.LogInformation("SyncHolderBalanceWorker has not  executed for bizDate: {0} pointName:{1}", bizDate, pointName);
+            _logger.LogInformation("SyncHolderBalanceWorker has not ready for executed for bizDate: {0} pointName:{1}", bizDate, pointName);
             return;
         }
         var chainIds = _workerOptionsMonitor.CurrentValue.ChainIds;
@@ -99,6 +99,16 @@ public class PointAssemblyTransactionWorker : AsyncPeriodicBackgroundWorkerBase
         }
         _logger.LogInformation("Executing point assembly transaction job end");
         await _pointDispatchProvider.SetDispatchAsync(PointDispatchConstants.POINT_ASSEMBLY_TRANSACTION_PREFIX, bizDate, pointName, true);
+    }
+
+    private bool IsAlwaysCheck(string pointName)
+    {
+        if (pointName == "XPSGR-7")
+        {
+            return false;
+        }
+
+        return true;
     }
 
 }

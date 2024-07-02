@@ -179,6 +179,7 @@ public class PointAccumulateForSGR7Worker : AsyncPeriodicBackgroundWorkerBase
          
          await _pointDispatchProvider.SetDispatchAsync(PointDispatchConstants.SYNC_SGR7_PREFIX, bizDate,
              pointName, true);
+         await _pointDispatchProvider.SetDispatchAsync(PointDispatchConstants.CAL_FINISH_PREFIX, bizDate, pointName, true);
          _logger.LogInformation("PointAccumulateForSGR7Worker CalculatePointAsync date:{date} end...", 
              bizDate);
      }
