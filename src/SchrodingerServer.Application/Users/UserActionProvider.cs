@@ -30,7 +30,7 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
 
     private readonly Dictionary<string, string> _domainDict = new Dictionary<string, string>
     {
-        { "app.schrodingerai.com", "schrodingerai.com" },
+        { "sgr.schrodingerai.com", "schrodingerai.com" },
         { "sgr.schrodingernft.ai", "schrodingernft.ai" }
     };
     
