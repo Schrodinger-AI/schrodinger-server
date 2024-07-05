@@ -5,7 +5,7 @@ namespace SchrodingerServer.Adopts;
 
 public interface IAdoptApplicationService
 {
-    Task<GetAdoptImageInfoOutput> GetAdoptImageInfoAsync(string adoptId);
+    Task<GetAdoptImageInfoOutput> GetAdoptImageInfoAsync(GetAdoptImageInfoInput input);
 
     Task<GetWaterMarkImageInfoOutput> GetWaterMarkImageInfoAsync(GetWaterMarkImageInfoInput input);
     Task<bool> IsOverLoadedAsync();

@@ -343,4 +343,23 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
         return res;
     }
+
+    public async Task<HoldingRankDto> GetHoldingRankAsync()
+    {
+        var rankList = await  _schrodingerCatProvider.GetHoldingRankAsync();
+        return new HoldingRankDto
+        {
+            Items = _objectMapper.Map<List<RankItem>, List<RankItemDto>>(rankList)
+        };
+    }
+    
+    public async Task<RarityRankDto> GetRarityRankAsync()
+    {
+        var rankList = await  _schrodingerCatProvider.GetRarityRankAsync();
+        return new RarityRankDto()
+        {
+            Items =  _objectMapper.Map<List<RarityRankItem>, List<RarityRankItemDto>>(rankList)
+        };
+    }
+    
 }

@@ -78,9 +78,10 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return chainId;
     }
 
-    public async Task<GetAdoptImageInfoOutput> GetAdoptImageInfoAsync(string adoptId)
+    public async Task<GetAdoptImageInfoOutput> GetAdoptImageInfoAsync(GetAdoptImageInfoInput input)
     {
-        _logger.Info("GetAdoptImageInfoAsync, {req}", adoptId);
+        var adoptId = input.AdoptId;
+        _logger.LogInformation("GetAdoptImageInfoAsync, adoptId: {adoptId}, transactionHash: {transactionHash}", adoptId, input.TransactionHash);
         var output = new GetAdoptImageInfoOutput();
         var adoptInfo = await QueryAdoptInfoAsync(adoptId);
         if (adoptInfo == null)

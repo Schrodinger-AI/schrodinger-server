@@ -37,4 +37,16 @@ public class SchrodingerCatController
         return await _schrodingerCatService.GetSchrodingerCatDetailAsync(input);
     }
     
+    [HttpGet("holding-rank")]
+    public async Task<HoldingRankDto> GetHoldingRank()
+    {
+        return await _schrodingerCatService.GetHoldingRankAsync();
+    }
+    
+    [HttpGet("rarity-rank")]
+    public async Task<RarityRankDto> GetSchrodingerAllCatsList()
+    {
+        return await _schrodingerCatService.GetRarityRankAsync();
+    }
+    
 }

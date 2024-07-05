@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using GraphQL;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,12 @@ public interface ISchrodingerCatProvider
     Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync(GetCatDetailInput input);
     
     Task<CatRankDto> GetSchrodingerCatRankAsync(GetCatRankInput input);
+    
+    Task<List<RankItem>> GetHoldingRankAsync();
+    
+    Task<List<RarityRankItem>> GetRarityRankAsync();
+    
+    Task<HomeDataDto> GetHomeDataAsync(string chainId);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -189,6 +196,96 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "getSchrodingerRank error");
             return new CatRankDto();
+        }
+    }
+
+    public async Task<List<RankItem>> GetHoldingRankAsync()
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<HoldingRankQueryDto>(new GraphQLRequest
+            {
+                Query =
+                    @"query($rankNumber:Int!){
+                    getHoldingRank(input: {rankNumber:$rankNumber}){
+                        address,
+                        amount        
+                }
+            }",
+                Variables = new
+                {
+                    rankNumber = 100
+                }
+            });
+
+            return indexerResult.GetHoldingRank;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getHoldingRank error");
+            return new List<RankItem>();
+        }
+    }
+    
+    public async Task<List<RarityRankItem>> GetRarityRankAsync()
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<RarityRankQueryDto>(new GraphQLRequest
+            {
+                Query =
+                    @"query($rankNumber:Int!){
+                    getRarityRank(input: {rankNumber:$rankNumber}){
+                        address,
+        			    diamond,
+        			    emerald,
+        			    platinum,
+        			    gold,
+        			    silver,
+        			    bronze
+                }
+            }",
+                Variables = new
+                {
+                    rankNumber = 100
+                }
+            });
+
+            return indexerResult.GetRarityRank;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getRarityRank error");
+            return new List<RarityRankItem>();
+        }
+    }
+
+    public async Task<HomeDataDto> GetHomeDataAsync(string chainId)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<HomeDataQueryDto>(new GraphQLRequest
+            {
+                Query =
+                    @"query($chainId:String!){
+                    getHomeData(input: {chainId:$chainId}){
+                        symbolCount,
+                        holdingCount,
+        		        tradeVolume
+                }
+            }",
+                Variables = new
+                {
+                    chainId = chainId
+                }
+            });
+
+            return indexerResult.GetHomeData;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getRarityRank error");
+            return new HomeDataDto();
         }
     }
 }

@@ -25,4 +25,11 @@ public class GateIoCirculationController : AbpController
     {
         return await _gateIoCirculationService.GetSgrCirculation();
     }
+    
+    
+    [HttpGet("price")]
+    public async Task<decimal> GetSgrPrice()
+    {
+        return await _gateIoCirculationService.GetSgrPrice();
+    }
 }
