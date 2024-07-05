@@ -28,6 +28,8 @@ public interface ISchrodingerCatProvider
     Task<HomeDataDto> GetHomeDataAsync(string chainId);
 
     Task<List<NFTActivityIndexDto>> GetSchrodingerSoldListAsync(GetSchrodingerSoldInput input);
+
+    Task<HoldingPointBySymbolDto> GetHoldingPointBySymbol(string symbol, string chainId);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -339,6 +341,42 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "getSchrodingerSoldList query GraphQL error");
             throw;
+        }
+    }
+    
+    
+    public async Task<HoldingPointBySymbolDto> GetHoldingPointBySymbol(string symbol, string chainId)
+    {
+        try
+        {
+            var res = await _graphQlHelper.QueryAsync<HoldingPointBySymbolQueryDto>(new GraphQLRequest
+            {
+                Query = @"query (
+                    $symbol:String!,
+                    $chainId:String!
+                ){
+                  getHoldingPointBySymbol(
+                    input:{
+                      symbol:$symbol,
+                      chainId:$chainId
+                    }
+                  ){
+                        point,
+                        level
+                  }
+                }",
+                Variables = new
+                {
+                    symbol = symbol,
+                    chainId = chainId
+                }
+            });
+            return res.GetHoldingPointBySymbol;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetHoldingPointBySymbol query GraphQL error");
+            return  new HoldingPointBySymbolDto();
         }
     }
 }
