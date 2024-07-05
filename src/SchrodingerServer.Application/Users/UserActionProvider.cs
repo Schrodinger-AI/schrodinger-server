@@ -31,7 +31,7 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
     private readonly Dictionary<string, string> _domainDict = new Dictionary<string, string>
     {
         { "app.schrodingerai.com", "schrodingerai.com" },
-        { "app.schrodingernft.ai", "schrodingernft.ai" }
+        { "sgr.schrodingernft.ai", "schrodingernft.ai" }
     };
     
 
@@ -52,6 +52,7 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
 
     public async Task<bool> CheckDomainAsync(string domain)
     {
+        _logger.Info("CheckDomain :{domain}", domain);
         if (_domainDict.TryGetValue(domain, out var value))
         {
             domain = value;
