@@ -130,7 +130,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
         _logger.LogInformation("PointAccumulateForSGR9Worker Index Judgement, {index1}, {index2}, {curIndex}", 
             indexList[0], indexList[1], curIndex);
         
-        var fixedIndexList =  _pointTradeOptions.CurrentValue.IndexList;
+        var fixedIndexList =  _workerOptionsMonitor.CurrentValue.GetTriggerIndexList(_lockKey);
         if (!fixedIndexList.IsNullOrEmpty())
         {
             indexList = fixedIndexList.ToList();
