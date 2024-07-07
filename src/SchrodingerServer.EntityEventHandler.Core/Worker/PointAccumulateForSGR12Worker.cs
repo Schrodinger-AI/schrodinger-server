@@ -37,7 +37,7 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
     private const int MaxResultCount = 500;
     private const int MinimumIndexGap = 24;
     private const int SnapShotCount = 2;
-    private const string pointName = "XPSGR-7";
+    private const string pointName = "XPSGR-12";
 
     private readonly ILogger<PointAccumulateForSGR12Worker> _logger;
     private readonly IOptionsMonitor<WorkerOptions> _workerOptionsMonitor;
@@ -80,7 +80,7 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
         _pointDispatchProvider = pointDispatchProvider;
         _schrodingerCatProvider = schrodingerCatProvider;
         _objectMapper = objectMapper;
-        timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 60 * 100;
+        timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 60 * 1000;
     }
 
     protected override async Task DoWorkAsync(PeriodicBackgroundWorkerContext workerContext)
@@ -106,13 +106,13 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
         DateTime now = DateTime.Now;
         int curIndex = now.Hour * 6 + now.Minute / 10;
         var indexList = await _distributedCache.GetAsync(PointDispatchConstants.SGR12_SNAPSHOT_INDEX_CACHE_KEY_PREFIX + bizDate);
-        // if (indexList == null)
-        // {
-        //     indexList = await SetSnapshotIndexCacheAsync(bizDate, curIndex);
-        // }
+        if (indexList == null)
+        {
+            indexList = await SetSnapshotIndexCacheAsync(bizDate, curIndex);
+        }
         
-        // _logger.LogInformation("PointAccumulateForSGR12Worker Index Judgement, {index1}, {index2}, {curIndex}", 
-        //     indexList[0], indexList[1], curIndex);
+        _logger.LogInformation("PointAccumulateForSGR12Worker Index Judgement, {index1}, {index2}, {curIndex}", 
+            indexList[0], indexList[1], curIndex);
 
         var fixedIndexList = _workerOptionsMonitor.CurrentValue.GetTriggerIndexList(_lockKey);
         if (!fixedIndexList.IsNullOrEmpty())
@@ -135,10 +135,10 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
-        _logger.LogInformation("PointAccumulateForSGR10Worker cal points");
+        _logger.LogInformation("PointAccumulateForSGR12Worker cal points");
         await Task.Delay(1000);
         var allSnapshots = await GetAllIndex(bizDate);
-        _logger.LogInformation("PointAccumulateForSGR10Worker snapshot counts: {cnt}", allSnapshots.Count);
+        _logger.LogInformation("PointAccumulateForSGR12Worker snapshot counts: {cnt}", allSnapshots.Count);
 
         var snapshotByAddress = allSnapshots.GroupBy(snapshot => snapshot.Address).Select(group => new HolderDailyChangeDto
         {
@@ -165,7 +165,7 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
       
             var pointDailyRecordGrain = _clusterClient.GetGrain<IPointDailyRecordGrain>(input.Id);
             var result = await pointDailyRecordGrain.UpdateAsync(input);
-            _logger.LogDebug("PointAccumulateForSGR10Worker write grain result: {result}, record: {record}", 
+            _logger.LogDebug("PointAccumulateForSGR12Worker write grain result: {result}, record: {record}", 
                 JsonConvert.SerializeObject(result), JsonConvert.SerializeObject(input));
 
             if (!result.Success)
