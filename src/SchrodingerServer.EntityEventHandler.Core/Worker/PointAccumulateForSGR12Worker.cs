@@ -127,6 +127,7 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
         }
         
         var chainId = _workerOptionsMonitor.CurrentValue.ChainIds.FirstOrDefault();
+        _logger.LogInformation("PointAccumulateForSGR12Worker CreateSnapshotAsync");
         await CreateSnapshotAsync(chainId, bizDate);
         _logger.LogInformation("PointAccumulateForSGR12Worker CreateSnapshotAsync Finish");
         
@@ -136,7 +137,7 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
         }
         
         _logger.LogInformation("PointAccumulateForSGR12Worker cal points");
-        await Task.Delay(1000);
+        await Task.Delay(3000);
         var allSnapshots = await GetAllIndex(bizDate);
         _logger.LogInformation("PointAccumulateForSGR12Worker snapshot counts: {cnt}", allSnapshots.Count);
 
@@ -248,7 +249,7 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
                 var snapshot = _objectMapper.Map<SchrodingerIndexerDto, PointsSnapshotIndex>(holderInfo);   
                 var pointBySymbolDto = await _schrodingerCatProvider.GetHoldingPointBySymbol(holderInfo.Symbol, chainId);
                 snapshot.Amount = pointBySymbolDto.Point * holderInfo.Amount;
-                snapshot.Id = IdGenerateHelper.GetId(holderInfo.Address, pointName, now.ToString("yyyy-MM-dd HH:mm"));
+                snapshot.Id = IdGenerateHelper.GetId(holderInfo.Address, holderInfo.Symbol, pointName, now.ToString("yyyy-MM-dd HH:mm"));
                 snapshot.PointName = pointName;
                 snapshot.BizDate = bizDate;
                 snapshot.CreateTime = now;
