@@ -23,7 +23,9 @@ public interface ISchrodingerCatProvider
 
     Task<List<NFTActivityIndexDto>> GetSchrodingerSoldListAsync(GetSchrodingerSoldInput input);
 
-    Task<HoldingPointBySymbolDto> GetHoldingPointBySymbol(string symbol, string chainId);
+    Task<HoldingPointBySymbolDto> GetHoldingPointBySymbolAsync(string symbol, string chainId);
+    
+    Task<SchrodingerIndexerListDto> GetSchrodingerHoldingListAsync(GetCatListInput input);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -249,7 +251,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
     }
     
     
-    public async Task<HoldingPointBySymbolDto> GetHoldingPointBySymbol(string symbol, string chainId)
+    public async Task<HoldingPointBySymbolDto> GetHoldingPointBySymbolAsync(string symbol, string chainId)
     {
         try
         {
@@ -281,6 +283,43 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "GetHoldingPointBySymbol query GraphQL error");
             return  new HoldingPointBySymbolDto();
+        }
+    }
+    
+    public async Task<SchrodingerIndexerListDto> GetSchrodingerHoldingListAsync(GetCatListInput input)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerHoldingIndexerQuery>(new GraphQLRequest
+            {
+                Query =
+                    @"query($chainId:String!, $address:String!, $skipCount:Int!,$maxResultCount:Int!){
+                    getSchrodingerHoldingList(input: {chainId:$chainId,address:$address,skipCount:$skipCount,maxResultCount:$maxResultCount}){
+                        totalCount,
+                        data{
+                        symbol,
+                        tokenName,
+                        amount,
+                        generation,
+                        decimals,
+                        adopter,
+                        address
+                    }
+                }
+            }",
+                Variables = new
+                {
+                    chainId = input.ChainId ?? "", address = input.Address ?? "",
+                    skipCount = input.SkipCount, maxResultCount = input.MaxResultCount
+                }
+            });
+
+            return indexerResult.GetSchrodingerHoldingList;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetSchrodingerHoldingList Indexer error");
+            return new SchrodingerIndexerListDto();
         }
     }
 }

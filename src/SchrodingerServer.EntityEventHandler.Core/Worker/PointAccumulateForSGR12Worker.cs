@@ -204,11 +204,10 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
             var input = new GetCatListInput
             {
                 ChainId = chainId,
-                FilterSgr = true,
                 SkipCount = skipCount,
                 MaxResultCount = MaxResultCount,
             };
-            getCatHolderResult = await _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
+            getCatHolderResult = await _schrodingerCatProvider.GetSchrodingerHoldingListAsync(input);
            
             if (getCatHolderResult == null)
             {
@@ -247,7 +246,7 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
                 }
                 
                 var snapshot = _objectMapper.Map<SchrodingerIndexerDto, PointsSnapshotIndex>(holderInfo);   
-                var pointBySymbolDto = await _schrodingerCatProvider.GetHoldingPointBySymbol(holderInfo.Symbol, chainId);
+                var pointBySymbolDto = await _schrodingerCatProvider.GetHoldingPointBySymbolAsync(holderInfo.Symbol, chainId);
                 snapshot.Amount = pointBySymbolDto.Point * holderInfo.Amount;
                 snapshot.Id = IdGenerateHelper.GetId(holderInfo.Address, holderInfo.Symbol, pointName, now.ToString("yyyy-MM-dd HH:mm"));
                 snapshot.PointName = pointName;
