@@ -305,14 +305,12 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             var res = await _graphQlHelper.QueryAsync<SchrodingerSoldListQueryDto>(new GraphQLRequest
             {
                 Query = @"query (
-                    $filterSymbol:String!,
                     $timestampMax:Long!,
                     $timestampMin:Long!,
                     $chainId:String!
                 ){
                   getSchrodingerSoldList(
                     input:{
-                      filterSymbol:$filterSymbol,
                       timestampMax:$timestampMax,
                       timestampMin:$timestampMin,
                       chainId:$chainId
@@ -331,7 +329,6 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                 }",
                 Variables = new
                 {
-                    filterSymbol = input.FilterSymbol,
                     timestampMin = input.TimestampMin,
                     timestampMax = input.TimestampMax,
                     chainId = input.ChainId

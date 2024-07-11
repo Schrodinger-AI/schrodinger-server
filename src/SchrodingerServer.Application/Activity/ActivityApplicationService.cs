@@ -11,8 +11,12 @@ using Newtonsoft.Json;
 using SchrodingerServer.Activity.Eto;
 using SchrodingerServer.AddressRelationship.Dto;
 using SchrodingerServer.Adopts.provider;
+using SchrodingerServer.Awaken.Provider;
+using SchrodingerServer.Cat.Provider;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.Dtos.Cat;
+using SchrodingerServer.Options;
 using SchrodingerServer.Users;
 using SchrodingerServer.Users.Index;
 using Volo.Abp;
@@ -20,6 +24,7 @@ using Volo.Abp.Application.Services;
 using Volo.Abp.Caching;
 using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.ObjectMapping;
+using RankItem = SchrodingerServer.AddressRelationship.Dto.RankItem;
 
 namespace SchrodingerServer.Activity;
 
@@ -28,12 +33,14 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     private readonly IAddressRelationshipProvider _addressRelationshipProvider;
     private readonly ILogger<ActivityApplicationService> _logger;
     private IOptionsMonitor<ActivityOptions> _activityOptions;
-    private IOptionsMonitor<ActivityRankOptions> _activityRankOptions;
     private readonly IObjectMapper _objectMapper;
     private readonly IDistributedEventBus _distributedEventBus;
     private readonly IDistributedCache<string> _distributedCache;
     private readonly IAdoptGraphQLProvider _adoptGraphQlProvider;
     private readonly IPortkeyProvider _portkeyProvider;
+    private readonly ISchrodingerCatProvider _schrodingerCatProvider;
+    private readonly IAwakenLiquidityProvider _awakenLiquidityProvider;
+    private readonly IOptionsMonitor<LevelOptions> _levelOptions;
     
     public ActivityApplicationService(
         IAddressRelationshipProvider addressRelationshipProvider, 
@@ -44,7 +51,9 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         IAdoptGraphQLProvider adoptGraphQlProvider, 
         IPortkeyProvider portkeyProvider,
         IDistributedCache<string> distributedCache,
-        IOptionsMonitor<ActivityRankOptions> activityRankOptions)
+        ISchrodingerCatProvider schrodingerCatProvider,
+        IAwakenLiquidityProvider awakenLiquidityProvider,
+        IOptionsMonitor<LevelOptions> levelOptions)
     {
         _addressRelationshipProvider = addressRelationshipProvider;
         _logger = logger;
@@ -54,7 +63,9 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         _adoptGraphQlProvider = adoptGraphQlProvider;
         _portkeyProvider = portkeyProvider;
         _distributedCache = distributedCache;
-        _activityRankOptions = activityRankOptions;
+        _schrodingerCatProvider = schrodingerCatProvider;
+        _awakenLiquidityProvider = awakenLiquidityProvider;
+        _levelOptions = levelOptions;
     }
 
     public async Task<ActivityListDto>GetActivityListAsync(GetActivityListInput input)
@@ -156,20 +167,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     {
         _logger.LogInformation("GetRank input:{input}", JsonConvert.SerializeObject(input));
 
-        var rankOptions = _activityRankOptions.CurrentValue;
-        
-        var inprogressStageTime = GetInProgressStageTime();
-        var beginTime = TimeHelper.ToUtcSeconds(inprogressStageTime.StartTime);
-        var endTime = TimeHelper.ToUtcSeconds(inprogressStageTime.EndTime);
-        
-        _logger.LogInformation("GetRank inprogress stage time, being:{begin}, end:{end}", beginTime, endTime);
-        
-        var cur = TimeHelper.GetTimeStampInSeconds();
-
-        if (cur < endTime)
-        {
-            endTime = cur;
-        }
+        var rankOptions = GetRankOptions(input.ActivityId);
         
         var header = new List<RankHeader>(rankOptions.Header);
         if (!input.IsFinal)
@@ -183,22 +181,274 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             Header = header
         };
         
-        if (input.UpdateAddressCache)
-        {
-            await _distributedEventBus.PublishAsync(new UpdateAddressCacheEto
-            {
-                BeginTime = beginTime,
-                EndTime = endTime
-            });
+        var rankDataList = await GetRankListAsync(input.ActivityId);
 
-            return result;
+        var displayNumbers = input.IsFinal ? rankOptions.FinalDisplayNumber : rankOptions.NormalDisplayNumber;
+        var rank = 0;
+        foreach (var rankData in rankDataList)
+        {
+            var address = rankData.Address;
+
+            if (input.ActivityId == ActivityConstants.SGR5RankActivityId)
+            {
+                var key = IdGenerateHelper.GetEOAAddressCacheKey(address);
+                var cache = await _distributedCache.GetAsync(key);
+                var isEoa = false;
+                if (cache == null)
+                {
+                    var response = await _portkeyProvider.IsEOAAddress(address);
+                    if (response != null)
+                    {
+                        isEoa = response.IsEOAAddress;
+                        _logger.LogInformation("{address} is EOA Address: {isEoa}", address, isEoa);
+                        await _distributedCache.SetAsync(key, isEoa.ToString(),  new DistributedCacheEntryOptions()
+                        {
+                            SlidingExpiration = TimeSpan.FromDays(300)
+                        });
+                    }
+                    else
+                    {
+                        _logger.LogError("IsEOAAddress judgment for {address} failed", address);
+                    }
+                }
+                else
+                {
+                    isEoa = bool.Parse(cache);
+                }
+            
+                if (!isEoa)
+                {
+                    rank++;
+                    if (input.IsFinal)
+                    {
+                        var reward = GetRankReward(rank, rankOptions);
+                        rankData.Reward = reward.ToString();
+                    }
+                    result.Data.Add(rankData);
+                }
+            }
+            else
+            {
+                rank++;
+                if (input.IsFinal)
+                {
+                    var reward = GetRankReward(rank, rankOptions);
+                    rankData.Reward = reward.ToString();
+                }
+                result.Data.Add(rankData);
+            }
+            
+
+            if (rank >= displayNumbers)
+            {
+                break;
+            }
+        }
+        
+        return result;
+    }
+
+    public async Task<StageDto> GetStageAsync(string activityId)
+    {
+        var inprogressStageTime = GetInProgressStageTime(activityId);
+        var displayedStageTime = GetDisplayedStageTime(activityId);
+        return new StageDto
+        {
+            InProgress = new StageTime
+            {
+                StartTime = TimeHelper.ToUtcMilliSeconds(inprogressStageTime.StartTime),
+                EndTime = TimeHelper.ToUtcMilliSeconds(inprogressStageTime.EndTime)
+            },
+            Displayed = new StageTime
+            {
+                StartTime = TimeHelper.ToUtcMilliSeconds(displayedStageTime.StartTime),
+                EndTime = TimeHelper.ToUtcMilliSeconds(displayedStageTime.EndTime)
+            },
+        };
+    }
+    
+    private long GetRankReward(int rank, ActivityRankOptions rankOptions)
+    {
+        var rankRewards = rankOptions.RankRewards;
+        foreach (var rankReward in rankRewards)
+        {
+            if (rank <= rankReward.Rank)
+            {
+                return rankReward.Reward;
+            }
         }
 
+        return 0;
+    }
+
+    private StageTimeInDateTime GetInProgressStageTime(string activityId)
+    {
+        switch (activityId)
+        {
+            case ActivityConstants.SGR5RankActivityId:
+                return GetInProgressStageTimeForSGR5();
+            case ActivityConstants.SGR7RankActivityId:
+                return GetInProgressStageTimeForSGR7();
+            default:
+                return GetInProgressStageTimeForSGR5();
+        }
+    }
+
+    private StageTimeInDateTime GetInProgressStageTimeForSGR5()
+    {
+        DateTime today = DateTime.UtcNow;
+
+        DateTime startTime, endTime;
+
+        // Check if the current time is on or before this Wednesday 23:59:59 UTC
+        if (today.DayOfWeek < DayOfWeek.Wednesday || (today.DayOfWeek == DayOfWeek.Wednesday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
+        {
+            // Set startTime to last Thursday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek).AddDays(-7);
+            // Set endTime to this Tuesday 23:59:59 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Tuesday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
+        }
+        else
+        {
+            // Set startTime to this Thursday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek);
+            // Set endTime to next Tuesday 23:59:59 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Tuesday - today.DayOfWeek + 7).Add(new TimeSpan(23, 59, 59));
+        }
+        
+        return  new StageTimeInDateTime
+        {
+            StartTime = startTime,
+            EndTime = endTime
+        };
+    }
+    
+    private StageTimeInDateTime GetInProgressStageTimeForSGR7()
+    {
+        DateTime today = DateTime.UtcNow;
+
+        DateTime startTime, endTime;
+
+        // Check if the current time is on or before this Thursday 23:59:59 UTC
+        if (today.DayOfWeek < DayOfWeek.Thursday || (today.DayOfWeek == DayOfWeek.Thursday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
+        {
+            // Set startTime to last Friday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Friday - today.DayOfWeek).AddDays(-7);
+            // Set endTime to this Wednesday 23:59:59 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
+        }
+        else
+        {
+            // Set startTime to this Friday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Friday - today.DayOfWeek);
+            // Set endTime to next Wednesday 23:59:59 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek + 7).Add(new TimeSpan(23, 59, 59));
+        }
+        
+        return  new StageTimeInDateTime
+        {
+            StartTime = startTime,
+            EndTime = endTime
+        };
+    }
+    
+    
+    private StageTimeInDateTime GetDisplayedStageTime(string activityId)
+    {
+        switch (activityId)
+        {
+            case ActivityConstants.SGR5RankActivityId:
+                return GetInProgressStageTimeForSGR5();
+            case ActivityConstants.SGR7RankActivityId:
+                return GetInProgressStageTimeForSGR7();
+            default:
+                return GetInProgressStageTimeForSGR5();
+        }
+    }
+    
+    private StageTimeInDateTime GetDisplayedStageTimeForSGR5()
+    {
+        DateTime today = DateTime.UtcNow;
+
+        DateTime startTime, endTime;
+
+        // Check if the current time is on or before Wednesday 23:59:59 UTC
+        if (today.DayOfWeek < DayOfWeek.Wednesday || (today.DayOfWeek == DayOfWeek.Wednesday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
+        {
+            // Set startTime to this Wednesday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek);
+            // Set startTime to this Wednesday 23:59:59 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
+        }
+        else
+        {
+            // Set startTime to next Wednesday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek + 7);
+            // Set startTime to next Wednesday 00:00:00 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek + 7).Add(new TimeSpan(23, 59, 59));
+        }
+        
+        return  new StageTimeInDateTime
+        {
+            StartTime = startTime,
+            EndTime = endTime
+        };
+    }
+    
+    private StageTimeInDateTime GetDisplayedStageTimeForSGR7()
+    {
+        DateTime today = DateTime.UtcNow;
+
+        DateTime startTime, endTime;
+
+        // Check if the current time is on or before Thursday 23:59:59 UTC
+        if (today.DayOfWeek < DayOfWeek.Thursday || (today.DayOfWeek == DayOfWeek.Thursday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
+        {
+            // Set startTime to this Thursday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek);
+            // Set startTime to this Thursday 23:59:59 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
+        }
+        else
+        {
+            // Set startTime to next Thursday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek + 7);
+            // Set startTime to next Thursday 00:00:00 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek + 7).Add(new TimeSpan(23, 59, 59));
+        }
+        
+        return  new StageTimeInDateTime
+        {
+            StartTime = startTime,
+            EndTime = endTime
+        };
+    }
+
+
+    private async Task<List<ActivityRankData>> GetRankListAsync(string activityId)
+    {
+        StageTimeInDateTime stageTime;
+        switch (activityId)
+        {
+            case ActivityConstants.SGR5RankActivityId:
+                stageTime = GetInProgressStageTimeForSGR5();
+                return await GetXPSGR5RankListAsync(stageTime.StartTime.ToUtcSeconds(), stageTime.EndTime.ToUtcSeconds());
+            case ActivityConstants.SGR7RankActivityId:
+                stageTime = GetInProgressStageTimeForSGR7();
+                return await GetXPSGR7RankListAsync(stageTime.StartTime.ToUtcMilliSeconds(), stageTime.EndTime.ToUtcMilliSeconds());
+            default:
+                stageTime = GetInProgressStageTimeForSGR5();
+                return await GetXPSGR5RankListAsync(stageTime.StartTime.ToUtcSeconds(), stageTime.EndTime.ToUtcSeconds());
+        }
+    }
+    
+    private async Task<List<ActivityRankData>> GetXPSGR5RankListAsync(long beginTime, long endTime)
+    {
         var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(beginTime, endTime);
         if (res.IsNullOrEmpty())
         {
             _logger.LogInformation("GetRank empty");
-            return result;
+            return new List<ActivityRankData>();
         }
         
         var rankDataDict = new Dictionary<string, RankItem>();
@@ -212,7 +462,6 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             var amount = adopt.InputAmount;
             var adoptTime = adopt.AdoptTime;
 
-            // var value;
             var exist = rankDataDict.TryGetValue(address, out var value);
             if (exist)
             {
@@ -257,145 +506,112 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             return item1.Address.CompareTo(item2.Address); 
         });
 
-        var displayNumbers = input.IsFinal ? rankOptions.FinalDisplayNumber : rankOptions.NormalDisplayNumber;
-        var rank = 0;
-        foreach (var rankData in rankDataList)
+        return rankDataList;
+    }
+    
+    
+    
+    private async Task<List<ActivityRankData>> GetXPSGR7RankListAsync(long beginTime, long endTime)
+    {
+        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
+        
+        var input = new GetSchrodingerSoldInput
         {
-            var address = rankData.Address;
-            var key = IdGenerateHelper.GetEOAAddressCacheKey(address);
-            var cache = await _distributedCache.GetAsync(key);
-            var isEoa = false;
-            if (cache == null)
+            TimestampMax = endTime,
+            TimestampMin = beginTime,
+            ChainId = chainId
+        };
+        var res = await _schrodingerCatProvider.GetSchrodingerSoldListAsync(input);
+        
+        var rankDataDict = new Dictionary<string, RankItem>();
+        foreach (var item in res)
+        {
+            var address = item.To;
+            if (address.IsNullOrEmpty())
             {
-                var response = await _portkeyProvider.IsEOAAddress(address);
-                if (response != null)
-                {
-                    isEoa = response.IsEOAAddress;
-                    _logger.LogInformation("{address} is EOA Address: {isEoa}", address, isEoa);
-                    await _distributedCache.SetAsync(key, isEoa.ToString(),  new DistributedCacheEntryOptions()
-                    {
-                        SlidingExpiration = TimeSpan.FromDays(300)
-                    });
-                }
-                else
-                {
-                    _logger.LogError("IsEOAAddress judgment for {address} failed", address);
-                }
+                continue;
+            }
+            var amount = (long)(item.Amount * item.Price);
+            var adoptTime = item.Timestamp;
+            
+            var exist = rankDataDict.TryGetValue(address, out var value);
+            if (exist)
+            {
+                var totalAmount = value.TotalAmount + amount;
+                var updateTime = value.UpdateTime > adoptTime ? value.UpdateTime : adoptTime;
+                rankDataDict[address].TotalAmount = totalAmount;
+                rankDataDict[address].UpdateTime = updateTime;
             }
             else
             {
-                isEoa = bool.Parse(cache);
-            }
-            
-            if (!isEoa)
-            {
-                rank++;
-                if (input.IsFinal)
+                rankDataDict[address] = new RankItem
                 {
-                    var reward = GetRankReward(rank);
-                    rankData.Reward = reward.ToString();
-                }
-                result.Data.Add(rankData);
-            }
-
-            if (rank >= displayNumbers)
-            {
-                break;
-            }
-        }
-        
-        return result;
-    }
-
-    public async Task<StageDto> GetStageAsync()
-    {
-        var inprogressStageTime = GetInProgressStageTime();
-        var displayedStageTime = GetDisplayedStageTime();
-        return new StageDto
-        {
-            InProgress = new StageTime
-            {
-                StartTime = TimeHelper.ToUtcMilliSeconds(inprogressStageTime.StartTime),
-                EndTime = TimeHelper.ToUtcMilliSeconds(inprogressStageTime.EndTime)
-            },
-            Displayed = new StageTime
-            {
-                StartTime = TimeHelper.ToUtcMilliSeconds(displayedStageTime.StartTime),
-                EndTime = TimeHelper.ToUtcMilliSeconds(displayedStageTime.EndTime)
-            },
-        };
-    }
-    
-    private long GetRankReward(int rank)
-    {
-        var rankRewards = _activityRankOptions.CurrentValue.RankRewards;
-        foreach (var rankReward in rankRewards)
-        {
-            if (rank <= rankReward.Rank)
-            {
-                return rankReward.Reward;
+                    TotalAmount = amount,
+                    UpdateTime = adoptTime
+                };
             }
         }
 
-        return 0;
-    }
-
-    private StageTimeInDateTime GetInProgressStageTime()
-    {
-        DateTime today = DateTime.UtcNow;
-
-        DateTime startTime, endTime;
-
-        // Check if the current time is on or before this Wednesday 23:59:59 UTC
-        if (today.DayOfWeek < DayOfWeek.Wednesday || (today.DayOfWeek == DayOfWeek.Wednesday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
+        var year = DateTime.UtcNow.Year;
+        var key = "ELFPrice:" + year + "-" + beginTime;
+        var cache = await _distributedCache.GetAsync(key);
+        decimal price;
+        if (cache != null)
         {
-            // Set startTime to last Thursday 00:00:00 UTC
-            startTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek).AddDays(-7);
-            // Set endTime to this Tuesday 23:59:59 UTC
-            endTime = today.Date.AddDays(DayOfWeek.Tuesday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
+            price = decimal.Parse(cache);
         }
         else
         {
-            // Set startTime to this Thursday 00:00:00 UTC
-            startTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek);
-            // Set endTime to next Tuesday 23:59:59 UTC
-            endTime = today.Date.AddDays(DayOfWeek.Tuesday - today.DayOfWeek + 7).Add(new TimeSpan(23, 59, 59));
+            price = await GetELFPriceAsync(key);
         }
         
-        return  new StageTimeInDateTime
+        
+        var rankDataList = rankDataDict.Select(kvp => 
+                new ActivityRankData
+                {
+                    Address = kvp.Key, 
+                    Scores = (long) (kvp.Value.TotalAmount * 99 * price),
+                    UpdateTime = kvp.Value.UpdateTime
+                })
+            .ToList();
+        
+        rankDataList.Sort((item1, item2) =>
+        { 
+            int scoreComparison = item2.Scores.CompareTo(item1.Scores);
+            if (scoreComparison != 0)
+            {
+                return scoreComparison;
+            }
+
+            int timeComparison = item1.UpdateTime.CompareTo(item2.UpdateTime);
+            if (timeComparison != 0)
+            {
+                return timeComparison;
+            }
+
+            return item1.Address.CompareTo(item2.Address); 
+        });
+
+        return rankDataList;
+    }
+
+    private async Task<decimal> GetELFPriceAsync(string key)
+    {
+        var priceDto = await _awakenLiquidityProvider.GetPriceAsync("ELF", "USDT", "tDVV", "0.0005");
+        var price = priceDto.Items.FirstOrDefault().Price;
+        AssertHelper.IsTrue(price != null && price > 0, "ELF price is null or zero");
+
+        await _distributedCache.SetAsync(key, price.ToString(), new DistributedCacheEntryOptions()
         {
-            StartTime = startTime,
-            EndTime = endTime
-        };
+            SlidingExpiration = TimeSpan.FromDays(7)
+        });
+        
+        return price;
     }
     
-    
-    private StageTimeInDateTime GetDisplayedStageTime()
+    private ActivityRankOptions GetRankOptions(string activityId)
     {
-        DateTime today = DateTime.UtcNow;
-
-        DateTime startTime, endTime;
-
-        // Check if the current time is on or before Wednesday 23:59:59 UTC
-        if (today.DayOfWeek < DayOfWeek.Wednesday || (today.DayOfWeek == DayOfWeek.Wednesday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
-        {
-            // Set startTime to this Wednesday 00:00:00 UTC
-            startTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek);
-            // Set startTime to this Wednesday 23:59:59 UTC
-            endTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
-        }
-        else
-        {
-            // Set startTime to next Wednesday 00:00:00 UTC
-            startTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek + 7);
-            // Set startTime to next Wednesday 00:00:00 UTC
-            endTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek + 7).Add(new TimeSpan(23, 59, 59));
-        }
-        
-        return  new StageTimeInDateTime
-        {
-            StartTime = startTime,
-            EndTime = endTime
-        };
+        var activityOption = _activityOptions.CurrentValue.ActivityList.FirstOrDefault(a => a.ActivityId == activityId);
+        return activityOption.RankOptions;
     }
 }
