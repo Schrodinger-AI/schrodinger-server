@@ -119,11 +119,9 @@ public class PointAccumulateForSGR7Worker : AsyncPeriodicBackgroundWorkerBase
          {
              TimestampMax = endTime,
              TimestampMin = beginTime,
-             ChainId = chainId,
-             FilterSymbol = chainId == "tDVV" ? "SGR" : "SGRTEST"
+             ChainId = chainId
          };
          var soldList = await _schrodingerCatProvider.GetSchrodingerSoldListAsync(input);
-         
          
          var priceDto = await _awakenLiquidityProvider.GetPriceAsync("ELF", "USDT", "tDVV", "0.0005");
          var price = priceDto.Items.FirstOrDefault().Price;

@@ -237,7 +237,7 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
             foreach (var holderInfo in realHolders)
             {
                 var dayBefore = TimeHelper.GetDateStrAddDays(bizDate, -1);
-                var excludeDate = new List<string> { dayBefore, bizDate };
+                var excludeDate = new List<string> { bizDate };
                 var lastHoldingRecord = await _holderBalanceProvider.GetLastHoldingRecordAsync(chainId, holderInfo.Address, holderInfo.Symbol, excludeDate);
                 if (lastHoldingRecord == null || lastHoldingRecord.Balance <= 0)
                 {
