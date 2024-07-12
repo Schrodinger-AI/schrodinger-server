@@ -484,7 +484,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 new ActivityRankData
                 {
                     Address = kvp.Key, 
-                    Scores = (long) (kvp.Value.TotalAmount * 1314 / (decimal)Math.Pow(10, 8)),
+                    Scores = kvp.Value.TotalAmount * 1314 / (decimal)Math.Pow(10, 8),
                     UpdateTime = kvp.Value.UpdateTime
                 })
             .ToList();
@@ -570,7 +570,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 new ActivityRankData
                 {
                     Address = kvp.Key, 
-                    Scores = (long) (kvp.Value.TotalAmount * 99 * price),
+                    Scores = kvp.Value.TotalAmount * 99 * price,
                     UpdateTime = kvp.Value.UpdateTime
                 })
             .ToList();
