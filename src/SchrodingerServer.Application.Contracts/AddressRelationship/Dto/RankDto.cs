@@ -23,6 +23,6 @@ public class ActivityRankData
 public class RankItem
 {
     public DateTime UpdateTime { get; set; }
-    public long TotalAmount { get; set; }
+    public decimal TotalAmount { get; set; }
 }
 

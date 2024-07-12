@@ -484,7 +484,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 new ActivityRankData
                 {
                     Address = kvp.Key, 
-                    Scores = (long) (kvp.Value.TotalAmount * 1314 / Math.Pow(10, 8)),
+                    Scores = (long) (kvp.Value.TotalAmount * 1314 / (decimal)Math.Pow(10, 8)),
                     UpdateTime = kvp.Value.UpdateTime
                 })
             .ToList();
@@ -531,7 +531,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             {
                 continue;
             }
-            var amount = (long)(item.Amount * item.Price);
+            var amount = item.Amount * item.Price;
             var adoptTime = item.Timestamp;
             
             var exist = rankDataDict.TryGetValue(address, out var value);

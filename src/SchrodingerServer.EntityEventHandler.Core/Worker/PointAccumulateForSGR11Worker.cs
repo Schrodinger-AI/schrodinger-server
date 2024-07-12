@@ -124,7 +124,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         if (!fixedIndexList.IsNullOrEmpty())
         {
             indexList = fixedIndexList.ToList();
-            _logger.LogInformation("PointAccumulateForSGR9Worker change snap index list to {index1}", indexList);
+            _logger.LogInformation("PointAccumulateForSGR11Worker change snap index list to {index1}", indexList);
         }
         
         if (!indexList.Contains(curIndex))
