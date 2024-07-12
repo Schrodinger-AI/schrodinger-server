@@ -330,19 +330,19 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         DateTime startTime, endTime;
 
         // Check if the current time is on or before this Thursday 23:59:59 UTC
-        if (today.DayOfWeek < DayOfWeek.Thursday || (today.DayOfWeek == DayOfWeek.Thursday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
+        if (today.DayOfWeek < DayOfWeek.Tuesday || (today.DayOfWeek == DayOfWeek.Tuesday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
         {
             // Set startTime to last Friday 00:00:00 UTC
-            startTime = today.Date.AddDays(DayOfWeek.Friday - today.DayOfWeek).AddDays(-7);
+            startTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek).AddDays(-7);
             // Set endTime to this Wednesday 23:59:59 UTC
-            endTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
+            endTime = today.Date.AddDays(DayOfWeek.Monday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
         }
         else
         {
             // Set startTime to this Friday 00:00:00 UTC
-            startTime = today.Date.AddDays(DayOfWeek.Friday - today.DayOfWeek);
+            startTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek);
             // Set endTime to next Wednesday 23:59:59 UTC
-            endTime = today.Date.AddDays(DayOfWeek.Wednesday - today.DayOfWeek + 7).Add(new TimeSpan(23, 59, 59));
+            endTime = today.Date.AddDays(DayOfWeek.Monday - today.DayOfWeek + 7).Add(new TimeSpan(23, 59, 59));
         }
         
         return  new StageTimeInDateTime
@@ -358,11 +358,11 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         switch (activityId)
         {
             case ActivityConstants.SGR5RankActivityId:
-                return GetInProgressStageTimeForSGR5();
+                return GetDisplayedStageTimeForSGR5();
             case ActivityConstants.SGR7RankActivityId:
-                return GetInProgressStageTimeForSGR7();
+                return GetDisplayedStageTimeForSGR7();
             default:
-                return GetInProgressStageTimeForSGR5();
+                return GetDisplayedStageTimeForSGR5();
         }
     }
     
@@ -402,19 +402,19 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         DateTime startTime, endTime;
 
         // Check if the current time is on or before Thursday 23:59:59 UTC
-        if (today.DayOfWeek < DayOfWeek.Thursday || (today.DayOfWeek == DayOfWeek.Thursday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
+        if (today.DayOfWeek < DayOfWeek.Tuesday || (today.DayOfWeek == DayOfWeek.Tuesday && today.TimeOfDay <= new TimeSpan(23, 59, 59)))
         {
             // Set startTime to this Thursday 00:00:00 UTC
-            startTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek);
+            startTime = today.Date.AddDays(DayOfWeek.Tuesday - today.DayOfWeek);
             // Set startTime to this Thursday 23:59:59 UTC
-            endTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
+            endTime = today.Date.AddDays(DayOfWeek.Tuesday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
         }
         else
         {
             // Set startTime to next Thursday 00:00:00 UTC
-            startTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek + 7);
+            startTime = today.Date.AddDays(DayOfWeek.Tuesday - today.DayOfWeek + 7);
             // Set startTime to next Thursday 00:00:00 UTC
-            endTime = today.Date.AddDays(DayOfWeek.Thursday - today.DayOfWeek + 7).Add(new TimeSpan(23, 59, 59));
+            endTime = today.Date.AddDays(DayOfWeek.Tuesday - today.DayOfWeek + 7).Add(new TimeSpan(23, 59, 59));
         }
         
         return  new StageTimeInDateTime
