@@ -36,7 +36,6 @@ public class ActivityController : AbpController
         return  _activityApplicationService.GetActivityInfoAsync();
     }
     
-    
     [HttpPost("bind-address")]
     [Authorize]
     public Task BindAddressAsync(BindActivityAddressInput input)
@@ -57,8 +56,8 @@ public class ActivityController : AbpController
     }
     
     [HttpGet("stage")]
-    public Task<StageDto> GetStageAsync()
+    public Task<StageDto> GetStageAsync(GetStageInput input)
     {
-        return  _activityApplicationService.GetStageAsync();
+        return  _activityApplicationService.GetStageAsync(input.ActivityId);
     }
 }

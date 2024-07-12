@@ -13,7 +13,7 @@ public class RankDto
 public class ActivityRankData
 {
     public string Address { get; set; }
-    public long Scores { get; set; }
+    public decimal Scores { get; set; }
     public string Reward { get; set; }
     
     public DateTime UpdateTime { get; set; }
@@ -23,6 +23,6 @@ public class ActivityRankData
 public class RankItem
 {
     public DateTime UpdateTime { get; set; }
-    public long TotalAmount { get; set; }
+    public decimal TotalAmount { get; set; }
 }
 

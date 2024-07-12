@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Microsoft.IdentityModel.Tokens;
 
@@ -21,7 +22,7 @@ public class WorkerOptions
     {
         var workerBizDate = Workers.TryGetValue(workerName, out var worker) ? worker.BizDate : null;
 
-        return workerBizDate.IsNullOrEmpty() ? BizDate : workerBizDate;
+        return CollectionUtilities.IsNullOrEmpty(workerBizDate) ? BizDate : workerBizDate;
     }
     
     public List<string> GetWorkerBizDateList(string workerName)
@@ -47,6 +48,12 @@ public class WorkerOptions
         var pointName = Workers.TryGetValue(workerName, out var worker) ? worker.PointName : "";
         return pointName;
     }
+    
+    public int[] GetTriggerIndexList(string workerName)
+    {
+        var indexList = Workers.TryGetValue(workerName, out var worker) ? worker.IndexList : Array.Empty<int>();
+        return indexList;
+    }
 }
 
 
@@ -62,4 +69,8 @@ public class Worker
 
     public bool OpenSwitch { get; set; } = false;
     public string PointName { get; set; }
+    
+    public int[] IndexList { get; set; }
+    
+    
 }

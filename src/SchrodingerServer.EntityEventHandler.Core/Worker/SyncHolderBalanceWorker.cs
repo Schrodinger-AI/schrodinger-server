@@ -107,7 +107,7 @@ public class SyncHolderBalanceWorker :  AsyncPeriodicBackgroundWorkerBase
     {
         _logger.LogInformation("SyncHolderBalanceWorker execute for bizDate: {bizDate} pointName:{1}", bizDate, pointName);
 
-        var isExecuted = await _pointDispatchProvider.GetDispatchAsync(PointDispatchConstants.SYNC_HOLDER_BALANCE_PREFIX , bizDate, pointName);
+        var isExecuted = await _pointDispatchProvider.GetDispatchAsync(PointDispatchConstants.CAL_FINISH_PREFIX , bizDate, pointName);
         if (isExecuted)
         {
             _logger.LogInformation("SyncHolderBalanceWorker has been executed for bizDate: {0} pointName:{1}", bizDate, pointName);
@@ -129,7 +129,7 @@ public class SyncHolderBalanceWorker :  AsyncPeriodicBackgroundWorkerBase
             await HandleHolderBalanceNoChangesAsync(chainId, bizDate, pointName);
         }
 
-        await _pointDispatchProvider.SetDispatchAsync(PointDispatchConstants.SYNC_HOLDER_BALANCE_PREFIX, bizDate,
+        await _pointDispatchProvider.SetDispatchAsync(PointDispatchConstants.CAL_FINISH_PREFIX, bizDate,
             pointName, true);
     }
 

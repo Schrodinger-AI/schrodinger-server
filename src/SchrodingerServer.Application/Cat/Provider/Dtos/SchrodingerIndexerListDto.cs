@@ -35,3 +35,8 @@ public class SchrodingerIndexerLatestQuery
 {
     public SchrodingerIndexerListDto GetLatestSchrodingerListAsync { get; set; }
 }
+
+public class SchrodingerHoldingIndexerQuery
+{
+    public SchrodingerIndexerListDto GetSchrodingerHoldingList { get; set; }
+}

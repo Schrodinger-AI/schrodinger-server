@@ -19,6 +19,7 @@ public class ActivityInfo
     public bool IsShow { get; set; }
     public bool IsNew { get; set; } = true;
     public string TimeDescription { get; set; }
+    public ActivityRankOptions RankOptions { get; set; }
 }
 
 
@@ -27,14 +28,6 @@ public class ActivityRankOptions
     public  List<RankHeader> Header { get; set; }
     
     public  List<RankRewardItem> RankRewards { get; set; }
-    
-    public long BeginTime { get; set; }
-    
-    public long EndTime { get; set; }
-    
-    public long DisplayBeginTime { get; set; }
-    
-    public long DisplayEndTime { get; set; }
     
     public long NormalDisplayNumber { get; set; }
     
