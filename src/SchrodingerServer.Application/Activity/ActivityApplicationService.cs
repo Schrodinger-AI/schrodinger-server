@@ -527,7 +527,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         foreach (var item in res)
         {
             var address = item.To;
-            if (address.IsNullOrEmpty() || address == "ELF_qYQLgEYVLyx3MatsUtW5sCbYooc5LQyuomFHvdmLbrESxMmeY_tDVV")
+            if (address.IsNullOrEmpty() || address == "ELF_Z3aw7RRoZnGuVeXb1ycZ4QscDUoxA7FzqDmnvhEnWM4gZ5TPY_tDVW")
             {
                 continue;
             }
