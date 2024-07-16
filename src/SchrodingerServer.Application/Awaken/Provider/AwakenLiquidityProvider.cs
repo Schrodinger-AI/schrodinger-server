@@ -1,19 +1,15 @@
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading.Tasks;
-using AElf.Indexing.Elasticsearch;
 using GraphQL;
 using Microsoft.Extensions.Logging;
-using Nest;
+using Microsoft.Extensions.Options;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Dtos;
 using SchrodingerServer.Common.GraphQL;
 using SchrodingerServer.Common.HttpClient;
-using SchrodingerServer.Symbol;
-using SchrodingerServer.Symbol.Provider;
-using SchrodingerServer.Users.Dto;
-using Volo.Abp.Application.Dtos;
+using SchrodingerServer.Options;
+using SchrodingerServer.PointServer;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.ObjectMapping;
 
@@ -28,22 +24,20 @@ public interface IAwakenLiquidityProvider
 public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDependency
 {
     private readonly IGraphQLClientFactory _graphQlClientFactory;
-    private readonly IObjectMapper _objectMapper;
     private readonly ILogger<AwakenLiquidityProvider> _logger;
     private readonly IHttpProvider _httpProvider;
-    
-    public static ApiInfo AwakenPrice = new(HttpMethod.Get, "/api/app/trade-pairs");
+    private readonly IOptionsMonitor<LevelOptions> _levelOptions;
 
     public AwakenLiquidityProvider( 
         IGraphQLClientFactory graphQlClientFactory,
-        IObjectMapper objectMapper,
         IHttpProvider httpProvider,
+        IOptionsMonitor<LevelOptions> levelOptions,
         ILogger<AwakenLiquidityProvider> logger)
     {
         _graphQlClientFactory = graphQlClientFactory;
-        _objectMapper = objectMapper;
         _logger = logger;
         _httpProvider = httpProvider;
+        _levelOptions = levelOptions;
     }
     
 
@@ -115,7 +109,7 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
         try
         {
             var resp = await _httpProvider.InvokeAsync<CommonResponseDto<GetAwakenPriceDto>>(
-                "https://awaken.finance", AwakenPrice, null,
+                _levelOptions.CurrentValue.AwakenUrl, PointServerProvider.Api.GetAwakenPrice, null,
                 new Dictionary<string, string>()
                 {
                     ["token0Symbol"] = token0Symbol,
