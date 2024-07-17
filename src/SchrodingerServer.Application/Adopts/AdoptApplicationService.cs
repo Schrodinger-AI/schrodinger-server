@@ -127,7 +127,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             {
                 attributes = new List<Trait> { }
             },
-            numImages = adoptInfo.ImageCount
+            numImages = 1
         };
         foreach (var item in adoptInfo.Attributes.Select(attributeItem => new Trait
                  {
