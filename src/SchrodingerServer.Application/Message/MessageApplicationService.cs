@@ -93,6 +93,7 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
     {
         _logger.LogDebug("GetMessageListAsync, input: {address}", JsonConvert.SerializeObject(input));
         var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        _logger.LogDebug("GetMessageListAsync, GetCurrentUserAddressAsync, address: {address}", currentAddress);
         if (currentAddress.IsNullOrEmpty())
         {
             currentAddress = input.Address;
@@ -101,6 +102,7 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
         var chainId = _levelOptions.CurrentValue.ChainIdForReal;
 
         currentAddress = FullAddressHelper.ToFullAddress(currentAddress, chainId);
+        _logger.LogDebug("GetMessageListAsync, full address, address: {address}", currentAddress);
       
         var response = new MessageListDto();
         var getSoldListInput = new GetSchrodingerSoldListInput()

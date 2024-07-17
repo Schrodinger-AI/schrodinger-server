@@ -58,6 +58,7 @@ public class SchrodingerServerEntityEventHandlerModule : AbpModule
         var configuration = context.Services.GetConfiguration();
         Configure<WorkerOptions>(configuration.GetSection("WorkerOptions"));
         Configure<PointTradeOptions>(configuration.GetSection("PointTradeOptions"));
+        Configure<LevelOptions>(configuration.GetSection("LevelOptions"));
         ConfigureHangfire(context, configuration);
         ConfigureGraphQl(context, configuration);
         ConfigureRedis(context, configuration, context.Services.GetHostingEnvironment());
