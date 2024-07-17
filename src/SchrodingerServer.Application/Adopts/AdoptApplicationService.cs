@@ -307,12 +307,10 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         }
         
         output.AdoptImageInfo.Images = images;
-        if (!images.IsNullOrEmpty())
+        var imageCount = adoptInfo.ImageCount;
+        if (!images.IsNullOrEmpty() && imageCount == 1)
         {
-            if (images.Count > 1)
-            {
-                _logger.LogWarning("image count above 1, adoptId:{adoptId}", adoptId);
-            }
+            _logger.LogInformation("ai generated image ready for direct adoption: {adoptId}", adoptId);
             var waterMarkedInfo =  await UploadAndWatermarkAsync(images[0], input.AdoptId);
             output.Image = waterMarkedInfo.Image;
             output.ImageUri = waterMarkedInfo.ImageUri;
