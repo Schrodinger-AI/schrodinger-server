@@ -403,7 +403,8 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         var s3Url = await UploadToS3Async(base64String, waterImageHash);
         _logger.LogInformation("upload to s3, url:{url}", s3Url);
 
-        await _adoptImageService.SetWatermarkImageInfoAsync(adoptId, uri, waterMarkInfo.resized, image);
+        var needRemove = images.Count == 2;
+        await _adoptImageService.SetWatermarkImageInfoAsync(adoptId, uri, waterMarkInfo.resized, image, needRemove);
 
         signature = await GenerateSignatureWithSecretService(adoptId, uri, waterMarkInfo.resized);
 
