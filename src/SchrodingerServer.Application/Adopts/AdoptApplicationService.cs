@@ -274,7 +274,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
     public async Task<ImageInfoForDirectAdoptionOutput> GetAdoptImageInfoForDirectAdoptionAsync(GetAdoptImageInfoInput input)
     {
         var adoptId = input.AdoptId;
-        _logger.LogInformation("GetAdoptImageInfoAsync, adoptId: {adoptId}, transactionHash: {transactionHash}", adoptId, input.TransactionHash);
+        _logger.LogInformation("GetAdoptImageInfoForDirectAdoptionAsync, adoptId: {adoptId}, transactionHash: {transactionHash}", adoptId, input.TransactionHash);
         var output = new ImageInfoForDirectAdoptionOutput();
         var adoptInfo = await QueryAdoptInfoAsync(adoptId);
         if (adoptInfo == null)
