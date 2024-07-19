@@ -72,17 +72,20 @@ public class AdoptImageService : IAdoptImageService, ISingletonDependency
         return await grain.HasWatermarkAsync();
     }
 
-    public async Task SetWatermarkImageInfoAsync(string adoptId, string imageUri, string resizedImage, string selectedImage)
+    public async Task SetWatermarkImageInfoAsync(string adoptId, string imageUri, string resizedImage, string selectedImage, bool needRemove)
     {
         var grain = _clusterClient.GetGrain<IAdoptImageInfoGrain>(adoptId);
         await grain.SetWatermarkImageInfoAsync(imageUri, resizedImage);
 
-        var images = await grain.GetImagesAsync();
-        var index = images.IndexOf(selectedImage);
+        if (needRemove)
+        {
+            var images = await grain.GetImagesAsync();
+            var index = images.IndexOf(selectedImage);
         
-        // only works when there are two images in the list
-        images.RemoveAt((index+1) % 2);
-        await grain.SetImagesAsync(images);
+            // only works when there are two images in the list
+            images.RemoveAt((index+1) % 2);
+            await grain.SetImagesAsync(images);
+        }
     }
 
     public async Task<WaterImageGrainInfoDto> GetWatermarkImageInfoAsync(string adoptId)

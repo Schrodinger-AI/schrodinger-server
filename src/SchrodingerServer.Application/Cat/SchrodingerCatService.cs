@@ -120,7 +120,11 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             }
 
             detail = holderDetail;
-            detail.HolderAmount = holderDetail.Amount;
+            if (!holderDetail.Address.IsNullOrEmpty())
+            {
+                detail.HolderAmount = holderDetail.Amount;
+            }
+            
             return detail;
         }
         

@@ -173,105 +173,8 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
     {
         _logger.Info("GetWaterMarkImageInfoAsync, AdoptId: {req}, dataLength: {length}", input.AdoptId, 
             input.Image.Length);
-        
-        var images = await _adoptImageService.GetImagesAsync(input.AdoptId);
-        _logger.Info("AI generated images count: {}", images.Count);
 
-        if (images.IsNullOrEmpty() || !images.Contains(input.Image))
-        {
-            _logger.Info("Invalid adopt image, images:{}", JsonConvert.SerializeObject(images));
-            throw new UserFriendlyException("Invalid adopt image");
-        }
-
-        var hasWaterMark = await _adoptImageService.HasWatermark(input.AdoptId);
-        string signature;
-        if (hasWaterMark)
-        {
-            var info = await _adoptImageService.GetWatermarkImageInfoAsync(input.AdoptId);
-            _logger.Info("GetWatermarkImageInfo from grain, info: {info}", JsonConvert.SerializeObject(info));
-
-            if (info == null || info.ImageUri == null || info.ResizedImage == null)
-            {
-                _logger.Info("Invalid watermark info, uri:{0}, resizeImage{1}", info.ImageUri, info.ResizedImage);
-                throw new UserFriendlyException("Invalid watermark info");
-            }
-
-            signature = await GenerateSignatureWithSecretService(input.AdoptId, info.ImageUri, info.ResizedImage);
-            
-            if (signature.IsNullOrEmpty())
-            {
-                _logger.LogError("GenerateSignatureFailed adoptId: {adoptId}", input.AdoptId);
-                throw new UserFriendlyException("GenerateSignatureFailed");
-            }
-            
-            var response = new GetWaterMarkImageInfoOutput
-            {
-                Image = info.ResizedImage,
-                Signature = signature,
-                ImageUri = info.ImageUri
-            };
-            return response;
-        }
-
-        var adoptInfo = await QueryAdoptInfoAsync(input.AdoptId);
-        _logger.Info("QueryAdoptInfoAsync, {adoptInfo}", JsonConvert.SerializeObject(adoptInfo));
-        if (adoptInfo == null)
-        {
-            throw new UserFriendlyException("query adopt info failed adoptId = " + input.AdoptId);
-        }
-
-        var waterMarkInfo = await GetWatermarkImageAsync(new WatermarkInput()
-        {
-            sourceImage = input.Image,
-            watermark = new WaterMark
-            {
-                text = adoptInfo.Symbol
-            }
-        });
-
-        if (waterMarkInfo == null || waterMarkInfo.processedImage == "" || waterMarkInfo.resized == "")
-        {
-            _logger.LogError("waterMarkImage empty, input: {input}", JsonConvert.SerializeObject(input));
-            throw new UserFriendlyException("waterMarkImage empty");
-        }
-
-        var stringArray = waterMarkInfo.processedImage.Split(",");
-        if (stringArray.Length < 2)
-        {
-            _logger.LogInformation("invalid waterMarkInfo");
-            throw new UserFriendlyException("invalid waterMarkInfo");
-        }
-
-        var base64String = stringArray[1].Trim();
-        string waterImageHash = await _ipfsAppService.UploadFile(base64String, input.AdoptId);
-        if (waterImageHash == "")
-        {
-            _logger.LogInformation("upload ipfs failed");
-            throw new UserFriendlyException("upload failed");
-        }
-
-        var uri = "ipfs://" + waterImageHash;
-
-        // uploadToS3
-        var s3Url = await UploadToS3Async(base64String, waterImageHash);
-        _logger.LogInformation("upload to s3, url:{url}", s3Url);
-
-        await _adoptImageService.SetWatermarkImageInfoAsync(input.AdoptId, uri, waterMarkInfo.resized, input.Image);
-
-        signature = await GenerateSignatureWithSecretService(input.AdoptId, uri, waterMarkInfo.resized);
-
-        if (signature.IsNullOrEmpty())
-        {
-            _logger.LogError("GenerateSignatureFailed adoptId: {adoptId}", input.AdoptId);
-            throw new UserFriendlyException("GenerateSignatureFailed");
-        }
-        
-        var resp = new GetWaterMarkImageInfoOutput
-        {
-            Image = waterMarkInfo.resized,
-            Signature = signature,
-            ImageUri = uri
-        };
+        var resp = await UploadAndWatermarkAsync(input.Image, input.AdoptId);
         _logger.LogInformation("GetWatermarkImageResp AdoptId: {adoptId}", input.AdoptId);
 
         return resp;
@@ -365,5 +268,160 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             _logger.LogError(e, "Get Watermark Image Success fail error, {err}", e.ToString());
             return null;
         }
+    }
+
+
+    public async Task<ImageInfoForDirectAdoptionOutput> GetAdoptImageInfoForDirectAdoptionAsync(GetAdoptImageInfoInput input)
+    {
+        var adoptId = input.AdoptId;
+        _logger.LogInformation("GetAdoptImageInfoForDirectAdoptionAsync, adoptId: {adoptId}, transactionHash: {transactionHash}", adoptId, input.TransactionHash);
+        var output = new ImageInfoForDirectAdoptionOutput();
+        var adoptInfo = await QueryAdoptInfoAsync(adoptId);
+        if (adoptInfo == null)
+        {
+            return output;
+        }
+
+        output.AdoptImageInfo = new AdoptImageInfo
+        {
+            Attributes = adoptInfo.Attributes,
+            Generation = adoptInfo.Generation,
+        };
+        var aelfAddress = await _userActionProvider.GetCurrentUserAddressAsync(GetCurChain());
+        var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, aelfAddress);
+        var provider = _imageDispatcher.CurrentProvider();
+        var hasSendRequest = await _adoptImageService.HasSendRequest(adoptId) && await provider.HasRequestId(adoptAddressId);
+        List<string> images;
+        if (!hasSendRequest)
+        {
+            _logger.LogInformation("has not send request for adoptId:{adoptId}", adoptId);
+            await _imageDispatcher.DispatchAIGenerationRequest(adoptAddressId, AdoptInfo2GenerateImage(adoptInfo), adoptId);
+            await _adoptImageService.MarkRequest(adoptId);
+
+            images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
+        }
+        else
+        {
+            _logger.LogInformation("has send request for adoptId:{adoptId}", adoptId);
+            images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
+        }
+        
+        output.AdoptImageInfo.Images = images;
+        var imageCount = adoptInfo.ImageCount;
+        if (!images.IsNullOrEmpty() && imageCount == 1)
+        {
+            _logger.LogInformation("ai generated image ready for direct adoption: {adoptId}", adoptId);
+            var waterMarkedInfo =  await UploadAndWatermarkAsync(images[0], input.AdoptId);
+            output.Image = waterMarkedInfo.Image;
+            output.ImageUri = waterMarkedInfo.ImageUri;
+            output.Signature = waterMarkedInfo.Signature;
+        }
+        return output;
+    }
+
+    private async Task<GetWaterMarkImageInfoOutput> UploadAndWatermarkAsync(string image, string adoptId)
+    {
+        var images = await _adoptImageService.GetImagesAsync(adoptId);
+        _logger.Info("AI generated images count: {}", images.Count);
+
+        if (images.IsNullOrEmpty() || !images.Contains(image))
+        {
+            _logger.Info("Invalid adopt image, images:{}", JsonConvert.SerializeObject(images));
+            throw new UserFriendlyException("Invalid adopt image");
+        }
+
+        var hasWaterMark = await _adoptImageService.HasWatermark(adoptId);
+        string signature;
+        if (hasWaterMark)
+        {
+            var info = await _adoptImageService.GetWatermarkImageInfoAsync(adoptId);
+            _logger.Info("GetWatermarkImageInfo from grain, info: {info}", JsonConvert.SerializeObject(info));
+
+            if (info == null || info.ImageUri == null || info.ResizedImage == null)
+            {
+                _logger.Info("Invalid watermark info, uri:{0}, resizeImage{1}", info.ImageUri, info.ResizedImage);
+                throw new UserFriendlyException("Invalid watermark info");
+            }
+
+            signature = await GenerateSignatureWithSecretService(adoptId, info.ImageUri, info.ResizedImage);
+            
+            if (signature.IsNullOrEmpty())
+            {
+                _logger.LogError("GenerateSignatureFailed adoptId: {adoptId}", adoptId);
+                throw new UserFriendlyException("GenerateSignatureFailed");
+            }
+            
+            var response = new GetWaterMarkImageInfoOutput
+            {
+                Image = info.ResizedImage,
+                Signature = signature,
+                ImageUri = info.ImageUri
+            };
+            return response;
+        }
+
+        var adoptInfo = await QueryAdoptInfoAsync(adoptId);
+        _logger.Info("QueryAdoptInfoAsync, {adoptInfo}", JsonConvert.SerializeObject(adoptInfo));
+        if (adoptInfo == null)
+        {
+            throw new UserFriendlyException("query adopt info failed adoptId = " + adoptId);
+        }
+
+        var waterMarkInfo = await GetWatermarkImageAsync(new WatermarkInput()
+        {
+            sourceImage = image,
+            watermark = new WaterMark
+            {
+                text = adoptInfo.Symbol
+            }
+        });
+
+        if (waterMarkInfo == null || waterMarkInfo.processedImage == "" || waterMarkInfo.resized == "")
+        {
+            _logger.LogError("waterMarkImage empty, adoptId: {adoptId}", adoptId);
+            throw new UserFriendlyException("waterMarkImage empty");
+        }
+
+        var stringArray = waterMarkInfo.processedImage.Split(",");
+        if (stringArray.Length < 2)
+        {
+            _logger.LogInformation("invalid waterMarkInfo");
+            throw new UserFriendlyException("invalid waterMarkInfo");
+        }
+
+        var base64String = stringArray[1].Trim();
+        string waterImageHash = await _ipfsAppService.UploadFile(base64String, adoptId);
+        if (waterImageHash == "")
+        {
+            _logger.LogInformation("upload ipfs failed");
+            throw new UserFriendlyException("upload failed");
+        }
+
+        var uri = "ipfs://" + waterImageHash;
+
+        // uploadToS3
+        var s3Url = await UploadToS3Async(base64String, waterImageHash);
+        _logger.LogInformation("upload to s3, url:{url}", s3Url);
+
+        var needRemove = images.Count == 2;
+        await _adoptImageService.SetWatermarkImageInfoAsync(adoptId, uri, waterMarkInfo.resized, image, needRemove);
+
+        signature = await GenerateSignatureWithSecretService(adoptId, uri, waterMarkInfo.resized);
+
+        if (signature.IsNullOrEmpty())
+        {
+            _logger.LogError("GenerateSignatureFailed adoptId: {adoptId}", adoptId);
+            throw new UserFriendlyException("GenerateSignatureFailed");
+        }
+        
+        var resp = new GetWaterMarkImageInfoOutput
+        {
+            Image = waterMarkInfo.resized,
+            Signature = signature,
+            ImageUri = uri
+        };
+        _logger.LogInformation("UploadAndWatermarkAsyncFinished, adoptId:{adoptId}", adoptId);
+
+        return resp;
     }
 }

@@ -42,4 +42,11 @@ public class AdoptController : AbpController
     {
         return await _adoptApplicationService.IsOverLoadedAsync();
     }
+    
+    [HttpGet("adoptInfo")]
+    public async Task<ImageInfoForDirectAdoptionOutput?> GetAdoptImageInfoForDirectAdoptionAsync(GetAdoptImageInfoInput input)
+    {
+        return await _adoptApplicationService.GetAdoptImageInfoForDirectAdoptionAsync(input);
+    }
+    
 }

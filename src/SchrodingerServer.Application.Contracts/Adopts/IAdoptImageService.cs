@@ -16,7 +16,7 @@ public interface IAdoptImageService
     Task SetWatermarkAsync(string adoptId);
     Task<bool> HasWatermark(string adoptId);
 
-    Task SetWatermarkImageInfoAsync(string adoptId, string imageUri, string resizedImage, string selectedImage);
+    Task SetWatermarkImageInfoAsync(string adoptId, string imageUri, string resizedImage, string selectedImage, bool needRemove);
 
     Task<WaterImageGrainInfoDto> GetWatermarkImageInfoAsync(string adoptId);
     
