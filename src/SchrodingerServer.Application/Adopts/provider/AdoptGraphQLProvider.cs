@@ -93,8 +93,10 @@ public class AdoptGraphQLProvider : IAdoptGraphQLProvider, ISingletonDependency
                        inputAmount,
         		       outputAmount,
                        adoptId,
-                       adopter,,
-                       adoptTime
+                       adopter,
+                       adoptTime,
+                       gen,
+                       parentGen
                    }
               }",
             Variables = new
