@@ -347,8 +347,8 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         
         return  new StageTimeInDateTime
         {
-            StartTime = startTime,
-            EndTime = endTime
+            StartTime = new DateTime(2024, 7, 12, 0, 0, 0, DateTimeKind.Utc),
+            EndTime = new DateTime(2024, 7, 17, 23, 59, 59, DateTimeKind.Utc)
         };
     }
     
@@ -419,8 +419,8 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         
         return  new StageTimeInDateTime
         {
-            StartTime = startTime,
-            EndTime = endTime
+            StartTime = new DateTime(2024, 7, 18, 0, 0, 0, DateTimeKind.Utc),
+            EndTime = new DateTime(2024, 7, 18, 23, 59, 59, DateTimeKind.Utc)
         };
     }
 
@@ -462,6 +462,16 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             var amount = adopt.InputAmount;
             var adoptTime = adopt.AdoptTime;
 
+            if (adopt.Gen - adopt.ParentGen > 1)
+            {
+                _logger.LogInformation("direct adoption to gen nine: {adoptId}", adopt.AdoptId);
+                amount *= 9666;
+            }
+            else
+            {
+                amount *= 1314;
+            }
+
             var exist = rankDataDict.TryGetValue(address, out var value);
             if (exist)
             {
@@ -484,7 +494,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 new ActivityRankData
                 {
                     Address = kvp.Key, 
-                    Scores = kvp.Value.TotalAmount * 1314 / (decimal)Math.Pow(10, 8),
+                    Scores = kvp.Value.TotalAmount / (decimal)Math.Pow(10, 8),
                     UpdateTime = kvp.Value.UpdateTime
                 })
             .ToList();
