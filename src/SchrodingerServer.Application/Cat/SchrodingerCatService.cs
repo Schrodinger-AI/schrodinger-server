@@ -365,5 +365,61 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             Items =  _objectMapper.Map<List<RarityRankItem>, List<RarityRankItemDto>>(rankList)
         };
     }
-    
+
+    public async Task<SchrodingerListDto> GetSchrodingerCatListInBotAsync(GetCatListInput input)
+    {
+        _logger.LogInformation("GetSchrodingerCatListInBotAsync input:{input}", JsonConvert.SerializeObject(input));
+        var list = await GetSchrodingerCatListAsync(input);
+        if (list.TotalCount == 0 || list.Data.IsNullOrEmpty())
+        {
+            return new SchrodingerListDto();
+        }
+
+        var nftIdList = list.Data.Select(i => input.ChainId + "-" + i.Symbol).ToList();
+        var nftInfoList = await _levelProvider.BatchGetForestNftInfoAsync(nftIdList, input.ChainId);
+        if (nftInfoList.Count == 0)
+        {
+            return list;
+        }
+        
+        var nftInfoDict = nftInfoList.ToDictionary(i => i.NftSymbol, i => i);
+        list.Data.ForEach(i =>
+        {
+            if (nftInfoDict.TryGetValue(i.Symbol, out var value))
+            {
+                i.ForestPrice = value.ListingPrice;
+            }
+        });
+
+        return list;
+    }
+
+    public async Task<SchrodingerListDto> GetSchrodingerAllCatsListInBotAsync(GetCatListInput input)
+    {
+        _logger.LogInformation("GetSchrodingerAllCatsListInBotAsync input:{input}", JsonConvert.SerializeObject(input));
+        input.MinAmount = "100000000";
+        var list = await GetSchrodingerAllCatsListAsync(input);
+        if (list.TotalCount == 0 || list.Data.IsNullOrEmpty())
+        {
+            return new SchrodingerListDto();
+        }
+
+        var nftIdList = list.Data.Select(i => input.ChainId + "-" + i.Symbol).ToList();
+        var nftInfoList = await _levelProvider.BatchGetForestNftInfoAsync(nftIdList, input.ChainId);
+        if (nftInfoList.Count == 0)
+        {
+            return list;
+        }
+        
+        var nftInfoDict = nftInfoList.ToDictionary(i => i.NftSymbol, i => i);
+        list.Data.ForEach(i =>
+        {
+            if (nftInfoDict.TryGetValue(i.Symbol, out var value))
+            {
+                i.ForestPrice = value.ListingPrice;
+            }
+        });
+
+        return list;
+    }
 }

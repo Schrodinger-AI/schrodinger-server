@@ -31,6 +31,7 @@ public class SchrodingerDto
     public string Describe{ get; set; }
     public string Token { get; set; }
     public string Address { get; set; }
+    public decimal ForestPrice { get; set; }
 }
 
 public class TraitsInfo

@@ -13,4 +13,6 @@ public interface ILevelProvider
     Task<LevelInfoDto> GetItemLevelDicAsync(int rank, double price);
 
     Task<bool> CheckAddressIsInWhiteListAsync(string address);
+    
+    Task<List<NftInfo>> BatchGetForestNftInfoAsync(List<string> nftIdList, string chainId);
 }
