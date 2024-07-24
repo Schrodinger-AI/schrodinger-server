@@ -286,6 +286,9 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         {
             Attributes = adoptInfo.Attributes,
             Generation = adoptInfo.Generation,
+            Rarity = adoptInfo.Rarity,
+            Rank = adoptInfo.Rank,
+            Level = adoptInfo.Level
         };
         var aelfAddress = await _userActionProvider.GetCurrentUserAddressAsync(GetCurChain());
         var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, aelfAddress);
