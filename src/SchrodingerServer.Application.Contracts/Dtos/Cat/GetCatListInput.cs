@@ -16,8 +16,8 @@ public class GetCatListInput : PagedAndSortedResultRequestDto
     public string SearchAddress { get; set; }
     public bool FilterSgr { get; set; } = false;
     public int SkipCount { get; set; } 
-    public int MaxResultCount { get; set; } 
-    public string MinAmount { get; set; }
+    public int MaxResultCount { get; set; }
+    public string MinAmount { get; set; } = "";
 
 }
 
