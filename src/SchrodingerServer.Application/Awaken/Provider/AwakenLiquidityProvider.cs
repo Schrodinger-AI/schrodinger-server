@@ -19,6 +19,7 @@ public interface IAwakenLiquidityProvider
 {
     Task<List<AwakenLiquidityRecordDto>> GetLiquidityRecordsAsync(GetAwakenLiquidityRecordDto dto);
     Task<GetAwakenPriceDto> GetPriceAsync(string token0Symbol, string token1Symbol, string chainId, string feeRate);
+    Task<GetAwakenTradeRecordDto> GetAwakenTradeRecordsAsync(long beginTime, long endTime, long skipCount, long maxResultCount);
 }
 
 public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDependency
@@ -127,6 +128,32 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
             return new GetAwakenPriceDto();
         }
     }
+
+    public async Task<GetAwakenTradeRecordDto> GetAwakenTradeRecordsAsync(long beginTime, long endTime, long skipCount, long maxResultCount)
+    {
+        try
+        {
+            var resp = await _httpProvider.InvokeAsync<CommonResponseDto<GetAwakenTradeRecordDto>>(
+                _levelOptions.CurrentValue.AwakenUrl, PointServerProvider.Api.GetAwakenTradeRecords, null,
+                new Dictionary<string, string>()
+                {
+                    ["skipCount"] = skipCount.ToString(),
+                    ["maxResultCount"] = maxResultCount.ToString(),
+                    ["TimestampMin"] = beginTime.ToString(),
+                    ["TimestampMax"] = endTime.ToString(),
+                    ["ChainId"] = "tDVV",
+                    ["TokenSymbol"] = "SGR-1"
+                });
+            AssertHelper.NotNull(resp, "Response empty");
+            AssertHelper.NotNull(resp.Success, "Response failed, {}", resp.Message);
+            return resp.Data ?? new GetAwakenTradeRecordDto();
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Points domain get points failed");
+            return new GetAwakenTradeRecordDto();
+        }
+    }
 }
 
 public class AwakenLiquidityRecordDto
@@ -172,12 +199,42 @@ public class GetAwakenPriceDto
 }
 
 
-
 public class GetAwakenPriceDetail 
 {
     public decimal Price { get; set; }
     public decimal priceUSD { get; set; }
     
+}
+
+public class GetAwakenTradeRecordDto 
+{
+    public int TotalCount { get; set; }
+    public List<AwakenTradeRecord> Items { get; set; } = new();
+}
+
+
+public class AwakenTradeRecord
+{
+    public string Address { get; set; }
+    public decimal TotalPriceInUsd { get; set; }
+    public decimal Price { get; set; }
+    public int Side { get; set; }
+    public TradePair TradePair { get; set; }
+    public string Token0Amount { get; set; }
+    public string Token1Amount { get; set; }
+}
+
+public class TradePair
+{
+    public decimal FeeRate { get; set; }
+    public bool IsTokenReverse { get; set; }
+    public Token Token0 { get; set; }
+    public Token Token1 { get; set; }
+}
+
+public class Token
+{
+    public string Symbol { get; set; }
 }
 
 

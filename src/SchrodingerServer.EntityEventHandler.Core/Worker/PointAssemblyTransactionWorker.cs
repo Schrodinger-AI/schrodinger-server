@@ -103,7 +103,7 @@ public class PointAssemblyTransactionWorker : AsyncPeriodicBackgroundWorkerBase
 
     private bool IsAlwaysCheck(string pointName)
     {
-        if (pointName == "XPSGR-7")
+        if (pointName == "XPSGR-7" || pointName == "XPSGR-8")
         {
             return false;
         }
