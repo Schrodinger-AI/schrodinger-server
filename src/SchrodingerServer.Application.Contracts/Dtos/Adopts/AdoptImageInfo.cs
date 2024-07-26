@@ -7,10 +7,6 @@ public class AdoptImageInfo
     public int Generation { get; set; }
     public List<Attribute> Attributes { get; set; }
     public List<string> Images { get; set; }
-    
-    public string Level { get; set; }
-    public string Rarity { get; set; }
-    public int Rank { get; set; }
 }
 
 public class Attribute
