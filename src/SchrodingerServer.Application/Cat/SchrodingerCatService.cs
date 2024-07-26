@@ -95,6 +95,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     public async Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync(GetCatDetailInput input)
     {
         var detail = new SchrodingerDetailDto();
+        var collectionId = input.ChainId == "tDVV" ? "tDVV-SGR-0" : "tDVW-SGRTEST-0";
         var address = await _userActionProvider.GetCurrentUserAddressAsync();
         if (!address.IsNullOrEmpty())
         {
@@ -125,6 +126,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 detail.HolderAmount = holderDetail.Amount;
             }
             
+            detail.CollectionId = collectionId;
             return detail;
         }
         
@@ -135,6 +137,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             detail = holderDetail ?? _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
             detail.Amount = amount;
             _logger.LogInformation("GetSchrodingerCatDetailAsync detail:{detail}",JsonConvert.SerializeObject(detail));
+            detail.CollectionId = collectionId;
             return detail;
         }
         
@@ -143,6 +146,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             detail = holderDetail ?? _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
             detail.Amount = amount;
             detail.HolderAmount = 0;
+            detail.CollectionId = collectionId;
             return detail;
         }
 
@@ -150,6 +154,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         detail.HolderAmount = detail.Amount;
         detail.Amount = amount;
+        detail.CollectionId = collectionId;
         return detail;
     }
 
