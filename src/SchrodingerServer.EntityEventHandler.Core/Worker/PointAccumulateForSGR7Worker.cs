@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -31,11 +30,9 @@ public class PointAccumulateForSGR7Worker : AsyncPeriodicBackgroundWorkerBase
 {
     private readonly ILogger<PointAccumulateForSGR7Worker> _logger;
      private readonly IOptionsMonitor<WorkerOptions> _workerOptionsMonitor;
-     private readonly IOptionsMonitor<PointTradeOptions> _pointTradeOptions;
      
      private readonly IPointDispatchProvider _pointDispatchProvider;
      private readonly IAbpDistributedLock _distributedLock;
-     private readonly IDistributedCache<List<int>> _distributedCache;
      private readonly IDistributedEventBus _distributedEventBus;
      private readonly ISchrodingerCatProvider _schrodingerCatProvider;
      private readonly IClusterClient _clusterClient;
@@ -47,9 +44,7 @@ public class PointAccumulateForSGR7Worker : AsyncPeriodicBackgroundWorkerBase
          IServiceScopeFactory serviceScopeFactory,
          ILogger<PointAccumulateForSGR7Worker> logger,
          IOptionsMonitor<WorkerOptions> workerOptionsMonitor,
-         IDistributedCache<List<int>> distributedCache,
          IAbpDistributedLock distributedLock,
-         IOptionsMonitor<PointTradeOptions> pointTradeOptions,
          IDistributedEventBus distributedEventBus,
          ISchrodingerCatProvider schrodingerCatProvider,
          IClusterClient clusterClient,
@@ -59,9 +54,7 @@ public class PointAccumulateForSGR7Worker : AsyncPeriodicBackgroundWorkerBase
      {
          _logger = logger;
          _workerOptionsMonitor = workerOptionsMonitor;
-         _pointTradeOptions = pointTradeOptions;
          _distributedLock = distributedLock;
-         _distributedCache = distributedCache;
          _distributedEventBus = distributedEventBus;
          _pointDispatchProvider = pointDispatchProvider;
          _schrodingerCatProvider = schrodingerCatProvider;
@@ -177,6 +170,7 @@ public class PointAccumulateForSGR7Worker : AsyncPeriodicBackgroundWorkerBase
          
          await _pointDispatchProvider.SetDispatchAsync(PointDispatchConstants.SYNC_SGR7_PREFIX, bizDate,
              pointName, true);
+         await Task.Delay(5000);
          await _pointDispatchProvider.SetDispatchAsync(PointDispatchConstants.CAL_FINISH_PREFIX, bizDate, pointName, true);
          _logger.LogInformation("PointAccumulateForSGR7Worker CalculatePointAsync date:{date} end...", 
              bizDate);
