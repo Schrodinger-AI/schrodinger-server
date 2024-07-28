@@ -44,13 +44,13 @@ public class DefaultImageGenerateHandler : IDistributedEventHandler<DefaultImage
         var hasSendRequest = await _adoptImageService.HasSendRequest(eventData.AdoptId) &&
                              !string.IsNullOrWhiteSpace(requestId);
         if (hasSendRequest) return;
-        var limiter = _rateDistributeLimiter.GetRateLimiterInstance("defaultImageGenerateHandler");
-        var lease = await limiter.AcquireAsync();
-        if (!lease.IsAcquired)
-        {
-            _logger.LogInformation("limit exceeded, will requeue, {AdoptId}", eventData.AdoptId);
-            throw new UserFriendlyException("limit exceeded");
-        }
+        // var limiter = _rateDistributeLimiter.GetRateLimiterInstance("defaultImageGenerateHandler");
+        // var lease = await limiter.AcquireAsync();
+        // if (!lease.IsAcquired)
+        // {
+        //     _logger.LogInformation("limit exceeded, will requeue, {AdoptId}", eventData.AdoptId);
+        //     throw new UserFriendlyException("limit exceeded");
+        // }
 
         var imageInfo = _objectMapper.Map<GenerateImage, GenerateOpenAIImage>(eventData.GenerateImage);
         if (_traitsOptions.CurrentValue.UseNewInterface)
