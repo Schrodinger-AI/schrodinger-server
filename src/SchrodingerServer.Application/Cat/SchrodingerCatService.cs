@@ -95,7 +95,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     public async Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync(GetCatDetailInput input)
     {
         var detail = new SchrodingerDetailDto();
-        var collectionId = input.ChainId == "tDVV" ? "tDVV-SGR-0" : "tDVW-SGRTEST-0";
+        var collectionId = input.ChainId == "tDVV" ? "tDVV-SGR-0" : "tDVW-SGR-0";
         var address = await _userActionProvider.GetCurrentUserAddressAsync();
         if (!address.IsNullOrEmpty())
         {
