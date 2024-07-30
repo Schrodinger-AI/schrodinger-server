@@ -88,7 +88,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             input.Address = address;
         }
-        
+
+        input.FilterSgr = true;
         return await GetSchrodingerAllCatsPageList(input);
     }
 
@@ -182,7 +183,6 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     private async Task<SchrodingerListDto> GetSchrodingerAllCatsPageList(GetCatListInput input)
     {
         var result = new SchrodingerListDto();
-        input.FilterSgr = true;
         var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerAllCatsListAsync(input);
         var list = _objectMapper.Map<List<SchrodingerSymbolIndexerDto>, List<SchrodingerDto>>(schrodingerIndexerListDto.Data);
         //get awaken price
