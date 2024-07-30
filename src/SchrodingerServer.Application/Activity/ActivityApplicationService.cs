@@ -16,6 +16,7 @@ using SchrodingerServer.Cat.Provider;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dtos.Cat;
+using SchrodingerServer.Message.Provider.Dto;
 using SchrodingerServer.Options;
 using SchrodingerServer.Users;
 using SchrodingerServer.Users.Index;
@@ -537,10 +538,12 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         foreach (var item in res)
         {
             var address = item.To;
-            if (address.IsNullOrEmpty() || address == "ELF_qYQLgEYVLyx3MatsUtW5sCbYooc5LQyuomFHvdmLbrESxMmeY_tDVV")
+            var valid = await IsValidTrade(item);
+            if (!valid)
             {
                 continue;
             }
+            
             var amount = item.Amount * item.Price;
             var adoptTime = item.Timestamp;
             
@@ -603,6 +606,57 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         });
 
         return rankDataList;
+    }
+
+    private async Task<bool> IsValidTrade(NFTActivityIndexDto item)
+    {
+        var address = item.To;
+        var nftId = item.NftInfoId;
+        var price = item.Price;
+        if (address == "ELF_qYQLgEYVLyx3MatsUtW5sCbYooc5LQyuomFHvdmLbrESxMmeY_tDVV" ||
+            address == "ELF_2rv9rq29J42yfoEhyMYa9xqskgHXHv7dfSdUWvW7gFSXip776u_tDVV")
+        {
+            _logger.LogInformation("address: {address} in blacklist", address);
+            return false;
+        }
+        
+        var info = nftId.Split("-");
+        var chainId = info[0];
+        var symbol = info[1] + "-" + info[2];
+        var pointBySymbolDto = await _schrodingerCatProvider.GetHoldingPointBySymbolAsync(symbol, chainId);
+        if (pointBySymbolDto.Level.IsNullOrEmpty())
+        {
+            if (price > 10)
+            {
+                _logger.LogInformation("price not satisfy, actual price: {price1}, required price: 10", price);
+                return false;
+            }
+
+        }
+        else
+        {
+            if (ActivityConstants.LevelPriceDictionary.TryGetValue(pointBySymbolDto.Level, out var priceOfLevel) && price > priceOfLevel)
+            {
+                _logger.LogInformation("price not satisfy, actual price: {price1}, required price: {price2}", price, priceOfLevel);
+                return false;
+            }
+        }
+        
+        var input = new GetSchrodingerTradeRecordInput
+        {
+            Buyer = address,
+            ChainId = chainId,
+            Symbol = symbol,
+            TradeTime = item.Timestamp
+        };
+        var tradeList = await _schrodingerCatProvider.GetSchrodingerTradeRecordAsync(input);
+        if (tradeList.Count > 1)
+        {
+            _logger.LogInformation("trade count not satisfy: {cnt}", tradeList.Count);
+            return false;
+        }
+
+        return true;
     }
 
     private async Task<decimal> GetELFPriceAsync(string key)
