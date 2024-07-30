@@ -403,6 +403,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     {
         _logger.LogInformation("GetSchrodingerAllCatsListInBotAsync input:{input}", JsonConvert.SerializeObject(input));
         input.MinAmount = "100000000";
+        input.Generations = new List<int> { 9 };
         var list = await GetSchrodingerAllCatsListAsync(input);
         if (list.TotalCount == 0 || list.Data.IsNullOrEmpty())
         {
