@@ -652,8 +652,13 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         var tradeList = await _schrodingerCatProvider.GetSchrodingerTradeRecordAsync(input);
         if (tradeList.Count > 1)
         {
-            _logger.LogInformation("trade count not satisfy: {cnt}", tradeList.Count);
-            return false;
+            var sortedTradeList = tradeList.OrderBy(x => x.Timestamp).ThenBy(x => x.TransactionHash);
+            var firstTrade = sortedTradeList.First();
+            if (firstTrade.TransactionHash != item.TransactionHash)
+            {
+                _logger.LogInformation("trade count not satisfy: {cnt}", tradeList.Count);
+                return false;
+            }
         }
 
         return true;
