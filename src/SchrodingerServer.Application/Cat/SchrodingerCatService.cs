@@ -88,13 +88,15 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             input.Address = address;
         }
-        
+
+        input.FilterSgr = true;
         return await GetSchrodingerAllCatsPageList(input);
     }
 
     public async Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync(GetCatDetailInput input)
     {
         var detail = new SchrodingerDetailDto();
+        var collectionId = input.ChainId == "tDVV" ? "tDVV-SGR-0" : "tDVW-SGR-0";
         var address = await _userActionProvider.GetCurrentUserAddressAsync();
         if (!address.IsNullOrEmpty())
         {
@@ -125,6 +127,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 detail.HolderAmount = holderDetail.Amount;
             }
             
+            detail.CollectionId = collectionId;
             return detail;
         }
         
@@ -135,6 +138,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             detail = holderDetail ?? _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
             detail.Amount = amount;
             _logger.LogInformation("GetSchrodingerCatDetailAsync detail:{detail}",JsonConvert.SerializeObject(detail));
+            detail.CollectionId = collectionId;
             return detail;
         }
         
@@ -143,6 +147,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             detail = holderDetail ?? _objectMapper.Map<SchrodingerDto, SchrodingerDetailDto>(symbolIndexerListDto.Data[0]);
             detail.Amount = amount;
             detail.HolderAmount = 0;
+            detail.CollectionId = collectionId;
             return detail;
         }
 
@@ -150,6 +155,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         detail.HolderAmount = detail.Amount;
         detail.Amount = amount;
+        detail.CollectionId = collectionId;
         return detail;
     }
 
@@ -177,7 +183,6 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     private async Task<SchrodingerListDto> GetSchrodingerAllCatsPageList(GetCatListInput input)
     {
         var result = new SchrodingerListDto();
-        input.FilterSgr = true;
         var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerAllCatsListAsync(input);
         var list = _objectMapper.Map<List<SchrodingerSymbolIndexerDto>, List<SchrodingerDto>>(schrodingerIndexerListDto.Data);
         //get awaken price
@@ -365,5 +370,62 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             Items =  _objectMapper.Map<List<RarityRankItem>, List<RarityRankItemDto>>(rankList)
         };
     }
-    
+
+    public async Task<SchrodingerListDto> GetSchrodingerCatListInBotAsync(GetCatListInput input)
+    {
+        _logger.LogInformation("GetSchrodingerCatListInBotAsync input:{input}", JsonConvert.SerializeObject(input));
+        var list = await GetSchrodingerCatListAsync(input);
+        if (list.TotalCount == 0 || list.Data.IsNullOrEmpty())
+        {
+            return new SchrodingerListDto();
+        }
+
+        var nftIdList = list.Data.Select(i => input.ChainId + "-" + i.Symbol).ToList();
+        var nftInfoList = await _levelProvider.BatchGetForestNftInfoAsync(nftIdList, input.ChainId);
+        if (nftInfoList.Count == 0)
+        {
+            return list;
+        }
+        
+        var nftInfoDict = nftInfoList.ToDictionary(i => i.NftSymbol, i => i);
+        list.Data.ForEach(i =>
+        {
+            if (nftInfoDict.TryGetValue(i.Symbol, out var value))
+            {
+                i.ForestPrice = value.ListingPrice;
+            }
+        });
+
+        return list;
+    }
+
+    public async Task<SchrodingerListDto> GetSchrodingerAllCatsListInBotAsync(GetCatListInput input)
+    {
+        _logger.LogInformation("GetSchrodingerAllCatsListInBotAsync input:{input}", JsonConvert.SerializeObject(input));
+        input.MinAmount = "100000000";
+        input.Generations = new List<int> { 9 };
+        var list = await GetSchrodingerAllCatsListAsync(input);
+        if (list.TotalCount == 0 || list.Data.IsNullOrEmpty())
+        {
+            return new SchrodingerListDto();
+        }
+
+        var nftIdList = list.Data.Select(i => input.ChainId + "-" + i.Symbol).ToList();
+        var nftInfoList = await _levelProvider.BatchGetForestNftInfoAsync(nftIdList, input.ChainId);
+        if (nftInfoList.Count == 0)
+        {
+            return list;
+        }
+        
+        var nftInfoDict = nftInfoList.ToDictionary(i => i.NftSymbol, i => i);
+        list.Data.ForEach(i =>
+        {
+            if (nftInfoDict.TryGetValue(i.Symbol, out var value))
+            {
+                i.ForestPrice = value.ListingPrice;
+            }
+        });
+
+        return list;
+    }
 }

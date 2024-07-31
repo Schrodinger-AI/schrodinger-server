@@ -36,6 +36,7 @@ public class PointServerProvider : IPointServerProvider, ISingletonDependency
         public static ApiInfo CheckIsInWhiteList = new(HttpMethod.Get, "/api/probability/isAddressValid");
         public static ApiInfo GetMyRewards = new(HttpMethod.Post, "/api/app/points/staking/rewards/info");
         public static ApiInfo GetAwakenTradeRecords = new(HttpMethod.Get, "/api/app/trade-records");
+        public static ApiInfo GetForestInfo = new(HttpMethod.Post, "/api/app/nft/composite-nft-infos");
     }
 
     private readonly ILogger<PointServerProvider> _logger;
