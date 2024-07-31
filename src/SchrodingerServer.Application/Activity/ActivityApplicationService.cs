@@ -348,8 +348,8 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         
         return  new StageTimeInDateTime
         {
-            StartTime = new DateTime(2024, 7, 12, 0, 0, 0, DateTimeKind.Utc),
-            EndTime = new DateTime(2024, 7, 17, 23, 59, 59, DateTimeKind.Utc)
+            StartTime = startTime,
+            EndTime = endTime
         };
     }
     
