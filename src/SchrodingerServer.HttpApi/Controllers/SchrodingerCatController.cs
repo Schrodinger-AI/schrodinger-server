@@ -49,4 +49,16 @@ public class SchrodingerCatController
         return await _schrodingerCatService.GetRarityRankAsync();
     }
     
+    [HttpPost("bot-list")]
+    public async Task<SchrodingerListDto> GetSchrodingerCatListInBot(GetCatListInput input)
+    {
+        return await _schrodingerCatService.GetSchrodingerCatListInBotAsync(input);
+    }
+    
+    [HttpPost("bot-all")]
+    public async Task<SchrodingerListDto> GetSchrodingerAllCatsListInBot(GetCatListInput input)
+    {
+        return await _schrodingerCatService.GetSchrodingerAllCatsListInBotAsync(input);
+    }
+    
 }

@@ -42,6 +42,12 @@ public class SchrodingerSoldListQueryDto
     public List<NFTActivityIndexDto> GetSchrodingerSoldList{ get; set; }
 }
 
+
+public class SchrodingerTradeRecordQueryDto
+{
+    public List<NFTActivityIndexDto> GetSchrodingerTradeRecord{ get; set; }
+}
+
 public enum NFTActivityType
 {
     Issue,

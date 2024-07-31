@@ -32,6 +32,8 @@ public interface ISchrodingerCatProvider
     Task<HoldingPointBySymbolDto> GetHoldingPointBySymbolAsync(string symbol, string chainId);
     
     Task<SchrodingerIndexerListDto> GetSchrodingerHoldingListAsync(GetCatListInput input);
+    
+    Task<List<NFTActivityIndexDto>> GetSchrodingerTradeRecordAsync(GetSchrodingerTradeRecordInput input);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -95,8 +97,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerSymbolIndexerQuery>(new GraphQLRequest
             {
                 Query =
-                    @"query($keyword:String!, $chainId:String!, $tick:String!, $traits:[TraitsInput!],$raritys:[String!],$generations:[Int!],$skipCount:Int!,$maxResultCount:Int!,$filterSgr:Boolean!){
-                    getAllSchrodingerList(input: {keyword:$keyword,chainId:$chainId,tick:$tick,traits:$traits,raritys:$raritys,generations:$generations,skipCount:$skipCount,maxResultCount:$maxResultCount,filterSgr:$filterSgr}){
+                    @"query($keyword:String!, $chainId:String!, $tick:String!, $traits:[TraitsInput!],$raritys:[String!],$generations:[Int!],$skipCount:Int!,$maxResultCount:Int!,$filterSgr:Boolean!,$minAmount:String!){
+                    getAllSchrodingerList(input: {keyword:$keyword,chainId:$chainId,tick:$tick,traits:$traits,raritys:$raritys,generations:$generations,skipCount:$skipCount,maxResultCount:$maxResultCount,filterSgr:$filterSgr,minAmount:$minAmount}){
                         totalCount,
                         data{
                         symbol,
@@ -120,7 +122,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                 {
                     keyword = input.Keyword ?? "", chainId = input.ChainId ?? "",
                     tick = input.Tick ?? "", traits = input.Traits,raritys = input.Rarities, generations = input.Generations,
-                    skipCount = input.SkipCount, maxResultCount = input.MaxResultCount,filterSgr = input.FilterSgr
+                    skipCount = input.SkipCount, maxResultCount = input.MaxResultCount,filterSgr = input.FilterSgr,
+                    minAmount = input.MinAmount
                 }
             });
 
@@ -413,6 +416,54 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "GetSchrodingerHoldingList Indexer error");
             return new SchrodingerIndexerListDto();
+        }
+    }
+    
+    public async Task<List<NFTActivityIndexDto>> GetSchrodingerTradeRecordAsync(GetSchrodingerTradeRecordInput input)
+    {
+        try
+        {
+            var res = await _graphQlHelper.QueryAsync<SchrodingerTradeRecordQueryDto>(new GraphQLRequest
+            {
+                Query = @"query (
+                    $symbol:String!,
+                    $buyer:String!,
+                    $chainId:String!,
+                    $tradeTime:DateTime!
+                ){
+                  getSchrodingerTradeRecord(
+                    input:{
+                      symbol:$symbol,
+                      buyer:$buyer,
+                      chainId:$chainId,
+                      tradeTime:$tradeTime
+                    }
+                  ){
+                        id,
+                        from,
+                        to,
+                        type,
+                        nftInfoId,
+                        amount,
+                        price,
+                        timestamp,
+                        transactionHash
+                  }
+                }",
+                Variables = new
+                {
+                    symbol = input.Symbol,
+                    buyer = input.Buyer,
+                    chainId = input.ChainId,
+                    tradeTime = input.TradeTime
+                }
+            });
+            return res.GetSchrodingerTradeRecord;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getSchrodingerTradeRecord query GraphQL error");
+            throw;
         }
     }
 }

@@ -17,6 +17,8 @@ public class SchrodingerDetailDto
     public string Address { get; set; }
     public List<TraitDto> Traits { get; set; }
     public long HolderAmount{ get; set; }
+    
+    public string CollectionId { get; set; }
 }
 
 public class TraitDto

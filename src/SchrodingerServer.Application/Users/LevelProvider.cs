@@ -248,4 +248,36 @@ public class LevelProvider : ApplicationService, ILevelProvider
         }
         return _levelInfoDic.TryGetValue(rank.ToString(), out levelInfo) ? levelInfo.DeepCopy() : null;
     }
+
+    public async Task<List<NftInfo>> BatchGetForestNftInfoAsync(List<string> nftIdList, string chainId)
+    {
+        try
+        {
+            var resp = await _httpProvider.InvokeAsync<BatchGetForestNftInfoDto>(
+                _levelOptions.CurrentValue.ForestUrl, PointServerProvider.Api.GetForestInfo,
+                body: JsonConvert.SerializeObject(new BatchGetForestNftINfoInput
+                {
+                    CollectionId = chainId + "-SGR-0",
+                    CollectionType = "nft",
+                    Sorting = "Low to High",
+                    ChainList = new List<string> {chainId},
+                    SkipCount = 0,
+                    MaxResultCount = nftIdList.Count,
+                    NFTIdList = nftIdList
+                }, JsonSerializerSettings));
+            if (resp is not { Code: "20000" })
+            {
+                _logger.LogError("BatchGetForestNftInfo Error,response:{response}",(resp == null ? "non result" : resp.Code));
+                return new List<NftInfo>();
+            }
+
+            return resp.Data.Items;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("BatchGetForestNftInfoAsync Failed, {msg}", e);
+            return new List<NftInfo>();
+        }
+    }
+    
 }
