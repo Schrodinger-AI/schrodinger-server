@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using SchrodingerServer.Aetherlink;
 using SchrodingerServer.Fee;
 using SchrodingerServer.Token;
 using Volo.Abp;
@@ -15,12 +16,14 @@ public class TokenController : AbpController
 {
     private readonly ITokenPriceProvider _tokenPriceProvider;
     private readonly ITransactionFeeAppService _transactionFeeAppService;
+    private readonly IAetherlinkApplicationService _aetherlinkApplicationService;
     private const string UsdSymbol = "usd";
 
-    public TokenController(ITokenPriceProvider tokenPriceProvider, ITransactionFeeAppService transactionFeeAppService)
+    public TokenController(ITokenPriceProvider tokenPriceProvider, ITransactionFeeAppService transactionFeeAppService, IAetherlinkApplicationService aetherlinkApplicationService)
     {
         _tokenPriceProvider = tokenPriceProvider;
         _transactionFeeAppService = transactionFeeAppService;
+        _aetherlinkApplicationService = aetherlinkApplicationService;
     }
 
     [HttpGet("schrodinger/transaction-fee")]
@@ -35,4 +38,11 @@ public class TokenController : AbpController
         var price = await _tokenPriceProvider.GetPriceByCacheAsync(input.Symbol);
         return new PriceDto() { Price = price };
     }
+    
+    [HttpGet("schrodinger/test-price")]
+    public async Task<decimal> AetherlinkPirce()
+    {
+        return await _aetherlinkApplicationService.GetTokenPriceInUsdt("elf");
+    }
+    
 }
