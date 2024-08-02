@@ -8,9 +8,9 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using SchrodingerServer.Activity.Eto;
 using SchrodingerServer.AddressRelationship.Dto;
 using SchrodingerServer.Adopts.provider;
+using SchrodingerServer.Aetherlink;
 using SchrodingerServer.Awaken.Provider;
 using SchrodingerServer.Cat.Provider;
 using SchrodingerServer.Common;
@@ -42,6 +42,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     private readonly ISchrodingerCatProvider _schrodingerCatProvider;
     private readonly IAwakenLiquidityProvider _awakenLiquidityProvider;
     private readonly IOptionsMonitor<LevelOptions> _levelOptions;
+    private readonly IAetherlinkApplicationService _aetherlinkApplicationService;
     
     public ActivityApplicationService(
         IAddressRelationshipProvider addressRelationshipProvider, 
@@ -54,6 +55,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         IDistributedCache<string> distributedCache,
         ISchrodingerCatProvider schrodingerCatProvider,
         IAwakenLiquidityProvider awakenLiquidityProvider,
+        IAetherlinkApplicationService aetherlinkApplicationService,
         IOptionsMonitor<LevelOptions> levelOptions)
     {
         _addressRelationshipProvider = addressRelationshipProvider;
@@ -66,6 +68,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         _distributedCache = distributedCache;
         _schrodingerCatProvider = schrodingerCatProvider;
         _awakenLiquidityProvider = awakenLiquidityProvider;
+        _aetherlinkApplicationService = aetherlinkApplicationService;
         _levelOptions = levelOptions;
     }
 
@@ -666,8 +669,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
 
     private async Task<decimal> GetELFPriceAsync(string key)
     {
-        var priceDto = await _awakenLiquidityProvider.GetPriceAsync("ELF", "USDT", "tDVV", "0.0005");
-        var price = priceDto.Items.FirstOrDefault().Price;
+        var price = await _aetherlinkApplicationService.GetTokenPriceInUsdt("elf");
         AssertHelper.IsTrue(price != null && price > 0, "ELF price is null or zero");
 
         await _distributedCache.SetAsync(key, price.ToString(), new DistributedCacheEntryOptions()

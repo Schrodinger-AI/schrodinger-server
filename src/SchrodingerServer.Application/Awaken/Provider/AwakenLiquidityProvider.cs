@@ -11,14 +11,12 @@ using SchrodingerServer.Common.HttpClient;
 using SchrodingerServer.Options;
 using SchrodingerServer.PointServer;
 using Volo.Abp.DependencyInjection;
-using Volo.Abp.ObjectMapping;
 
 namespace SchrodingerServer.Awaken.Provider;
 
 public interface IAwakenLiquidityProvider
 {
     Task<List<AwakenLiquidityRecordDto>> GetLiquidityRecordsAsync(GetAwakenLiquidityRecordDto dto);
-    Task<GetAwakenPriceDto> GetPriceAsync(string token0Symbol, string token1Symbol, string chainId, string feeRate);
     Task<GetAwakenTradeRecordDto> GetAwakenTradeRecordsAsync(long beginTime, long endTime, long skipCount, long maxResultCount);
 }
 
@@ -101,31 +99,6 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
         {
             _logger.LogError(e, "GetNFTListingsAsync query GraphQL error");
             throw;
-        }
-    }
-    
-    
-    public async Task<GetAwakenPriceDto> GetPriceAsync(string token0Symbol, string token1Symbol, string chainId, string feeRate)
-    {
-        try
-        {
-            var resp = await _httpProvider.InvokeAsync<CommonResponseDto<GetAwakenPriceDto>>(
-                _levelOptions.CurrentValue.AwakenUrl, PointServerProvider.Api.GetAwakenPrice, null,
-                new Dictionary<string, string>()
-                {
-                    ["token0Symbol"] = token0Symbol,
-                    ["token1Symbol"] = token1Symbol,
-                    ["feeRate"] = feeRate,
-                    ["chainId"] = chainId
-                });
-            AssertHelper.NotNull(resp, "Response empty");
-            AssertHelper.NotNull(resp.Success, "Response failed, {}", resp.Message);
-            return resp.Data ?? new GetAwakenPriceDto();
-        }
-        catch (Exception e)
-        {
-            _logger.LogWarning(e, "Points domain get points failed");
-            return new GetAwakenPriceDto();
         }
     }
 
