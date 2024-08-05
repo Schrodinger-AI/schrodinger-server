@@ -18,9 +18,6 @@ jobs:
       - name: 'Download AElf build tools'
         run: bash scripts/download_binary.sh
 
-      - name: 'Install protobuf'
-        run: bash scripts/install_protobuf.sh
-
       - name: Install dependencies
         run: dotnet restore --verbosity quiet
         
