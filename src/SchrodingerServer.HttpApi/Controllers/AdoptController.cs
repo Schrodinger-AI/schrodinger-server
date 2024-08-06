@@ -48,5 +48,10 @@ public class AdoptController : AbpController
     {
         return await _adoptApplicationService.GetAdoptImageInfoForDirectAdoptionAsync(input);
     }
-    
+
+    [HttpPost("confirm-adoption")]
+    public async Task<ConfirmAdoptionOutput> ConfirmAdoptionAsync(ConfirmAdoptionInput input)
+    {
+        return await _adoptApplicationService.ConfirmAdoptionAsync(input);
+    }
 }
