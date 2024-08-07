@@ -74,7 +74,9 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
             var address = context.Request.GetParameter("address").ToString();
             var source = context.Request.GetParameter("source").ToString();
             var registerHost = DeviceInfoContext.CurrentDeviceInfo.Host ?? CommonConstant.EmptyString;
-
+            
+            _logger.LogInformation("test auth, address: {address}, ts:{ts}", address, timestampVal);
+            
             AssertHelper.NotEmpty(source, "invalid parameter source.");
             AssertHelper.NotEmpty(publicKeyVal, "invalid parameter publickey.");
             AssertHelper.NotEmpty(signatureVal, "invalid parameter signature.");
