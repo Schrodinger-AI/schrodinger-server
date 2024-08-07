@@ -10,4 +10,6 @@ public interface IAdoptApplicationService
     Task<GetWaterMarkImageInfoOutput> GetWaterMarkImageInfoAsync(GetWaterMarkImageInfoInput input);
     Task<bool> IsOverLoadedAsync();
     Task<ImageInfoForDirectAdoptionOutput> GetAdoptImageInfoForDirectAdoptionAsync(GetAdoptImageInfoInput input);
+    
+    Task<ConfirmAdoptionOutput> ConfirmAdoptionAsync(ConfirmAdoptionInput input);
 }
