@@ -302,7 +302,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         List<string> images;
         if (!hasSendRequest)
         {
-            _logger.LogInformation("has not send request for adoptId:{adoptId}", adoptId);
+            _logger.LogInformation("send ai generation request for adoptId:{adoptId}", adoptId);
             await _imageDispatcher.DispatchAIGenerationRequest(adoptAddressId, AdoptInfo2GenerateImage(adoptInfo), adoptId);
             await _adoptImageService.MarkRequest(adoptId);
 
@@ -310,7 +310,6 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         }
         else
         {
-            _logger.LogInformation("has send request for adoptId:{adoptId}", adoptId);
             images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
         }
         
