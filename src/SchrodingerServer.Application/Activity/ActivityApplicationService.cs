@@ -8,7 +8,6 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using SchrodingerServer.Activity.Eto;
 using SchrodingerServer.AddressRelationship.Dto;
 using SchrodingerServer.Adopts.provider;
 using SchrodingerServer.Awaken.Provider;
@@ -18,12 +17,12 @@ using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Message.Provider.Dto;
 using SchrodingerServer.Options;
+using SchrodingerServer.Points.Provider;
 using SchrodingerServer.Users;
 using SchrodingerServer.Users.Index;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Caching;
-using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.ObjectMapping;
 using RankItem = SchrodingerServer.AddressRelationship.Dto.RankItem;
 
@@ -35,38 +34,39 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     private readonly ILogger<ActivityApplicationService> _logger;
     private IOptionsMonitor<ActivityOptions> _activityOptions;
     private readonly IObjectMapper _objectMapper;
-    private readonly IDistributedEventBus _distributedEventBus;
     private readonly IDistributedCache<string> _distributedCache;
     private readonly IAdoptGraphQLProvider _adoptGraphQlProvider;
     private readonly IPortkeyProvider _portkeyProvider;
     private readonly ISchrodingerCatProvider _schrodingerCatProvider;
     private readonly IAwakenLiquidityProvider _awakenLiquidityProvider;
     private readonly IOptionsMonitor<LevelOptions> _levelOptions;
+    private readonly IPointDailyRecordProvider _pointDailyRecordProvider;
     
     public ActivityApplicationService(
         IAddressRelationshipProvider addressRelationshipProvider, 
         ILogger<ActivityApplicationService> logger, 
         IOptionsMonitor<ActivityOptions> activityOptions, 
         IObjectMapper objectMapper, 
-        IDistributedEventBus distributedEventBus,
         IAdoptGraphQLProvider adoptGraphQlProvider, 
         IPortkeyProvider portkeyProvider,
         IDistributedCache<string> distributedCache,
         ISchrodingerCatProvider schrodingerCatProvider,
         IAwakenLiquidityProvider awakenLiquidityProvider,
-        IOptionsMonitor<LevelOptions> levelOptions)
+        IOptionsMonitor<LevelOptions> levelOptions,
+        IPointDailyRecordProvider pointDailyRecordProvider
+        )
     {
         _addressRelationshipProvider = addressRelationshipProvider;
         _logger = logger;
         _activityOptions = activityOptions;
         _objectMapper = objectMapper;
-        _distributedEventBus = distributedEventBus;
         _adoptGraphQlProvider = adoptGraphQlProvider;
         _portkeyProvider = portkeyProvider;
         _distributedCache = distributedCache;
         _schrodingerCatProvider = schrodingerCatProvider;
         _awakenLiquidityProvider = awakenLiquidityProvider;
         _levelOptions = levelOptions;
+        _pointDailyRecordProvider = pointDailyRecordProvider;
     }
 
     public async Task<ActivityListDto>GetActivityListAsync(GetActivityListInput input)
@@ -682,5 +682,122 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     {
         var activityOption = _activityOptions.CurrentValue.ActivityList.FirstOrDefault(a => a.ActivityId == activityId);
         return activityOption.RankOptions;
+    }
+
+    public async Task<BotRankDto> GetBotRankAsync(GetBotRankInput input)
+    {
+        var stageTime = GetStageTimeOfBotActivity(input.IsCurrent);
+        List<ActivityRankData> rankDataList;
+        switch (input.Tab)
+        {
+            case 1:
+                rankDataList = await GetXPSGR5RankListAsync(stageTime.StartTime.ToUtcSeconds(), stageTime.EndTime.ToUtcSeconds());
+                break;
+            case 2:
+                rankDataList = await GetXPSGR7RankListAsync(stageTime.StartTime.ToUtcMilliSeconds(), stageTime.EndTime.ToUtcMilliSeconds());
+                break;
+            default:
+                rankDataList = await GetXPSGR5RankListAsync(stageTime.StartTime.ToUtcSeconds(), stageTime.EndTime.ToUtcSeconds());
+                break;
+        }
+        
+        var resp = new  BotRankDto
+        {
+            Data = rankDataList,
+            MyReward = "",
+            MyScores = 0
+        };
+        
+        var address = input.Address;
+        foreach (var rankData in rankDataList)
+        {
+            if (address == rankData.Address)
+            {
+                resp.MyScores = rankData.Scores;
+                resp.MyReward = rankData.Reward;
+                break;
+            }
+        }
+
+        return resp;
+    }
+    
+    private StageTimeInDateTime GetStageTimeOfBotActivity(bool isCurrent)
+    {
+        DateTime today = DateTime.UtcNow;
+        DateTime startTime, endTime;
+  
+        if (isCurrent)
+        {
+            // Set startTime to this Monday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Monday - today.DayOfWeek);
+            // Set endTime to this Sunday 23:59:59 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Sunday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59)).AddDays(7);
+        }
+        else
+        {
+            // Set startTime to last Monday 00:00:00 UTC
+            startTime = today.Date.AddDays(DayOfWeek.Monday - today.DayOfWeek).AddDays(-7);
+            // Set endTime to last Sunday 23:59:59 UTC
+            endTime = today.Date.AddDays(DayOfWeek.Sunday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
+        }
+        
+        return  new StageTimeInDateTime
+        {
+            StartTime = startTime,
+            EndTime = endTime
+        };
+    }
+
+    private async Task<List<ActivityRankData>> GetReferralRecordListAsync(long beginTime, long endTime)
+    {
+        var res = await _pointDailyRecordProvider.GetUserReferralRecordByTimeAsync(beginTime, endTime);
+        if (res.IsNullOrEmpty())
+        {
+            _logger.LogInformation("GetUserReferralRecordByTimeAsync empty");
+            return new List<ActivityRankData>();
+        }
+        
+        var rankDataDict = new Dictionary<string, RankItem>();
+        foreach (var record in res)
+        {
+            var address = record.Referrer;
+            if (address.IsNullOrEmpty())
+            {
+                continue;
+            }
+            var amount = 1;
+            var adoptTime = TimeHelper.GetDateTimeFromTimeStamp(record.CreateTime);
+            
+            var exist = rankDataDict.TryGetValue(address, out var value);
+            if (exist)
+            {
+                var totalAmount = value.TotalAmount + amount;
+                var updateTime = value.UpdateTime > adoptTime ? value.UpdateTime : adoptTime;
+                rankDataDict[address].TotalAmount = totalAmount;
+                rankDataDict[address].UpdateTime = updateTime;
+            }
+            else
+            {
+                rankDataDict[address] = new RankItem
+                {
+                    TotalAmount = amount,
+                    UpdateTime = adoptTime
+                };
+            }
+        }
+        
+        var rankDataList = rankDataDict.Select(kvp => 
+                new ActivityRankData
+                {
+                    Address = kvp.Key, 
+                    Scores = kvp.Value.TotalAmount,
+                    UpdateTime = kvp.Value.UpdateTime
+                })
+            .ToList();
+        
+        var sortedTradeList = rankDataList.OrderByDescending(x => x.Scores).ThenBy(x => x.UpdateTime).ToList();
+
+        return sortedTradeList;
     }
 }
