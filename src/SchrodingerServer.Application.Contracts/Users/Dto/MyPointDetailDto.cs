@@ -7,6 +7,7 @@ public class MyPointDetailsDto
     public bool HasBoundAddress { get; set; }
     public string EvmAddress { get; set; }
     public List<EarnedPointDto> PointDetails { get; set; } = new();
+    public string TotalScore { get; set; }
 }
 
 public class ActionPoints
