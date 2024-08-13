@@ -71,3 +71,22 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+  dispatch:
+    runs-on: schrodinger-runner
+    needs: build-and-push-image
+    steps:
+      - name: Deploy
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.TOK }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'Schrodinger-AI',
+              repo: 'devops',
+              workflow_id: 'deployment_testnet.yaml',
+              ref: 'main',
+              inputs: {
+                appName: 'schrodinger-backend',
+                commit_sha: 'sha-${{ needs.build-and-push-image.outputs.short_sha }}',
+              }
+            })
