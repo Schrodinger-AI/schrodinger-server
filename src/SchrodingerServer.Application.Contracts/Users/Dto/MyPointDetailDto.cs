@@ -8,6 +8,7 @@ public class MyPointDetailsDto
     public string EvmAddress { get; set; }
     public List<EarnedPointDto> PointDetails { get; set; } = new();
     public string TotalScore { get; set; }
+    public string TotalReward{ get; set; }
 }
 
 public class ActionPoints

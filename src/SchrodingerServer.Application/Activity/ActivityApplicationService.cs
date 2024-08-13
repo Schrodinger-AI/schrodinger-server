@@ -500,24 +500,26 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 })
             .ToList();
         
-        rankDataList.Sort((item1, item2) =>
-        { 
-            int scoreComparison = item2.Scores.CompareTo(item1.Scores);
-            if (scoreComparison != 0)
-            {
-                return scoreComparison;
-            }
+        // rankDataList.Sort((item1, item2) =>
+        // { 
+        //     int scoreComparison = item2.Scores.CompareTo(item1.Scores);
+        //     if (scoreComparison != 0)
+        //     {
+        //         return scoreComparison;
+        //     }
+        //
+        //     int timeComparison = item1.UpdateTime.CompareTo(item2.UpdateTime);
+        //     if (timeComparison != 0)
+        //     {
+        //         return timeComparison;
+        //     }
+        //
+        //     return item1.Address.CompareTo(item2.Address); 
+        // });
 
-            int timeComparison = item1.UpdateTime.CompareTo(item2.UpdateTime);
-            if (timeComparison != 0)
-            {
-                return timeComparison;
-            }
-
-            return item1.Address.CompareTo(item2.Address); 
-        });
-
-        return rankDataList;
+        var sortedTradeList = rankDataList.OrderByDescending(x => x.Scores).ThenBy(x => x.UpdateTime).ToList();    
+        
+        return sortedTradeList;
     }
     
     
@@ -588,24 +590,26 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 })
             .ToList();
         
-        rankDataList.Sort((item1, item2) =>
-        { 
-            int scoreComparison = item2.Scores.CompareTo(item1.Scores);
-            if (scoreComparison != 0)
-            {
-                return scoreComparison;
-            }
+        // rankDataList.Sort((item1, item2) =>
+        // { 
+        //     int scoreComparison = item2.Scores.CompareTo(item1.Scores);
+        //     if (scoreComparison != 0)
+        //     {
+        //         return scoreComparison;
+        //     }
+        //
+        //     int timeComparison = item1.UpdateTime.CompareTo(item2.UpdateTime);
+        //     if (timeComparison != 0)
+        //     {
+        //         return timeComparison;
+        //     }
+        //
+        //     return item1.Address.CompareTo(item2.Address); 
+        // });
+        
+        var sortedTradeList = rankDataList.OrderByDescending(x => x.Scores).ThenBy(x => x.UpdateTime).ToList();    
 
-            int timeComparison = item1.UpdateTime.CompareTo(item2.UpdateTime);
-            if (timeComparison != 0)
-            {
-                return timeComparison;
-            }
-
-            return item1.Address.CompareTo(item2.Address); 
-        });
-
-        return rankDataList;
+        return sortedTradeList;
     }
 
     private async Task<bool> IsValidTrade(NFTActivityIndexDto item)
@@ -688,33 +692,41 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     {
         var stageTime = GetStageTimeOfBotActivity(input.IsCurrent);
         List<ActivityRankData> rankDataList;
+        ActivityRankOptions rankOptions;
         switch (input.Tab)
         {
             case 1:
                 rankDataList = await GetXPSGR5RankListAsync(stageTime.StartTime.ToUtcSeconds(), stageTime.EndTime.ToUtcSeconds());
+                rankOptions = GetRankOptions(ActivityConstants.SGR5RankActivityId);
                 break;
             case 2:
                 rankDataList = await GetXPSGR7RankListAsync(stageTime.StartTime.ToUtcMilliSeconds(), stageTime.EndTime.ToUtcMilliSeconds());
+                rankOptions = GetRankOptions(ActivityConstants.SGR7RankActivityId);
                 break;
             default:
                 rankDataList = await GetXPSGR5RankListAsync(stageTime.StartTime.ToUtcSeconds(), stageTime.EndTime.ToUtcSeconds());
+                rankOptions = GetRankOptions(ActivityConstants.SGR5RankActivityId);
                 break;
         }
-        
+
+        var displayNumbers = rankOptions.FinalDisplayNumber;
         var resp = new  BotRankDto
         {
-            Data = rankDataList,
-            MyReward = "",
-            MyScores = 0
+            Data = rankDataList.Take((int)displayNumbers).ToList(),
+            MyReward = 0,
+            MyScore = 0
         };
         
         var address = input.Address;
+        int rank = 0;
         foreach (var rankData in rankDataList)
         {
+            rank += 1;
             if (address == rankData.Address)
             {
-                resp.MyScores = rankData.Scores;
-                resp.MyReward = rankData.Reward;
+                resp.MyScore = rankData.Scores;
+                resp.MyRank = rank <= displayNumbers ? rank : 0;
+                resp.MyReward = rank <= displayNumbers ? GetRankReward(rank, rankOptions) : 0;
                 break;
             }
         }
