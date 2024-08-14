@@ -708,25 +708,96 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 rankOptions = GetRankOptions(ActivityConstants.SGR5RankActivityId);
                 break;
         }
-
-        var displayNumbers = rankOptions.FinalDisplayNumber;
-        var resp = new  BotRankDto
+    
+        var header = new List<RankHeader>(rankOptions.Header);
+        if (input.IsCurrent)
         {
-            Data = rankDataList.Take((int)displayNumbers).ToList(),
-            MyReward = 0,
-            MyScore = 0
-        };
+            header.RemoveAt(header.Count-1);
+        }
         
-        var address = input.Address;
-        int rank = 0;
+        var displayNumbers = input.IsCurrent ? rankOptions.NormalDisplayNumber : rankOptions.FinalDisplayNumber;
+        var rank = 0;
+        var validDataList = new List<ActivityRankData>();
         foreach (var rankData in rankDataList)
         {
-            rank += 1;
-            if (address == rankData.Address)
+            var address = rankData.Address;
+
+            if (input.Tab == 1)
+            {
+                var key = IdGenerateHelper.GetEOAAddressCacheKey(address);
+                var cache = await _distributedCache.GetAsync(key);
+                var isEoa = false;
+                if (cache == null)
+                {
+                    var response = await _portkeyProvider.IsEOAAddress(address);
+                    if (response != null)
+                    {
+                        isEoa = response.IsEOAAddress;
+                        _logger.LogInformation("{address} is EOA Address: {isEoa}", address, isEoa);
+                        await _distributedCache.SetAsync(key, isEoa.ToString(),  new DistributedCacheEntryOptions()
+                        {
+                            SlidingExpiration = TimeSpan.FromDays(300)
+                        });
+                    }
+                    else
+                    {
+                        _logger.LogError("IsEOAAddress judgment for {address} failed", address);
+                    }
+                }
+                else
+                {
+                    isEoa = bool.Parse(cache);
+                }
+            
+                if (!isEoa)
+                {
+                    rank++;
+                    if (!input.IsCurrent)
+                    {
+                        var reward = GetRankReward(rank, rankOptions);
+                        rankData.Reward = reward.ToString();
+                    }
+                    validDataList.Add(rankData);
+                }
+            }
+            else
+            {
+                rank++;
+                if (!input.IsCurrent)
+                {
+                    var reward = GetRankReward(rank, rankOptions);
+                    rankData.Reward = reward.ToString();
+                }
+                validDataList.Add(rankData);
+            }
+            
+            if (rank >= displayNumbers)
+            {
+                break;
+            }
+        }
+        
+        
+        var resp = new  BotRankDto
+        {
+            Data = validDataList,
+            MyReward = 0,
+            MyScore = 0,
+            Header = header
+        };
+        
+        int myRank = 0;
+        foreach (var rankData in validDataList)
+        {
+            myRank += 1;
+            if (FullAddressHelper.ToShortAddress(input.Address) == FullAddressHelper.ToShortAddress(rankData.Address))
             {
                 resp.MyScore = rankData.Scores;
-                resp.MyRank = rank <= displayNumbers ? rank : 0;
-                resp.MyReward = rank <= displayNumbers ? GetRankReward(rank, rankOptions) : 0;
+                resp.MyRank = myRank <= displayNumbers ? myRank : 0;
+                if (!input.IsCurrent && myRank <= displayNumbers)
+                {
+                    resp.MyReward = decimal.Parse(rankData.Reward);
+                }
                 break;
             }
         }

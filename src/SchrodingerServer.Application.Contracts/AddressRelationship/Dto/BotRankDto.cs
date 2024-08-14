@@ -9,4 +9,5 @@ public class BotRankDto
     public decimal MyScore { get; set; }
     public decimal MyReward { get; set; }
     public int MyRank { get; set; }
+    public List<RankHeader> Header { get; set; }
 }
