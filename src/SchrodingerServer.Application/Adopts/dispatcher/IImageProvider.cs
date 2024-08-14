@@ -307,23 +307,41 @@ public class DefaultImageProvider : ImageProvider, ISingletonDependency
     
     private async Task<AiQueryResponse> QueryImageInfoByAiNewAsync(string requestId)
     {
-        using var httpClient = new HttpClient();
-        httpClient.DefaultRequestHeaders.Add("accept", "*/*");
-        var start = DateTime.Now;
-        var url = _traitsOptions.CurrentValue.ImageGenerationsUrl + requestId;
-        Logger.LogInformation("TraitsActionProvider QueryImageInfoByAiNewAsync start new query {requestId} url={timeCost}", requestId, url);
-        var response = await httpClient.GetAsync(url);
-        var timeCost = (DateTime.Now - start).TotalMilliseconds;
-        if (response.IsSuccessStatusCode)
+        try
         {
-            string responseContent = await response.Content.ReadAsStringAsync();
-            AiQueryResponse aiQueryResponse = JsonConvert.DeserializeObject<AiQueryResponse>(responseContent);
-            Logger.LogInformation("TraitsActionProvider QueryImageInfoByAiNewAsync query success {requestId} timeCost={timeCost}", requestId, timeCost);
-            return aiQueryResponse;
-        }
+            using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(25);
+            httpClient.DefaultRequestHeaders.Add("accept", "*/*");
+            var start = DateTime.Now;
+            var url = _traitsOptions.CurrentValue.ImageGenerationsUrl + requestId;
+            Logger.LogInformation(
+                "TraitsActionProvider QueryImageInfoByAiNewAsync start new query {requestId} url={timeCost}", requestId,
+                url);
+            var response = await httpClient.GetAsync(url);
+            var timeCost = (DateTime.Now - start).TotalMilliseconds;
+            if (response.IsSuccessStatusCode)
+            {
+                string responseContent = await response.Content.ReadAsStringAsync();
+                AiQueryResponse aiQueryResponse = JsonConvert.DeserializeObject<AiQueryResponse>(responseContent);
+                Logger.LogInformation(
+                    "TraitsActionProvider QueryImageInfoByAiNewAsync query success {requestId} timeCost={timeCost}",
+                    requestId, timeCost);
+                return aiQueryResponse;
+            }
 
-        Logger.LogError("TraitsActionProvider QueryImageInfoByAiNewAsync query not success {requestId}", requestId);
-        return new AiQueryResponse { };
+            Logger.LogError("TraitsActionProvider QueryImageInfoByAiNewAsync query err {requestId}, resp:{resp}", requestId, response.ToString());
+            return new AiQueryResponse { };
+        }
+        catch (TimeoutException e)
+        {
+            Logger.LogError("TraitsActionProvider QueryImageInfoByAiNewAsync query timeout {requestId}", requestId);
+            return new AiQueryResponse { };
+        }
+        catch (Exception e)
+        {
+            Logger.LogError("TraitsActionProvider QueryImageInfoByAiNewAsync query failed {requestId}, error:{e}", requestId, e.ToString());
+            return new AiQueryResponse { };
+        }
     }
 
     private async Task<AiQueryResponse> QueryImageInfoByAiAsync(string requestId)
