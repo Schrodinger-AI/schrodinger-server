@@ -24,7 +24,7 @@ public class AetherlinkApplicationService : ApplicationService, IAetherlinkAppli
         {
             TokenPair = tokenPair,
             AggregateType = AggregateType.Latest
-        })).Data.Price;
+        })).Data.Price / 100000000;
     }
     
 }
