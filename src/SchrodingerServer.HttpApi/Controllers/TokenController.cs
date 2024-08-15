@@ -39,10 +39,10 @@ public class TokenController : AbpController
         return new PriceDto() { Price = price };
     }
     
-    [HttpGet("schrodinger/test-price")]
-    public async Task<decimal> AetherlinkPirce()
+    [HttpGet("schrodinger/test-price/{symbol}")]
+    public async Task<decimal> AetherlinkPirce(string symbol)
     {
-        return await _aetherlinkApplicationService.GetTokenPriceInUsdt("elf");
+        return await _aetherlinkApplicationService.GetTokenPriceInUsdt(symbol);
     }
     
 }
