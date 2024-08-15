@@ -20,11 +20,13 @@ public class AetherlinkApplicationService : ApplicationService, IAetherlinkAppli
     public async Task<decimal> GetTokenPriceInUsdt(string symbol)
     {
         var tokenPair = symbol.ToLower() + "-usdt";
-        return (await _priceServerProvider.GetAggregatedTokenPriceAsync(new()
+        var price = (await _priceServerProvider.GetAggregatedTokenPriceAsync(new()
         {
             TokenPair = tokenPair,
             AggregateType = AggregateType.Latest
-        })).Data.Price / 100000000;
+        })).Data.Price;
+
+        return (decimal)price / 100000000;
     }
     
 }
