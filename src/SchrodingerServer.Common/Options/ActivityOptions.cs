@@ -4,7 +4,9 @@ public class ActivityOptions
 {
     public List<ActivityInfo> ActivityList { get; set; }
     
-    public long NewTagInterval { get; set; } = 72 * 60 * 60; 
+    public long NewTagInterval { get; set; } = 72 * 60 * 60;
+
+    public long BeginTime { get; set; } = 1723852800000;
 }
 
 public class ActivityInfo

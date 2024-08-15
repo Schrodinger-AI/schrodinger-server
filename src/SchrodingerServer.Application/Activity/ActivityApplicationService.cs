@@ -657,6 +657,19 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     public async Task<BotRankDto> GetBotRankAsync(GetBotRankInput input)
     {
         var stageTime = GetStageTimeOfBotActivity(input.IsCurrent);
+        
+        var activityBeginTime = TimeHelper.GetDateTimeFromTimeStamp(_activityOptions.CurrentValue.BeginTime);
+
+        if (stageTime.StartTime < activityBeginTime)
+        {
+            return new BotRankDto();
+        }
+        
+        if (stageTime.StartTime > activityBeginTime.AddDays(7) && !input.IsCurrent)
+        {
+            return new BotRankDto();
+        }
+        
         List<ActivityRankData> rankDataList;
         ActivityRankOptions rankOptions;
         switch (input.Tab)
