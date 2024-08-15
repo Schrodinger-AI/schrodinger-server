@@ -692,12 +692,14 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             Header = header
         };
         
-        if (stageTime.StartTime < activityBeginTime)
+        DateTime now = DateTime.UtcNow;
+        
+        if (now < activityBeginTime)
         {
             return resp;
         }
         
-        if (stageTime.StartTime > activityBeginTime.AddDays(7) && !input.IsCurrent)
+        if (stageTime.EndTime <= activityBeginTime && !input.IsCurrent)
         {
             return resp;
         }
@@ -806,6 +808,12 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
 
         startTime = targetTime;
         endTime = targetTime.AddDays(7);
+        
+        if (!isCurrent)
+        {
+            startTime = startTime.AddDays(-7);
+            endTime = endTime.AddDays(-7);
+        }
         
         return  new StageTimeInDateTime
         {
