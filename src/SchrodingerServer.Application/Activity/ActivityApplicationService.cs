@@ -499,23 +499,6 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                     UpdateTime = kvp.Value.UpdateTime
                 })
             .ToList();
-        
-        // rankDataList.Sort((item1, item2) =>
-        // { 
-        //     int scoreComparison = item2.Scores.CompareTo(item1.Scores);
-        //     if (scoreComparison != 0)
-        //     {
-        //         return scoreComparison;
-        //     }
-        //
-        //     int timeComparison = item1.UpdateTime.CompareTo(item2.UpdateTime);
-        //     if (timeComparison != 0)
-        //     {
-        //         return timeComparison;
-        //     }
-        //
-        //     return item1.Address.CompareTo(item2.Address); 
-        // });
 
         var sortedTradeList = rankDataList.OrderByDescending(x => x.Scores).ThenBy(x => x.UpdateTime).ToList();    
         
@@ -539,7 +522,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         var rankDataDict = new Dictionary<string, RankItem>();
         foreach (var item in res)
         {
-            var address = item.To;
+            var address = FullAddressHelper.ToShortAddress(item.To);
             var valid = await IsValidTrade(item);
             if (!valid)
             {
@@ -589,23 +572,6 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                     UpdateTime = kvp.Value.UpdateTime
                 })
             .ToList();
-        
-        // rankDataList.Sort((item1, item2) =>
-        // { 
-        //     int scoreComparison = item2.Scores.CompareTo(item1.Scores);
-        //     if (scoreComparison != 0)
-        //     {
-        //         return scoreComparison;
-        //     }
-        //
-        //     int timeComparison = item1.UpdateTime.CompareTo(item2.UpdateTime);
-        //     if (timeComparison != 0)
-        //     {
-        //         return timeComparison;
-        //     }
-        //
-        //     return item1.Address.CompareTo(item2.Address); 
-        // });
         
         var sortedTradeList = rankDataList.OrderByDescending(x => x.Scores).ThenBy(x => x.UpdateTime).ToList();    
 
@@ -748,7 +714,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 {
                     isEoa = bool.Parse(cache);
                 }
-            
+                
                 if (!isEoa)
                 {
                     rank++;
@@ -758,6 +724,10 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                         rankData.Reward = reward.ToString();
                     }
                     validDataList.Add(rankData);
+                }
+                else
+                {
+                    _logger.LogInformation("filter eoa address: {address}", address);
                 }
             }
             else
@@ -807,23 +777,21 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     
     private StageTimeInDateTime GetStageTimeOfBotActivity(bool isCurrent)
     {
-        DateTime today = DateTime.UtcNow;
         DateTime startTime, endTime;
-  
-        if (isCurrent)
+        
+        DateTime currentUtcTime = DateTime.UtcNow;
+        DayOfWeek currentDay = currentUtcTime.DayOfWeek;
+        int daysUntilSaturday = ((int)DayOfWeek.Saturday - (int)currentDay + 7) % 7;
+        DateTime nearestSaturday = currentUtcTime.Date.AddDays(daysUntilSaturday);
+        DateTime targetTime = new DateTime(nearestSaturday.Year, nearestSaturday.Month, nearestSaturday.Day, 0, 0, 0, DateTimeKind.Utc);
+
+        if (currentUtcTime <= targetTime)
         {
-            // Set startTime to this Monday 00:00:00 UTC
-            startTime = today.Date.AddDays(DayOfWeek.Monday - today.DayOfWeek);
-            // Set endTime to this Sunday 23:59:59 UTC
-            endTime = today.Date.AddDays(DayOfWeek.Sunday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59)).AddDays(7);
+            targetTime = targetTime.AddDays(-7);
         }
-        else
-        {
-            // Set startTime to last Monday 00:00:00 UTC
-            startTime = today.Date.AddDays(DayOfWeek.Monday - today.DayOfWeek).AddDays(-7);
-            // Set endTime to last Sunday 23:59:59 UTC
-            endTime = today.Date.AddDays(DayOfWeek.Sunday - today.DayOfWeek).Add(new TimeSpan(23, 59, 59));
-        }
+
+        startTime = targetTime;
+        endTime = targetTime.AddDays(7);
         
         return  new StageTimeInDateTime
         {

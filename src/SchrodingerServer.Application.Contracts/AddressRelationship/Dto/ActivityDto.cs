@@ -14,6 +14,7 @@ public class ActivityDto
     public long EndTime { get; set; }
     public bool IsNew { get; set; }
     public string TimeDescription { get; set; }
+    public bool IsShow { get; set; }
 }
 
 
