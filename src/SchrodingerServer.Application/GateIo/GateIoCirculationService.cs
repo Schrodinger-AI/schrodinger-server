@@ -1,14 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using SchrodingerServer.Awaken.Provider;
-using SchrodingerServer.Common;
+using SchrodingerServer.Aetherlink;
 using SchrodingerServer.Common.Http;
 using SchrodingerServer.GateIo.Dtos;
 using SchrodingerServer.Options;
@@ -24,7 +22,7 @@ public class GateIoCirculationService : AbpRedisCache, IGateIoCirculationService
     private readonly HttpProvider _httpProvider;
     private readonly IDistributedCacheSerializer _serializer;
     private readonly SgrCirculationOptions _sgrCirculationOptions;
-    private readonly IAwakenLiquidityProvider _awakenLiquidityProvider;
+    private readonly IAetherlinkApplicationService _aetherlinkApplicationService;
     private const string SgrCirculationRedisKey = "SgrCirculationRedisKey";
     private const string USDT = "USDT";
     private const string SGR = "SGR-1";
@@ -32,14 +30,14 @@ public class GateIoCirculationService : AbpRedisCache, IGateIoCirculationService
 
     public GateIoCirculationService(IOptions<RedisCacheOptions> optionsAccessor,
         ILogger<GateIoCirculationService> logger, HttpProvider httpProvider, IDistributedCacheSerializer serializer,
-        IAwakenLiquidityProvider awakenLiquidityProvider,
+        IAetherlinkApplicationService aetherlinkApplicationService,
         IOptionsSnapshot<SgrCirculationOptions> sgrCirculationOptions) : base(optionsAccessor)
     {
         _logger = logger;
         _httpProvider = httpProvider;
         _serializer = serializer;
         _sgrCirculationOptions = sgrCirculationOptions.Value;
-        _awakenLiquidityProvider = awakenLiquidityProvider;
+        _aetherlinkApplicationService = aetherlinkApplicationService;
     }
 
 
@@ -96,14 +94,14 @@ public class GateIoCirculationService : AbpRedisCache, IGateIoCirculationService
 
     public async Task<decimal> GetSgrPrice()
     {
-        var elfPriceDto = await _awakenLiquidityProvider.GetPriceAsync(ELF, USDT, "tDVV", "0.0005");
-        var elfPrice = elfPriceDto.Items.FirstOrDefault().Price;
-        AssertHelper.IsTrue(elfPrice != null && elfPrice > 0, "ELF price is null or zero");
-   
-        var sgrPriceInElfDto = await _awakenLiquidityProvider.GetPriceAsync(SGR, ELF,"tDVV", "0.03");
-        var sgrPriceInElf = sgrPriceInElfDto.Items.FirstOrDefault().Price;
-        AssertHelper.IsTrue(sgrPriceInElf != null && sgrPriceInElf > 0, "SGR price is null or zero");
+        // var elfPriceDto = await _awakenLiquidityProvider.GetPriceAsync(ELF, USDT, "tDVV", "0.0005");
+        // var elfPrice = elfPriceDto.Items.FirstOrDefault().Price;
+        // AssertHelper.IsTrue(elfPrice != null && elfPrice > 0, "ELF price is null or zero");
+        //
+        // var sgrPriceInElfDto = await _awakenLiquidityProvider.GetPriceAsync(SGR, ELF,"tDVV", "0.03");
+        // var sgrPriceInElf = sgrPriceInElfDto.Items.FirstOrDefault().Price;
+        // AssertHelper.IsTrue(sgrPriceInElf != null && sgrPriceInElf > 0, "SGR price is null or zero");
         
-        return elfPrice * sgrPriceInElf;
+        return await _aetherlinkApplicationService.GetTokenPriceInUsdt("sgr");;
     }
 }

@@ -7,10 +7,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Orleans;
-using SchrodingerServer.Awaken.Provider;
+using SchrodingerServer.Aetherlink;
 using SchrodingerServer.Cat.Provider;
 using SchrodingerServer.Common;
-using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.EntityEventHandler.Core.Options;
 using SchrodingerServer.Grains.Grain.Points;
@@ -19,7 +18,6 @@ using SchrodingerServer.Uniswap;
 using SchrodingerServer.Users.Eto;
 using Volo.Abp;
 using Volo.Abp.BackgroundWorkers;
-using Volo.Abp.Caching;
 using Volo.Abp.DistributedLocking;
 using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.Threading;
@@ -36,7 +34,7 @@ public class PointAccumulateForSGR7Worker : AsyncPeriodicBackgroundWorkerBase
      private readonly IDistributedEventBus _distributedEventBus;
      private readonly ISchrodingerCatProvider _schrodingerCatProvider;
      private readonly IClusterClient _clusterClient;
-     private readonly IAwakenLiquidityProvider _awakenLiquidityProvider;
+     private readonly IAetherlinkApplicationService _aetherlinkApplicationService;
      private readonly string _lockKey = "PointAccumulateForSGR7Worker";
      private const string pointName = "XPSGR-7";
 
@@ -48,8 +46,8 @@ public class PointAccumulateForSGR7Worker : AsyncPeriodicBackgroundWorkerBase
          IDistributedEventBus distributedEventBus,
          ISchrodingerCatProvider schrodingerCatProvider,
          IClusterClient clusterClient,
-         IAwakenLiquidityProvider awakenLiquidityProvider,
-         IPointDispatchProvider pointDispatchProvider): base(timer,
+         IPointDispatchProvider pointDispatchProvider, 
+         IAetherlinkApplicationService aetherlinkApplicationService): base(timer,
          serviceScopeFactory)
      {
          _logger = logger;
@@ -59,7 +57,7 @@ public class PointAccumulateForSGR7Worker : AsyncPeriodicBackgroundWorkerBase
          _pointDispatchProvider = pointDispatchProvider;
          _schrodingerCatProvider = schrodingerCatProvider;
          _clusterClient = clusterClient;
-         _awakenLiquidityProvider = awakenLiquidityProvider;
+         _aetherlinkApplicationService = aetherlinkApplicationService;
          timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 60 * 1000;
      }
      
@@ -116,8 +114,8 @@ public class PointAccumulateForSGR7Worker : AsyncPeriodicBackgroundWorkerBase
          };
          var soldList = await _schrodingerCatProvider.GetSchrodingerSoldListAsync(input);
          
-         var priceDto = await _awakenLiquidityProvider.GetPriceAsync("ELF", "USDT", "tDVV", "0.0005");
-         var price = priceDto.Items.FirstOrDefault().Price;
+         // var priceDto = await _awakenLiquidityProvider.GetPriceAsync("ELF", "USDT", "tDVV", "0.0005");
+         var price = await _aetherlinkApplicationService.GetTokenPriceInUsdt("elf");
          AssertHelper.IsTrue(price != null && price > 0, "ELF price is null or zero");
 
          var now = DateTime.UtcNow;

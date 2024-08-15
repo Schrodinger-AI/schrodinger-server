@@ -1,3 +1,4 @@
+using Aetherlink.PriceServer;
 using Microsoft.Extensions.DependencyInjection;
 using SchrodingerServer.Cat;
 using SchrodingerServer.Common;
@@ -25,7 +26,8 @@ namespace SchrodingerServer;
     typeof(AbpTenantManagementApplicationModule),
     typeof(AbpFeatureManagementApplicationModule),
     typeof(SchrodingerServerGrainsModule),
-    typeof(AbpSettingManagementApplicationModule)
+    typeof(AbpSettingManagementApplicationModule),
+    typeof(AetherlinkPriceServerModule)
 )]
 public class SchrodingerServerApplicationModule : AbpModule
 {

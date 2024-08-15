@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nest;
+using SchrodingerServer.Aetherlink;
 using SchrodingerServer.Cat.Provider;
 using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.Common;
@@ -15,7 +16,6 @@ using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.EntityEventHandler.Core.Options;
 using SchrodingerServer.Points;
 using SchrodingerServer.Points.Provider;
-using SchrodingerServer.Symbol.Provider;
 using SchrodingerServer.Users;
 using SchrodingerServer.Users.Index;
 using Volo.Abp.BackgroundWorkers;
@@ -43,22 +43,22 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
 
     private readonly IObjectMapper _objectMapper;
     private readonly IPointDailyRecordService _pointDailyRecordService;
-    private readonly ISymbolDayPriceProvider _symbolDayPriceProvider;
     private readonly ISchrodingerCatProvider _schrodingerCatProvider;
     private readonly IDistributedCache<List<int>> _distributedCache;
     private readonly IPointDispatchProvider _pointDispatchProvider;
     private readonly IAbpDistributedLock _distributedLock;
+    private readonly IAetherlinkApplicationService _aetherlinkApplicationService;
     private readonly string _lockKey = "PointAccumulateForSGR9Worker";
 
     public PointAccumulateForSGR9Worker(AbpAsyncTimer timer,IServiceScopeFactory serviceScopeFactory,ILogger<PointAccumulateForSGR9Worker> logger,
         IHolderBalanceProvider holderBalanceProvider, IOptionsMonitor<WorkerOptions> workerOptionsMonitor,
         INESTRepository<PointsSnapshotIndex, string> pointSnapshotIndexRepository, IObjectMapper objectMapper,
         IPointDailyRecordService pointDailyRecordService,
-        ISymbolDayPriceProvider symbolDayPriceProvider,
         IDistributedCache<List<int>> distributedCache,
         IPointDispatchProvider pointDispatchProvider,
         IAbpDistributedLock distributedLock,
         IOptionsMonitor<PointTradeOptions> pointTradeOptions,
+        IAetherlinkApplicationService aetherlinkApplicationService,
         ISchrodingerCatProvider schrodingerCatProvider): base(timer,
         serviceScopeFactory)
     {
@@ -68,12 +68,12 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
         _pointSnapshotIndexRepository = pointSnapshotIndexRepository;
         _objectMapper = objectMapper;
         _pointDailyRecordService = pointDailyRecordService;
-        _symbolDayPriceProvider = symbolDayPriceProvider;
         _pointTradeOptions = pointTradeOptions;
         _distributedCache = distributedCache;
         _pointDispatchProvider = pointDispatchProvider;
         _distributedLock = distributedLock;
         _schrodingerCatProvider = schrodingerCatProvider;
+        _aetherlinkApplicationService = aetherlinkApplicationService;
         timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 60 * 1000;
     }
 
@@ -229,9 +229,9 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             
             _logger.LogInformation("PointAccumulateForSGR9Worker  snapshot by address counts: {cnt}", snapshotByAddress.Count());
             
-            var symbols = new List<string> { baseSymbol };
-            var symbolPriceDict = await _symbolDayPriceProvider.GetSymbolPricesAsync(priceBizDate, symbols);
-            var symbolPrice = DecimalHelper.GetValueFromDict(symbolPriceDict, baseSymbol, baseSymbol);
+            // var symbols = new List<string> { baseSymbol };
+            // var symbolPriceDict = await _symbolDayPriceProvider.GetSymbolPricesAsync(priceBizDate, symbols);
+            var symbolPrice = await _aetherlinkApplicationService.GetTokenPriceInUsdt("sgr");
             
             foreach (var snapshot in snapshotByAddress)
             {

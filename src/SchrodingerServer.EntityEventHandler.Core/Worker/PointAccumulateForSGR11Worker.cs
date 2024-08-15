@@ -8,14 +8,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nest;
 using Newtonsoft.Json;
-using NUglify.Helpers;
 using Orleans;
+using SchrodingerServer.Aetherlink;
 using SchrodingerServer.Awaken.Provider;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.EntityEventHandler.Core.Options;
 using SchrodingerServer.Grains.Grain.Points;
-using SchrodingerServer.Points;
 using SchrodingerServer.Points.Provider;
 using SchrodingerServer.Users.Eto;
 using SchrodingerServer.Users.Index;
@@ -24,7 +23,6 @@ using Volo.Abp.BackgroundWorkers;
 using Volo.Abp.Caching;
 using Volo.Abp.DistributedLocking;
 using Volo.Abp.EventBus.Distributed;
-using Volo.Abp.ObjectMapping;
 using Volo.Abp.Threading;
 using DistributedCacheEntryOptions = Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions;
 
@@ -51,6 +49,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     private readonly IDistributedCache<List<int>> _distributedCache;
     private readonly IDistributedEventBus _distributedEventBus;
     private readonly IClusterClient _clusterClient;
+    private readonly IAetherlinkApplicationService _aetherlinkApplicationService;
     private readonly string _lockKey = "PointAccumulateForSGR11Worker";
 
     public PointAccumulateForSGR11Worker(AbpAsyncTimer timer,IServiceScopeFactory serviceScopeFactory,ILogger<PointAccumulateForSGR11Worker> logger,
@@ -62,6 +61,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         IOptionsMonitor<PointTradeOptions> pointTradeOptions,
         IDistributedEventBus distributedEventBus,
         IPointDispatchProvider pointDispatchProvider,
+        IAetherlinkApplicationService aetherlinkApplicationService,
         INESTRepository<AwakenLiquiditySnapshotIndex, string> pointSnapshotIndexRepository): base(timer,
         serviceScopeFactory)
     {
@@ -75,6 +75,7 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
         _pointSnapshotIndexRepository = pointSnapshotIndexRepository;
         _distributedEventBus = distributedEventBus;
         _pointDispatchProvider = pointDispatchProvider;
+        _aetherlinkApplicationService = aetherlinkApplicationService;
         timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 60 * 1000;
     }
 
@@ -266,8 +267,8 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             var validAddress = await GetValidAddressAsync(chainId, bizDate);
             _logger.LogInformation("PointAccumulateForSGR11Worker  get valid address counts: {cnt}", validAddress.Count());
             
-            var elfPrice = await GetELFPrice();
-            var sgrPrice = await GetSGRPrice() * elfPrice;
+            var elfPrice = await _aetherlinkApplicationService.GetTokenPriceInUsdt("elf");
+            var sgrPrice = await _aetherlinkApplicationService.GetTokenPriceInUsdt("sgr");
             
             _logger.LogInformation("PointAccumulateForSGR11Worker  get prices in USD, ELF: {elf}, SGR: {sgr}", elfPrice, sgrPrice);
 
@@ -377,8 +378,8 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
             
             _logger.LogInformation("PointAccumulateForSGR11Worker snapshot by address counts: {cnt}", snapshotByAddress.Count());
             
-            var elfPrice = await GetELFPrice();
-            var sgrPrice = await GetSGRPrice() * elfPrice;
+            var elfPrice = await _aetherlinkApplicationService.GetTokenPriceInUsdt("elf");
+            var sgrPrice = await _aetherlinkApplicationService.GetTokenPriceInUsdt("sgr");
             
             _logger.LogInformation("PointAccumulateForSGR11Worker get prices in USD, ELF: {elf}, SGR: {sgr}", elfPrice, sgrPrice);
 
@@ -592,22 +593,22 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
     
     
     
-    private async Task<decimal> GetELFPrice()
-    {
-        var priceDto = await _awakenLiquidityProvider.GetPriceAsync(ELF, USDT, "tDVV", "0.0005");
-        var price = priceDto.Items.FirstOrDefault().Price;
-        AssertHelper.IsTrue(price != null && price > 0, "ELF price is null or zero");
-        return price;
-    }
-    
-    
-    private async Task<decimal> GetSGRPrice()
-    {
-        var priceDto = await _awakenLiquidityProvider.GetPriceAsync(SGR, ELF,"tDVV", "0.03");
-        var price = priceDto.Items.FirstOrDefault().Price;
-        AssertHelper.IsTrue(price != null && price > 0, "SGR price is null or zero");
-        return price;
-    }
+    // private async Task<decimal> GetELFPrice()
+    // {
+    //     var priceDto = await _awakenLiquidityProvider.GetPriceAsync(ELF, USDT, "tDVV", "0.0005");
+    //     var price = priceDto.Items.FirstOrDefault().Price;
+    //     AssertHelper.IsTrue(price != null && price > 0, "ELF price is null or zero");
+    //     return price;
+    // }
+    //
+    //
+    // private async Task<decimal> GetSGRPrice()
+    // {
+    //     var priceDto = await _awakenLiquidityProvider.GetPriceAsync(SGR, ELF,"tDVV", "0.03");
+    //     var price = priceDto.Items.FirstOrDefault().Price;
+    //     AssertHelper.IsTrue(price != null && price > 0, "SGR price is null or zero");
+    //     return price;
+    // }
     
     private  async Task<List<AwakenLiquiditySnapshotIndex>> GetAllIndex(string bizDate, string pointName)
     {
