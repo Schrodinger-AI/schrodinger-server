@@ -657,18 +657,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     public async Task<BotRankDto> GetBotRankAsync(GetBotRankInput input)
     {
         var stageTime = GetStageTimeOfBotActivity(input.IsCurrent);
-        
         var activityBeginTime = TimeHelper.GetDateTimeFromTimeStamp(_activityOptions.CurrentValue.BeginTime);
-
-        if (stageTime.StartTime < activityBeginTime)
-        {
-            return new BotRankDto();
-        }
-        
-        if (stageTime.StartTime > activityBeginTime.AddDays(7) && !input.IsCurrent)
-        {
-            return new BotRankDto();
-        }
         
         List<ActivityRankData> rankDataList;
         ActivityRankOptions rankOptions;
@@ -692,6 +681,23 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         if (input.IsCurrent)
         {
             header.RemoveAt(header.Count-1);
+        }
+        
+        var resp = new  BotRankDto
+        {
+            MyReward = 0,
+            MyScore = 0,
+            Header = header
+        };
+        
+        if (stageTime.StartTime < activityBeginTime)
+        {
+            return resp;
+        }
+        
+        if (stageTime.StartTime > activityBeginTime.AddDays(7) && !input.IsCurrent)
+        {
+            return resp;
         }
         
         var displayNumbers = input.IsCurrent ? rankOptions.NormalDisplayNumber : rankOptions.FinalDisplayNumber;
@@ -759,15 +765,8 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 break;
             }
         }
-        
-        
-        var resp = new  BotRankDto
-        {
-            Data = validDataList,
-            MyReward = 0,
-            MyScore = 0,
-            Header = header
-        };
+
+        resp.Data = validDataList;
         
         int myRank = 0;
         foreach (var rankData in validDataList)
