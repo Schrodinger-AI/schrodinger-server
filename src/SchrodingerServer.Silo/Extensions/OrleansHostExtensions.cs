@@ -25,8 +25,14 @@ public static class OrleansHostExtensions
         {
             //Configure OrleansSnapshot
             var configSection = context.Configuration.GetSection("Orleans");
+            var isRunningInKubernetes = configSection.GetValue<bool>("isRunningInKubernetes");
+            //read advertisedIP，clusterId、serviceId from ENV
+            var advertisedIP = isRunningInKubernetes ?  Environment.GetEnvironmentVariable("POD_IP") :configSection.GetValue<string>("AdvertisedIP");
+            var clusterId = isRunningInKubernetes ? Environment.GetEnvironmentVariable("ORLEANS_CLUSTER_ID") : configSection.GetValue<string>("ClusterId");
+            var serviceId = isRunningInKubernetes ? Environment.GetEnvironmentVariable("ORLEANS_SERVICE_ID") : configSection.GetValue<string>("ServiceId");
+            
             siloBuilder
-                .ConfigureEndpoints(advertisedIP:IPAddress.Parse(configSection.GetValue<string>("AdvertisedIP")),siloPort: configSection.GetValue<int>("SiloPort"), gatewayPort: configSection.GetValue<int>("GatewayPort"), listenOnAnyHostAddress: true)
+                .ConfigureEndpoints(advertisedIP:IPAddress.Parse(advertisedIP),siloPort: configSection.GetValue<int>("SiloPort"), gatewayPort: configSection.GetValue<int>("GatewayPort"), listenOnAnyHostAddress: true)
                 .UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
                 .UseMongoDBClustering(options =>
                 {
@@ -54,8 +60,8 @@ public static class OrleansHostExtensions
                 })
                 .Configure<ClusterOptions>(options =>
                 {
-                    options.ClusterId = configSection.GetValue<string>("ClusterId");
-                    options.ServiceId = configSection.GetValue<string>("ServiceId");
+                    options.ClusterId = clusterId;
+                    options.ServiceId = serviceId;
                 })
                // .AddMemoryGrainStorage("PubSubStore")
                 .ConfigureApplicationParts(parts => parts.AddFromApplicationBaseDirectory())

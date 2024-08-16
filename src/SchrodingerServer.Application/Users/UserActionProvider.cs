@@ -161,9 +161,19 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
             res.EvmAddress = evmAddress;
             res.HasBoundAddress = true;
         }
+
+        decimal totalAmount = 0;
+        foreach (var pointData in res.PointDetails)
+        {
+            var amount = pointData.Amount;
+            totalAmount += amount;
+        }
+
+        res.TotalScore = totalAmount.ToString();
         
         return res;
     }
+    
     public async Task<string> GetCurrentUserAddressAsync(string chainId)
     {
         var userId  = CurrentUser.IsAuthenticated ? CurrentUser.GetId() : Guid.Empty;

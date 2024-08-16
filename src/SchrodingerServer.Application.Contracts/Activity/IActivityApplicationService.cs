@@ -18,4 +18,6 @@ public interface IActivityApplicationService
     Task<RankDto> GetRankAsync(GetRankInput input);
     
     Task<StageDto> GetStageAsync(string activityId);
+    
+    Task<BotRankDto> GetBotRankAsync(GetBotRankInput input);
 }

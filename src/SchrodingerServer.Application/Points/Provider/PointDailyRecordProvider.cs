@@ -35,6 +35,8 @@ public interface IPointDailyRecordProvider
     Task<List<PointsDetailDto>> GetPointsRecordByNameAsync(string pointsName);
 
     Task<List<PointDailyRecordIndex>> GetDailyRecordsByAddressAndPointNameAsync(string address, string pointName);
+    
+    Task<List<UserReferralRecordDto>> GetUserReferralRecordByTimeAsync(long beginTime, long endTime);
 }
 
 public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDependency
@@ -275,5 +277,31 @@ public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDep
         
         var tuple = await _pointDailyRecordIndexRepository.GetSortListAsync(Filter, skip: 0, limit: 10000, sortFunc: sorting);
         return tuple.Item2;
+    }
+
+
+    public async Task<List<UserReferralRecordDto>> GetUserReferralRecordByTimeAsync(long beginTime, long endTime)
+    {
+        var indexerResult = await _graphQlClientFactory.GetClient(GraphQLClientEnum.PointPlatform).SendQueryAsync<UserReferralRecordQueryDto>(new GraphQLRequest
+        {
+            Query =
+                @"query($timestampMin:Long!, $timestampMax:Long!){
+                    getUserReferralRecordByTime(input: {timestampMin:$timestampMin, timestampMax:$timestampMax}){
+                        domain
+                        dappId
+                        referrer
+                        invitee
+                        inviter
+                        createTime
+                }
+            }",
+            Variables = new
+            {
+                timestampMin = beginTime,
+                timestampMax = endTime
+            }
+        });
+
+        return indexerResult.Data.GetUserReferralRecordByTime;
     }
 }
