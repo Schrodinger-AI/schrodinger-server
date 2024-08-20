@@ -35,7 +35,8 @@ public class TokenController : AbpController
     [HttpGet("schrodinger/token-price")]
     public async Task<PriceDto> GetPriceAsync(GetTokenPriceInput input)
     {
-        var price = await _tokenPriceProvider.GetPriceByCacheAsync(input.Symbol);
+        // var price = await _tokenPriceProvider.GetPriceByCacheAsync(input.Symbol);
+        var price =  await _aetherlinkApplicationService.GetTokenPriceInUsdt(input.Symbol.ToLower());
         return new PriceDto() { Price = price };
     }
     
