@@ -124,9 +124,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
 
     private GenerateImage AdoptInfo2GenerateImage(AdoptInfo adoptInfo)
     {
-        var seed = CurrentUser.IsAuthenticated
-            ? BitConverter.ToInt32(CurrentUser.GetId().ToByteArray(), 0)
-            : new Random().Next();
+        var seed = 1;
         var imageInfo = new GenerateImage
         {
             seed = seed,
