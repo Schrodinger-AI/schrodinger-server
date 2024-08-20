@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Aetherlink.PriceServer;
 using Aetherlink.PriceServer.Dtos;
@@ -19,24 +20,40 @@ public class AetherlinkApplicationService : ApplicationService, IAetherlinkAppli
 
     public async Task<decimal> GetTokenPriceInUsdt(string symbol)
     {
-        var tokenPair = symbol.ToLower() + "-usdt";
-        var price = (await _priceServerProvider.GetAggregatedTokenPriceAsync(new()
+        try
         {
-            TokenPair = tokenPair,
-            AggregateType = AggregateType.Latest
-        })).Data.Price;
-        return price / (decimal)100000000;
+            var tokenPair = symbol.ToLower() + "-usdt";
+            var price = (await _priceServerProvider.GetAggregatedTokenPriceAsync(new()
+            {
+                TokenPair = tokenPair,
+                AggregateType = AggregateType.Latest
+            })).Data.Price;
+            return price / (decimal)100000000;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetTokenPriceInUsdt error");
+            return 0;
+        }
     }
     
     public async Task<decimal> GetTokenPriceInElf(string symbol)
     {
-        var tokenPair = symbol.ToLower() + "-elf";
-        var price=  (await _priceServerProvider.GetAggregatedTokenPriceAsync(new()
+        try
         {
-            TokenPair = tokenPair,
-            AggregateType = AggregateType.Latest
-        })).Data.Price;
-        return price / (decimal)100000000;
+            var tokenPair = symbol.ToLower() + "-elf";
+            var price=  (await _priceServerProvider.GetAggregatedTokenPriceAsync(new()
+            {
+                TokenPair = tokenPair,
+                AggregateType = AggregateType.Latest
+            })).Data.Price;
+            return price / (decimal)100000000;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetTokenPriceInElf error");
+            return 0;
+        }
     }
     
 }
