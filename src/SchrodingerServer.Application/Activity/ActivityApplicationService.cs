@@ -797,7 +797,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
         
         DateTime currentUtcTime = DateTime.UtcNow;
         DayOfWeek currentDay = currentUtcTime.DayOfWeek;
-        int daysUntilSaturday = ((int)DayOfWeek.Saturday - (int)currentDay + 7) % 7;
+        int daysUntilSaturday = ((int)DayOfWeek.Tuesday - (int)currentDay + 7) % 7;
         DateTime nearestSaturday = currentUtcTime.Date.AddDays(daysUntilSaturday);
         DateTime targetTime = new DateTime(nearestSaturday.Year, nearestSaturday.Month, nearestSaturday.Day, 0, 0, 0, DateTimeKind.Utc);
 
