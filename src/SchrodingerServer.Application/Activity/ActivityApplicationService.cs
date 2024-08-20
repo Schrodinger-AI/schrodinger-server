@@ -641,6 +641,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
     {
         var price = await _aetherlinkApplicationService.GetTokenPriceInUsdt("elf");
         AssertHelper.IsTrue(price != null && price > 0, "ELF price is null or zero");
+        _logger.LogInformation("GetELFPriceAsync： {cnt}", price);
 
         await _distributedCache.SetAsync(key, price.ToString(), new DistributedCacheEntryOptions()
         {
