@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Orleans;
+using SchrodingerServer.Aetherlink;
 using SchrodingerServer.AwsS3;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.HttpClient;
@@ -32,6 +33,8 @@ public class LevelProvider : ApplicationService, ILevelProvider
     private readonly Dictionary<string, decimal> LevelMinPriceDict = new ();
     private readonly IHttpProvider _httpProvider;
     private readonly AwsS3Client _awsS3Client;
+    private readonly IAetherlinkApplicationService _aetherlinkApplicationService;
+    
 
     private static readonly JsonSerializerSettings JsonSerializerSettings = JsonSettingsBuilder.New()
         .IgnoreNullValue()
@@ -43,13 +46,15 @@ public class LevelProvider : ApplicationService, ILevelProvider
     public LevelProvider(IClusterClient clusterClient, IPointServerProvider pointServerProvider,
         ILogger<LevelProvider> logger, IDistributedCache<string> checkDomainCache,
         IOptionsMonitor<AccessVerifyOptions> accessVerifyOptions, IUserInformationProvider userInformationProvider,IHttpProvider httpProvider, 
-        IOptionsMonitor<LevelOptions> levelOptions, AwsS3Client awsS3Client)
+        IOptionsMonitor<LevelOptions> levelOptions, AwsS3Client awsS3Client, 
+        IAetherlinkApplicationService aetherlinkApplicationService)
     {
         _clusterClient = clusterClient;
         _logger = logger;
         _httpProvider = httpProvider;
         _levelOptions = levelOptions;
         _awsS3Client = awsS3Client;
+        _aetherlinkApplicationService = aetherlinkApplicationService;
     }
     public async Task<List<RankData>> GetItemLevelAsync(GetLevelInfoInputDto input)
     {
@@ -82,21 +87,26 @@ public class LevelProvider : ApplicationService, ILevelProvider
         var price = 0.0;
         try
         {
-            var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
-                PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
-                {
-                    ["token0Symbol"] = "SGR-1",
-                    ["token1Symbol"] = "ELF",
-                    ["feeRate"] = "0.03",
-                    ["chainId"] = _levelOptions.CurrentValue.ChainId
-                });
-            if (resp is not { Code: "20000" })
-            {
-                _logger.LogError("AwakenPrice get failed,response:{response}",(resp == null ? "non result" : resp.Code));
-                return null;
-            }
+            // var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
+            //     PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
+            //     {
+            //         ["token0Symbol"] = "SGR-1",
+            //         ["token1Symbol"] = "ELF",
+            //         ["feeRate"] = "0.03",
+            //         ["chainId"] = _levelOptions.CurrentValue.ChainId
+            //     });
+            // if (resp is not { Code: "20000" })
+            // {
+            //     _logger.LogError("AwakenPrice get failed,response:{response}",(resp == null ? "non result" : resp.Code));
+            //     return null;
+            // }
+            //
+            // price = (double)(resp.Data.Items?.First().ValueLocked1 / resp.Data.Items?.First().ValueLocked0);
+            
+            var elfPrice = await _aetherlinkApplicationService.GetTokenPriceInUsdt("elf");
+            var sgrPrice = await _aetherlinkApplicationService.GetTokenPriceInUsdt("sgr");
 
-            price = (double)(resp.Data.Items?.First().ValueLocked1 / resp.Data.Items?.First().ValueLocked0);
+            price = (double)(sgrPrice / elfPrice);
         }
         catch (Exception e)
         {

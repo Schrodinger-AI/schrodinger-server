@@ -26,7 +26,7 @@ public class AetherlinkApplicationService : ApplicationService, IAetherlinkAppli
             var price = (await _priceServerProvider.GetAggregatedTokenPriceAsync(new()
             {
                 TokenPair = tokenPair,
-                AggregateType = AggregateType.Latest
+                AggregateType = AggregateType.Avg
             })).Data.Price;
             return price / (decimal)100000000;
         }
@@ -45,7 +45,7 @@ public class AetherlinkApplicationService : ApplicationService, IAetherlinkAppli
             var price=  (await _priceServerProvider.GetAggregatedTokenPriceAsync(new()
             {
                 TokenPair = tokenPair,
-                AggregateType = AggregateType.Latest
+                AggregateType = AggregateType.Avg
             })).Data.Price;
             return price / (decimal)100000000;
         }
