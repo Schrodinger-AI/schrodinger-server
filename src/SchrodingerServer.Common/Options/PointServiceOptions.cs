@@ -10,4 +10,5 @@ public class PointServiceOptions
     public string EcoEarnUrl { get; set; }
 
     public bool EcoEarnReady { get; set; } = false;
+    public string Address { get; set; }
 }
