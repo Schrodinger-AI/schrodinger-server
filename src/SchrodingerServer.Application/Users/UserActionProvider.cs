@@ -171,6 +171,12 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
 
         res.TotalScore = totalAmount.ToString();
         
+        var totalRewardDto = await _pointServerProvider.GetEcoEarnTotalRewardsAsync(input.Address);
+        if (totalRewardDto.TotalReward.NotNullOrEmpty())
+        {
+            res.TotalReward = totalRewardDto.TotalReward;
+        }
+        
         return res;
     }
     

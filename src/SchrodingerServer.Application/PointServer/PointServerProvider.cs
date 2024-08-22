@@ -23,6 +23,8 @@ public interface IPointServerProvider
     Task<MyPointDetailsDto> GetMyPointsAsync(GetMyPointsInput input);
     
     Task<EcoEarnRewardDto> GetEcoEarnRewardsAsync(string address);
+    
+    Task<EcoEarnTotalRewardDto> GetEcoEarnTotalRewardsAsync(string address);
 }
 
 public class PointServerProvider : IPointServerProvider, ISingletonDependency
@@ -37,6 +39,7 @@ public class PointServerProvider : IPointServerProvider, ISingletonDependency
         public static ApiInfo GetMyRewards = new(HttpMethod.Post, "/api/app/points/staking/rewards/info");
         public static ApiInfo GetAwakenTradeRecords = new(HttpMethod.Get, "/api/app/trade-records");
         public static ApiInfo GetForestInfo = new(HttpMethod.Post, "/api/app/nft/composite-nft-infos");
+        public static ApiInfo GetTotalReward = new(HttpMethod.Post, "/api/app/points/staking/rewards/total");
     }
 
     private readonly ILogger<PointServerProvider> _logger;
@@ -125,7 +128,8 @@ public class PointServerProvider : IPointServerProvider, ISingletonDependency
             var resp = await _httpProvider.InvokeAsync<CommonResponseDto<EcoEarnRewardDto>>(
                 _pointServiceOptions.CurrentValue.EcoEarnUrl, Api.GetMyRewards, body: JsonConvert.SerializeObject(new GetEcoEarnRewardRequest()
                 {
-                    Address = address
+                    Address = address,
+                    DappId = _pointServiceOptions.CurrentValue.DappId
                 })
                 );
             AssertHelper.NotNull(resp, "Response empty");
@@ -134,11 +138,39 @@ public class PointServerProvider : IPointServerProvider, ISingletonDependency
         }
         catch (Exception e)
         {
-            _logger.LogWarning(e, "Points domain get points failed");
+            _logger.LogWarning(e, "get my rewards failed");
             return new EcoEarnRewardDto
             {
                 Reward = new Dictionary<string, string>()
             };
+        }
+    }
+
+    public async Task<EcoEarnTotalRewardDto> GetEcoEarnTotalRewardsAsync(string address)
+    {
+        if (!_pointServiceOptions.CurrentValue.EcoEarnReady)
+        {
+            _logger.LogInformation("EcoEarnTotalRewards is not ready");
+            return new EcoEarnTotalRewardDto();
+        }
+        
+        try
+        {
+            var resp = await _httpProvider.InvokeAsync<CommonResponseDto<EcoEarnTotalRewardDto>>(
+                _pointServiceOptions.CurrentValue.EcoEarnUrl, Api.GetTotalReward, body: JsonConvert.SerializeObject(new GetEcoEarnRewardRequest()
+                {
+                    Address = address,
+                    DappId = _pointServiceOptions.CurrentValue.DappId
+                })
+            );
+            AssertHelper.NotNull(resp, "Response empty");
+            AssertHelper.NotNull(resp.Success, "Response failed, {}", resp.Message);
+            return resp.Data ?? new EcoEarnTotalRewardDto();
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "get total rewards failed");
+            return new EcoEarnTotalRewardDto();
         }
     }
 }
