@@ -133,7 +133,7 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
         {
             if (ecoEarnRewards.Reward.TryGetValue(detail.Symbol, out var value))
             {
-                detail.EcoEarnReward = decimal.Parse(value) * (decimal)0.9;
+                detail.EcoEarnReward = decimal.Parse(value);
             }
             else
             {
