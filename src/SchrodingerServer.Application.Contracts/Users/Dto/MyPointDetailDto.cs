@@ -39,4 +39,10 @@ public class EcoEarnRewardDto
 public class GetEcoEarnRewardRequest
 {
     public string Address { get; set; }
+    public string DappId { get; set; }
+}
+
+public class EcoEarnTotalRewardDto
+{
+    public string TotalReward { get; set; }
 }

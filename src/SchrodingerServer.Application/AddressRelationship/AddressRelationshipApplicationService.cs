@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using AElf;
@@ -7,7 +8,9 @@ using AElf.Cryptography;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using SchrodingerServer.AddressRelationship.Dto;
 using SchrodingerServer.Common;
+using SchrodingerServer.Common.Options;
 using SchrodingerServer.Options;
 using SchrodingerServer.Points;
 using SchrodingerServer.Points.Provider;
@@ -26,19 +29,22 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
     private readonly IPointSettleService _pointSettleService;
     private readonly IPointDailyRecordProvider _pointDailyRecordProvider;
     private readonly IOptionsMonitor<LevelOptions> _levelOptions;
+    private readonly IOptionsMonitor<PointServiceOptions> _pointServiceOptions;
     
     public AddressRelationshipApplicationService(
         IAddressRelationshipProvider addressRelationshipProvider,
         ILogger<AddressRelationshipApplicationService> logger, 
         IPointSettleService pointSettleService, 
         IPointDailyRecordProvider pointDailyRecordProvider, 
-        IOptionsMonitor<LevelOptions> levelOptions)
+        IOptionsMonitor<LevelOptions> levelOptions, 
+        IOptionsMonitor<PointServiceOptions> pointServiceOptions)
     {
         _addressRelationshipProvider = addressRelationshipProvider;
         _logger = logger;
         _pointSettleService = pointSettleService;
         _pointDailyRecordProvider = pointDailyRecordProvider;
         _levelOptions = levelOptions;
+        _pointServiceOptions = pointServiceOptions;
     }
     
     public async Task BindAddressAsync(BindAddressInput input)
@@ -145,5 +151,19 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
             .GroupBy(x => x.index / n)
             .Select(g => g.Select(x => x.item).ToList())
             .ToList();
+    }
+
+
+    public async Task<RemainPointDto> GetRemainPointAsync()
+    {
+        var address = _pointServiceOptions.CurrentValue.Address;
+        var pointDailyRecordList = await _pointDailyRecordProvider.GetDailyRecordsByAddressAndPointNameAsync(address, "XPSGR-10");
+        
+        decimal totalPoints = pointDailyRecordList.Sum(item => item.PointAmount);
+
+        return new RemainPointDto
+        {
+            Amount = totalPoints.ToString(CultureInfo.CurrentCulture)
+        };
     }
 }

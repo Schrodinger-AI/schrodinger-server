@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchrodingerServer.AddressRelationship;
+using SchrodingerServer.AddressRelationship.Dto;
 using SchrodingerServer.Users.Dto;
 using Volo.Abp;
 using Volo.Abp.AspNetCore.Mvc;
@@ -27,5 +28,12 @@ public class AddressController : AbpController
     public Task BindAddressAsync(BindAddressInput input)
     {
         return  _addressRelationshipApplicationService.BindAddressAsync(input);
+    }
+    
+    
+    [HttpGet("remain-point")]
+    public Task<RemainPointDto> GetRemainPointAsync()
+    {
+        return _addressRelationshipApplicationService.GetRemainPointAsync();
     }
 }
