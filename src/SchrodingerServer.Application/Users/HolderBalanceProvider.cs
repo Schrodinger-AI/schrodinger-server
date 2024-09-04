@@ -42,8 +42,8 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
     {
         var graphQlResponse = await _graphQlHelper.QueryAsync<IndexerHolderDailyChangeDto>(new GraphQLRequest
         {
-            Query = @"query($chainId:String!,$date:String!,$skipCount:Int!,$maxResultCount:Int!,$symbol:String!){
-            getSchrodingerHolderDailyChangeList(input: {chainId:$chainId,date:$date,skipCount:$skipCount,maxResultCount:$maxResultCount,symbol:$symbol})
+            Query = @"query($chainId:String!,$date:String!,$skipCount:Int!,$maxResultCount:Int!,$symbol:String!,$address:String!,$excludeDate:[String!]){
+            getSchrodingerHolderDailyChangeList(input: {chainId:$chainId,date:$date,skipCount:$skipCount,maxResultCount:$maxResultCount,symbol:$symbol,address:$address,excludeDate:$excludeDate})
             {
                data {
                 address,
@@ -56,11 +56,13 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
             }}",
             Variables = new
             {
-                chainId,
-                date,
-                skipCount,
-                maxResultCount,
-                symbol
+                chainId = chainId,
+                date = date,
+                skipCount = skipCount,
+                maxResultCount = maxResultCount,
+                symbol = symbol,
+                address = "",
+                excludeDate = new List<string> ()
             }
         });
         return graphQlResponse?.GetSchrodingerHolderDailyChangeList.Data;
@@ -112,8 +114,8 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
     {
         var graphQlResponse = await _graphQlHelper.QueryAsync<IndexerHolderDailyChangeDto>(new GraphQLRequest
         {
-            Query = @"query($chainId:String!,$skipCount:Int!,$maxResultCount:Int!,$address:String!,$symbol:String!,$excludeDate:[String!]){
-            getSchrodingerHolderDailyChangeList(input: {chainId:$chainId,skipCount:$skipCount,maxResultCount:$maxResultCount, address:$address, symbol:$symbol, excludeDate:$excludeDate})
+            Query = @"query($chainId:String!,$date:String!,$skipCount:Int!,$maxResultCount:Int!,$address:String!,$symbol:String!,$excludeDate:[String!]){
+            getSchrodingerHolderDailyChangeList(input: {chainId:$chainId,date:$date,skipCount:$skipCount,maxResultCount:$maxResultCount,address:$address,symbol:$symbol,excludeDate:$excludeDate})
             {
                data {
                 address,
@@ -131,7 +133,8 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
                 maxResultCount = 1000,
                 address = address,
                 symbol = symbol,
-                excludeDate = excludeDate
+                excludeDate = excludeDate,
+                date = ""
             }
         });
         return graphQlResponse?.GetSchrodingerHolderDailyChangeList.Data?.LastOrDefault();

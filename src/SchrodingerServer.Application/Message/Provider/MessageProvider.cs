@@ -88,7 +88,9 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
                     $filterSymbol:String!,
                     $address:String!,
                     $timestampMin:Long!,
-                    $chainId:String!
+                    $chainId:String!,
+                    $types:[Int!],
+                    $sortType:String!
                 ){
                   getSchrodingerSoldRecord(
                     input:{
@@ -97,7 +99,9 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
                       filterSymbol:$filterSymbol,
                       address:$address,
                       timestampMin:$timestampMin,
-                      chainId:$chainId
+                      chainId:$chainId,
+                      types:$types,
+                      sortType:$sortType
                     }
                   ){
                     totalRecordCount,
@@ -121,7 +125,9 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
                     filterSymbol = input.FilterSymbol,
                     address = input.Address,
                     timestampMin = StartTimestamp,
-                    chainId = input.ChainId
+                    chainId = input.ChainId,
+                    types = new List<int>(),
+                    sortType = ""
                 }
             });
             return res.Data?.GetSchrodingerSoldRecord;

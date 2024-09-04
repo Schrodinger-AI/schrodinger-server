@@ -10,4 +10,5 @@ public class WorkerOptions
     public string SubscribeStartHeightGrainId { get; set; } = "StartHeight";
     public string SyncPendingListGrainId { get; set; } = "SyncPendingList";
     public int SyncExecutionAccelerationThreshold { get; set; } = 100;
+    public string AefinderApiUrl { get; set; }
 }
