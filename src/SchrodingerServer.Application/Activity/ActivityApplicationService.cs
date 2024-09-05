@@ -739,7 +739,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 if (!isEoa)
                 {
                     rank++;
-                    if (!input.IsCurrent)
+                    if (!input.IsCurrent && rank <= displayNumbers)
                     {
                         var reward = GetRankReward(rank, rankOptions);
                         rankData.Reward = reward.ToString();
@@ -754,21 +754,14 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
             else
             {
                 rank++;
-                if (!input.IsCurrent)
+                if (!input.IsCurrent && rank <= displayNumbers)
                 {
                     var reward = GetRankReward(rank, rankOptions);
                     rankData.Reward = reward.ToString();
                 }
                 validDataList.Add(rankData);
             }
-            
-            if (rank >= displayNumbers)
-            {
-                break;
-            }
         }
-
-        resp.Data = validDataList;
         
         int myRank = 0;
         foreach (var rankData in validDataList)
@@ -785,6 +778,9 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 break;
             }
         }
+
+        validDataList = validDataList.Take(displayNumbers).ToList();
+        resp.Data = validDataList;
 
         return resp;
     }
