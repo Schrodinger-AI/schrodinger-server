@@ -31,9 +31,9 @@ public class ActivityRankOptions
     
     public  List<RankRewardItem> RankRewards { get; set; }
     
-    public long NormalDisplayNumber { get; set; }
+    public int NormalDisplayNumber { get; set; }
     
-    public  long FinalDisplayNumber { get; set; }
+    public int FinalDisplayNumber { get; set; }
 }
 
 public class RankHeader
