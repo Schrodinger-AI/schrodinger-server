@@ -428,4 +428,41 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
         return list;
     }
+    
+    public async Task<SchrodingerBoxListDto> GetSchrodingerBoxListAsync(GetBlindBoxListInput input)
+    {
+        var address = await _userActionProvider.GetCurrentUserAddressAsync();
+        if (!address.IsNullOrEmpty())
+        {
+            input.Address = address;
+        }
+        _logger.LogInformation("GetSchrodingerBoxListAsync address:{address}",input.Address);
+        
+        var result = new SchrodingerBoxListDto();
+        
+        var schrodingerIndexerBoxListDto = await _schrodingerCatProvider.GetSchrodingerBoxListAsync(input);
+        var boxList = _objectMapper.Map<List<SchrodingerIndexerBoxDto>, List<BlindBoxDto>>(schrodingerIndexerBoxListDto.Data);
+
+        boxList = boxList.OrderBy(x => x.Rank).ThenBy(x => x.AdoptTime).ToList();
+        boxList.ForEach(x =>
+        {
+            if (x.Rarity.NotNullOrEmpty())
+            {
+                x.InscriptionImageUri = "aaaa";
+            }
+            else if (x.Generation == 9)
+            {
+                x.InscriptionImageUri = "bbbb";
+            }
+            else
+            {
+                x.InscriptionImageUri = "cccc";
+            }
+        });
+        
+        result.Data = boxList.Skip(input.SkipCount).Take(input.MaxResultCount).ToList();
+        result.TotalCount = schrodingerIndexerBoxListDto.TotalCount;
+        
+        return result;
+    }
 }

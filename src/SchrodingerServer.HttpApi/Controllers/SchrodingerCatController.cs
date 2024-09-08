@@ -61,4 +61,9 @@ public class SchrodingerCatController
         return await _schrodingerCatService.GetSchrodingerAllCatsListInBotAsync(input);
     }
     
+    [HttpPost("box-list")]
+    public async Task<SchrodingerListDto> GetSchrodingerBoxList(GetCatListInput input)
+    {
+        return await _schrodingerCatService.GetSchrodingerCatListAsync(input);
+    }
 }

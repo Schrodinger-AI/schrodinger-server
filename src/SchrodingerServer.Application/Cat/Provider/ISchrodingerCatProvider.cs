@@ -34,6 +34,8 @@ public interface ISchrodingerCatProvider
     Task<SchrodingerIndexerListDto> GetSchrodingerHoldingListAsync(GetCatListInput input);
     
     Task<List<NFTActivityIndexDto>> GetSchrodingerTradeRecordAsync(GetSchrodingerTradeRecordInput input);
+
+    Task<SchrodingerIndexerBoxListDto> GetSchrodingerBoxListAsync(GetBlindBoxListInput input);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -464,6 +466,46 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "getSchrodingerTradeRecord query GraphQL error");
             throw;
+        }
+    }
+    
+    public async Task<SchrodingerIndexerBoxListDto> GetSchrodingerBoxListAsync(GetBlindBoxListInput input)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxQuery>(new GraphQLRequest
+            {
+                Query =
+                    @"query($adopter:String!, $height:Long!){
+                    getBlindBoxList(input: {adopter:$adopter, height:$height}){
+                        totalCount,
+                        data{
+                        symbol,
+                        tokenName,
+                        adoptId,
+                        amount,
+                        gen,
+                        decimals,
+                        adopter,
+                        adoptTime,
+                        rarity,
+                        rank
+                    }
+                }
+            }",
+                Variables = new
+                {
+                    Adopter = input.Address, 
+                    Height = input.Height
+                }
+            });
+
+            return indexerResult.GetBlindBoxList;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetSchrodingerBoxList Indexer error");
+            return new SchrodingerIndexerBoxListDto();
         }
     }
 }

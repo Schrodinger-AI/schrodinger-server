@@ -55,5 +55,7 @@ public class SchrodingerServerApplicationAutoMapperProfile : Profile
         CreateMap<ActivityInfo, ActivityDto>();
         CreateMap<RankItem, RankItemDto>();
         CreateMap<RarityRankItem, RarityRankItemDto>();
+        CreateMap<SchrodingerIndexerBoxDto, BlindBoxDto>()
+            .ForMember(t => t.Generation, m => m.MapFrom(f => f.Gen));
     }
 }

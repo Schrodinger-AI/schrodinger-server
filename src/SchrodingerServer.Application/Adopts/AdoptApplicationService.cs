@@ -299,20 +299,20 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, aelfAddress);
         var provider = _imageDispatcher.CurrentProvider();
         var hasSendRequest = await _adoptImageService.HasSendRequest(adoptId) && await provider.HasRequestId(adoptAddressId);
-        List<string> images;
+        
         if (!hasSendRequest)
         {
             _logger.LogInformation("send ai generation request for adoptId:{adoptId}", adoptId);
             await _imageDispatcher.DispatchAIGenerationRequest(adoptAddressId, AdoptInfo2GenerateImage(adoptInfo), adoptId);
             await _adoptImageService.MarkRequest(adoptId);
-
-            images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
-        }
-        else
-        {
-            images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
         }
         
+        if (input.AdoptOnly)
+        {
+            return output;
+        }
+
+        var images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
         output.AdoptImageInfo.Images = images;
         var imageCount = adoptInfo.ImageCount;
         if (!images.IsNullOrEmpty() && imageCount == 1)
