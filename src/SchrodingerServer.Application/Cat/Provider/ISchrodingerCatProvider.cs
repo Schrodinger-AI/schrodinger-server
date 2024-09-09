@@ -478,8 +478,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxListQuery>(new GraphQLRequest
             {
                 Query =
-                    @"query($adopter:String!, $height:Long!){
-                    getBlindBoxList(input: {adopter:$adopter, height:$height}){
+                    @"query($adopter:String!){
+                    getBlindBoxList(input: {adopter:$adopter}){
                         totalCount,
                         data{
                         symbol,
@@ -498,8 +498,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             }",
                 Variables = new
                 {
-                    Adopter = input.Address, 
-                    Height = input.Height
+                    Adopter = input.Address
                 }
             });
 
