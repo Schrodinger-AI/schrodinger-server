@@ -46,7 +46,8 @@ public class AdoptGraphQLProvider : IAdoptGraphQLProvider, ISingletonDependency
                           }
                           adopter,
                           imageCount,
-                          gen
+                          gen,
+                          rarity
                 }
             }",
             Variables = new

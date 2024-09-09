@@ -18,6 +18,7 @@ using SchrodingerServer.AwsS3;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dtos.Adopts;
+using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Dtos.TraitsDto;
 using SchrodingerServer.Ipfs;
 using SchrodingerServer.Users;
@@ -295,6 +296,20 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             Attributes = adoptInfo.Attributes,
             Generation = adoptInfo.Generation,
         };
+        
+        if (adoptInfo.Rarity.NotNullOrEmpty())
+        {
+            output.AdoptImageInfo.BoxImage = BoxImageConst.RareBox;
+        }
+        else if (adoptInfo.Generation == 9)
+        {
+            output.AdoptImageInfo.BoxImage = BoxImageConst.NormalBox;
+        }
+        else
+        {
+            output.AdoptImageInfo.BoxImage = BoxImageConst.NonGen9Box;
+        }
+        
         var aelfAddress = await _userActionProvider.GetCurrentUserAddressAsync(GetCurChain());
         var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, aelfAddress);
         var provider = _imageDispatcher.CurrentProvider();
