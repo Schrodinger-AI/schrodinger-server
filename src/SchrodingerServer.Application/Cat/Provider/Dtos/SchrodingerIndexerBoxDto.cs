@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using SchrodingerServer.Dtos.Cat;
 
 namespace SchrodingerServer.Cat.Provider.Dtos;
 
@@ -21,12 +22,22 @@ public class SchrodingerIndexerBoxDto
     public string Adopter { get; set; }
     public long AdoptTime { get; set; }
     public string Rarity { get; set; }
+    public long ConsumeAmount { get; set; }
+    public bool DirectAdoption { get; set; }
     public int Rank { get; set; }
+    public List<TraitsInfo> Traits { get; set; }
 }
 
 
-
-public class SchrodingerIndexerBoxQuery
+public class SchrodingerIndexerBoxListQuery
 {
     public SchrodingerIndexerBoxListDto GetBlindBoxList { get; set; }
 }
+
+
+public class SchrodingerIndexerBoxDetailQuery
+{
+    public SchrodingerIndexerBoxDto GetBlindBoxDetail { get; set; }
+}
+
+

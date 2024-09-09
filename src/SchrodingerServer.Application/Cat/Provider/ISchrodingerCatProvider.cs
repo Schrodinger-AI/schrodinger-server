@@ -36,6 +36,8 @@ public interface ISchrodingerCatProvider
     Task<List<NFTActivityIndexDto>> GetSchrodingerTradeRecordAsync(GetSchrodingerTradeRecordInput input);
 
     Task<SchrodingerIndexerBoxListDto> GetSchrodingerBoxListAsync(GetBlindBoxListInput input);
+    
+    Task<SchrodingerIndexerBoxDto> GetSchrodingerBoxDetailAsync(GetCatDetailInput input);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -473,7 +475,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
     {
         try
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxQuery>(new GraphQLRequest
+            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxListQuery>(new GraphQLRequest
             {
                 Query =
                     @"query($adopter:String!, $height:Long!){
@@ -489,7 +491,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         adopter,
                         adoptTime,
                         rarity,
-                        rank
+                        rank,
+                        traits{traitType,value}
                     }
                 }
             }",
@@ -506,6 +509,45 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "GetSchrodingerBoxList Indexer error");
             return new SchrodingerIndexerBoxListDto();
+        }
+    }
+
+    public async Task<SchrodingerIndexerBoxDto> GetSchrodingerBoxDetailAsync(GetCatDetailInput input)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxDetailQuery>(new GraphQLRequest
+            {
+                Query =
+                    @"query($symbol:String!){
+                    getBlindBoxDetail(input: {symbol:$symbol}){
+                        symbol,
+                        tokenName,
+                        adoptId,
+                        amount,
+                        gen,
+                        decimals,
+                        adopter,
+                        adoptTime,
+                        rarity,
+                        rank,
+                        traits{traitType,value}
+                        consumeAmount,
+                        directAdoption
+                }
+            }",
+                Variables = new
+                {
+                    Symbol = input.Symbol
+                }
+            });
+
+            return indexerResult.GetBlindBoxDetail;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetSchrodingerBoxList Indexer error");
+            return new SchrodingerIndexerBoxDto();
         }
     }
 }

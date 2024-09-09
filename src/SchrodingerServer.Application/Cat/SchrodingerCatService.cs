@@ -438,31 +438,65 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
         _logger.LogInformation("GetSchrodingerBoxListAsync address:{address}",input.Address);
         
-        var result = new SchrodingerBoxListDto();
+        var resp = new SchrodingerBoxListDto();
         
         var schrodingerIndexerBoxListDto = await _schrodingerCatProvider.GetSchrodingerBoxListAsync(input);
-        var boxList = _objectMapper.Map<List<SchrodingerIndexerBoxDto>, List<BlindBoxDto>>(schrodingerIndexerBoxListDto.Data);
 
-        boxList = boxList.OrderBy(x => x.Rank).ThenBy(x => x.AdoptTime).ToList();
+        var data = schrodingerIndexerBoxListDto.Data;
+        if (data.IsNullOrEmpty())
+        {
+            return resp;
+        }
+        
+        data = data.OrderBy(x => x.Rank).ThenBy(x => x.AdoptTime).ToList();
+        var boxList = _objectMapper.Map<List<SchrodingerIndexerBoxDto>, List<BlindBoxDto>>(data);
+        
         boxList.ForEach(x =>
         {
             if (x.Rarity.NotNullOrEmpty())
             {
-                x.InscriptionImageUri = "aaaa";
+                x.InscriptionImageUri = BoxImageConst.RareBox;
             }
             else if (x.Generation == 9)
             {
-                x.InscriptionImageUri = "bbbb";
+                x.InscriptionImageUri = BoxImageConst.NormalBox;
             }
             else
             {
-                x.InscriptionImageUri = "cccc";
+                x.InscriptionImageUri = BoxImageConst.NonGen9Box;
             }
         });
         
-        result.Data = boxList.Skip(input.SkipCount).Take(input.MaxResultCount).ToList();
-        result.TotalCount = schrodingerIndexerBoxListDto.TotalCount;
+        resp.Data = boxList.Skip(input.SkipCount).Take(input.MaxResultCount).ToList();
+        resp.TotalCount = schrodingerIndexerBoxListDto.TotalCount;
         
-        return result;
+        return resp;
+    }
+    
+    public async Task<BlindBoxDetailDto> GetSchrodingerBoxDetailAsync(GetCatDetailInput input)
+    {
+        _logger.LogInformation("GetSchrodingerBoxDetailAsync symbol:{symbol}",input.Symbol);
+        if (input.Symbol.IsNullOrEmpty())
+        {
+            return new BlindBoxDetailDto();
+        }
+        
+        var boxDetail = await _schrodingerCatProvider.GetSchrodingerBoxDetailAsync(input);
+        
+        var resp = _objectMapper.Map<SchrodingerIndexerBoxDto, BlindBoxDetailDto>(boxDetail);
+        if (resp.Rarity.NotNullOrEmpty())
+        {
+            resp.InscriptionImageUri = BoxImageConst.RareBox;
+        }
+        else if (resp.Generation == 9)
+        {
+            resp.InscriptionImageUri = BoxImageConst.NormalBox;
+        }
+        else
+        {
+            resp.InscriptionImageUri = BoxImageConst.NonGen9Box;
+        }
+
+        return resp;
     }
 }
