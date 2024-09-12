@@ -8,4 +8,6 @@ public class GetLevelInfoInputDto
     public string Address { get; set; }
     public string SearchAddress { get; set; } = "";
     public LinkedList<LinkedList<LinkedList<LinkedList<string>>>> CatsTraits { get; set; }
+    
+    public bool IsGen9 { get; set; }
 }

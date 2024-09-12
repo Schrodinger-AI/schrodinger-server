@@ -32,6 +32,7 @@ public class LevelController : AbpController
             foreach (var traits in gen2To9Traits)
             {
                 var traitValues = traits.LastOrDefault();
+                input.IsGen9 = traitValues.Count >= 8;
                 LinkedListNode<string> currentNode = traitValues.First;
                 while (currentNode != null)
                 {
