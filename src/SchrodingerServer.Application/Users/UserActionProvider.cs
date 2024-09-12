@@ -203,7 +203,16 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
             var userGrain =  await _userInformationProvider.GetUserById(userId);
             userAddress = userGrain == null ? "" : (userGrain.AelfAddress.IsNullOrEmpty()?userGrain.CaAddressMain:userGrain.AelfAddress);
         }
-        _logger.LogInformation("Get current user address address:{address}", userAddress);
+
+        if (userAddress.IsNullOrEmpty())
+        {
+            _logger.LogInformation("current user address empty");
+        }
+        else
+        {
+            _logger.LogInformation("Get current user address address:{address}", userAddress);
+        }
+        
         return userAddress;
     }
 }

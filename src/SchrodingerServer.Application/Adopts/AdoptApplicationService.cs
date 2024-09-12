@@ -311,6 +311,8 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         }
         
         var aelfAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        _logger.LogInformation("GetCurrentUserAddress:{adoptAddressId}", aelfAddress);
+        
         var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, aelfAddress);
         var provider = _imageDispatcher.CurrentProvider();
         var judgement1 = await _adoptImageService.HasSendRequest(adoptId);
