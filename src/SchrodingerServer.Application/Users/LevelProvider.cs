@@ -130,7 +130,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
             }
             rankData.LevelInfo = levelInfo;
 
-            if (input.IsGen9)
+            if (input.IsGen9 && rankData.LevelInfo.Describe.IsNullOrEmpty())
             {
                 rankData.LevelInfo.Describe = "Normal,,";
             }
