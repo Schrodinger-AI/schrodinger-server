@@ -117,6 +117,12 @@ public class LevelProvider : ApplicationService, ILevelProvider
                 levelInfo.AwakenPrice = (double.Parse(levelInfo.Token) * price).ToString();
             }
             rankData.LevelInfo = levelInfo;
+
+            if (rankData.Rank.Rank > 0 && levelInfo.Describe.IsNullOrEmpty())
+            {
+                rankData.LevelInfo.Describe = "Normal,,";
+            }
+            
             if (isInWhiteList)
             {
                 continue;

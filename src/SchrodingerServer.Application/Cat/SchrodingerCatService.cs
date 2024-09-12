@@ -465,10 +465,12 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             if (x.Rarity.NotNullOrEmpty())
             {
                 x.InscriptionImageUri = BoxImageConst.RareBox;
+                x.Describe = x.Rarity + ",,";
             }
             else if (x.Generation == 9)
             {
                 x.InscriptionImageUri = BoxImageConst.NormalBox;
+                x.Describe = "Normal,,";
             }
             else
             {
