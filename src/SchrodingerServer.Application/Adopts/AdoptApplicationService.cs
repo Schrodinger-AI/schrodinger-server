@@ -290,12 +290,18 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         {
             return output;
         }
-        
-        var aelfAddress = await _userActionProvider.GetCurrentUserAddressAsync();
-        if (aelfAddress.IsNullOrEmpty())
+
+        var address = input.Address;
+        if (address.IsNullOrEmpty())
         {
-            _logger.LogInformation("GetCurrentUserAddress failed for adoption:{adoptId}", adoptId);
-            return output;
+            address = await _userActionProvider.GetCurrentUserAddressAsync();
+            if (address.IsNullOrEmpty())
+            {
+                _logger.LogInformation("GetCurrentUserAddress failed for adoption:{adoptId}}", adoptId);
+                return output;
+            }
+            
+            _logger.LogInformation("GetCurrentUserAddress address for adoption:{adoptId}, addres:{address}", adoptId, address);
         }
             
         output.AdoptImageInfo = new AdoptImageInfo
@@ -317,7 +323,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             output.AdoptImageInfo.BoxImage = BoxImageConst.NonGen9Box;
         }
         
-        var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, aelfAddress);
+        var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, address);
         var provider = _imageDispatcher.CurrentProvider();
         var judgement1 = await _adoptImageService.HasSendRequest(adoptId);
         var judgement2 = await provider.HasRequestId(adoptAddressId);
