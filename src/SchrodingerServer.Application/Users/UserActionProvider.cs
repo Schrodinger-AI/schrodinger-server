@@ -190,7 +190,7 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
 
             userAddress = userGrain.AelfAddress;
         }
-        _logger.LogInformation("Get current user address chainId: {chainId} address:{address}", chainId, userAddress);
+        _logger.LogInformation("Get current user address:{address}", userAddress);
         return userAddress;
     }
     

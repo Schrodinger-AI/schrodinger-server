@@ -310,7 +310,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             output.AdoptImageInfo.BoxImage = BoxImageConst.NonGen9Box;
         }
         
-        var aelfAddress = await _userActionProvider.GetCurrentUserAddressAsync(GetCurChain());
+        var aelfAddress = await _userActionProvider.GetCurrentUserAddressAsync();
         var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, aelfAddress);
         var provider = _imageDispatcher.CurrentProvider();
         var judgement1 = await _adoptImageService.HasSendRequest(adoptId);
