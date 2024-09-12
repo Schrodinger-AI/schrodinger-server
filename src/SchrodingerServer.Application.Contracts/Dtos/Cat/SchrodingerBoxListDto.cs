@@ -31,3 +31,16 @@ public class BoxImageConst
     public const string NormalBox = "https://schrodinger-mainnet.s3.amazonaws.com/512a8d95-4d9b-40a5-9e11-446684e9db1e.png";
     public const string NonGen9Box = "https://schrodinger-mainnet.s3.amazonaws.com/d152a12d-3dd8-4e60-a25a-e1f83e4d30f6.png";
 }
+
+public class BoxRarityConst
+{
+    public static List<string> RarityList = new List<string>
+    { 
+        "Diamond",
+        "Emerald",
+        "Platinum",
+        "Gold",
+        "Silver",
+        "Bronze"
+    };
+}

@@ -457,7 +457,36 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             return resp;
         }
         
-        data = data.OrderBy(x => x.Rank).ThenBy(x => x.AdoptTime).ToList();
+        // data = data.OrderBy(x => x.Rank).ThenBy(x => x.AdoptTime).ToList();
+        
+        data.Sort((x, y) => {
+            if (x.Rarity != y.Rarity) {
+                if (x.Rarity.IsNullOrEmpty())
+                {
+                    return 1;
+                }
+
+                if (y.Rarity.IsNullOrEmpty())
+                {
+                    return -1;
+                }
+
+                var indexX = BoxRarityConst.RarityList.IndexOf(x.Rarity);
+                var indexY = BoxRarityConst.RarityList.IndexOf(y.Rarity);
+
+                if (indexX < indexY)
+                {
+                    return -1;
+                }
+                else
+                {
+                    return 1;
+                }
+            } 
+            
+            return y.AdoptTime.CompareTo(x.AdoptTime);
+        });
+        
         var boxList = _objectMapper.Map<List<SchrodingerIndexerBoxDto>, List<BlindBoxDto>>(data);
         
         boxList.ForEach(x =>
