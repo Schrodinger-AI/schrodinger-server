@@ -118,7 +118,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
             }
             rankData.LevelInfo = levelInfo;
 
-            if (rankData.Rank.Rank > 0 && levelInfo.Describe.IsNullOrEmpty())
+            if (rankData.RankTwoToNine.Total > 0 && levelInfo.Describe.IsNullOrEmpty())
             {
                 rankData.LevelInfo.Describe = "Normal,,";
             }
