@@ -12,4 +12,5 @@ public class LevelOptions
     
     public string ChainIdForReal { get; set; } 
     public string ForestUrl { get; set; } 
+    public long  AdoptTime { get; set; }
 }

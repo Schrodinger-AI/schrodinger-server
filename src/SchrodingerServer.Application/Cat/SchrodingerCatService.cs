@@ -304,8 +304,16 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 }
                 else
                 {
-                    genTwoToNineTraitType.AddLast(traitsInfo.TraitType);
-                    genTwoToNineTraitValue.AddLast(traitsInfo.Value);
+                    var traitType = traitsInfo.TraitType;
+                    var traitValue = traitsInfo.Value;
+                        
+                    if (traitType == "Face" && traitValue == "WUKONG Face Paint")
+                    {
+                        traitValue = "Monkey King Face Paint";
+                    }
+                    
+                    genTwoToNineTraitType.AddLast(traitType);
+                    genTwoToNineTraitValue.AddLast(traitValue);
                 }
             }
 
@@ -439,7 +447,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         _logger.LogInformation("GetSchrodingerBoxListAsync address:{address}",input.Address);
         
         var resp = new SchrodingerBoxListDto();
-        
+
+        input.AdoptTime = _levelOptions.CurrentValue.AdoptTime;
         var schrodingerIndexerBoxListDto = await _schrodingerCatProvider.GetSchrodingerBoxListAsync(input);
 
         var data = schrodingerIndexerBoxListDto.Data;
@@ -497,6 +506,21 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             resp.InscriptionImageUri = BoxImageConst.NonGen9Box;
         }
 
+        return resp;
+    }
+
+    public async Task<StrayCatsListDto> GetStrayCatsAsync(StrayCatsInput input)
+    {
+        _logger.LogInformation("GetStrayCatsAsync adopter:{adopter}",input.Adopter);
+        if (input.Adopter.IsNullOrEmpty())
+        {
+            return new StrayCatsListDto();
+        }
+
+        input.AdoptTime = _levelOptions.CurrentValue.AdoptTime;
+        var boxDetail = await _schrodingerCatProvider.GetStrayCatsListAsync(input);
+        
+        var resp = _objectMapper.Map<SchrodingerIndexerStrayCatsDto, StrayCatsListDto>(boxDetail);
         return resp;
     }
 }

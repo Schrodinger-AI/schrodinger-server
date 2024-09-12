@@ -60,5 +60,6 @@ public class SchrodingerServerApplicationAutoMapperProfile : Profile
         CreateMap<SchrodingerIndexerBoxDto, BlindBoxDetailDto>()
             .ForMember(t => t.Generation, m => m.MapFrom(f => f.Gen))
             .ForMember(t => t.HolderAmount, m => m.MapFrom(f => f.Amount));
+        CreateMap<SchrodingerIndexerStrayCatsDto, StrayCatsListDto>();
     }
 }

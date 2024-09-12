@@ -72,4 +72,10 @@ public class SchrodingerCatController
     {
         return await _schrodingerCatService.GetSchrodingerBoxDetailAsync(input);
     }
+    
+    [HttpPost("stray-cats")]
+    public async Task<StrayCatsListDto> GetStrayCatsAsync(StrayCatsInput input)
+    {
+        return await _schrodingerCatService.GetStrayCatsAsync(input);
+    }
 }
