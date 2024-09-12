@@ -29,6 +29,7 @@ public class AdpotInfoDto
     public int ParentGen { get; set; }
     public int Decimals { get; set; }
     public DateTime AdoptTime { get; set; }
+    public string Rarity { get; set; }
 }
 
 public class Trait
