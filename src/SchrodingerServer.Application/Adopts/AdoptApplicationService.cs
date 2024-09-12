@@ -313,7 +313,11 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         var aelfAddress = await _userActionProvider.GetCurrentUserAddressAsync(GetCurChain());
         var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, aelfAddress);
         var provider = _imageDispatcher.CurrentProvider();
-        var hasSendRequest = await _adoptImageService.HasSendRequest(adoptId) && await provider.HasRequestId(adoptAddressId);
+        var judgement1 = await _adoptImageService.HasSendRequest(adoptId);
+        var judgement2 = await provider.HasRequestId(adoptAddressId);
+        _logger.LogInformation("send judgment for adoptAddressId:{adoptAddressId}, {judgement1}, {judgement2}", adoptAddressId,  judgement1, judgement2);
+        
+        var hasSendRequest = judgement1 && judgement2;
         
         if (!hasSendRequest)
         {
