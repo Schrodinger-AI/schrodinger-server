@@ -106,7 +106,18 @@ public class LevelProvider : ApplicationService, ILevelProvider
         foreach (var rankData in rankDataList)
         {
             var levelInfo = await GetItemLevelDicAsync(rankData.Rank.Rank, price);
-            if (levelInfo == null) continue;
+            if (levelInfo == null)
+            {
+                if (rankData.RankTwoToNine.TraitsProbability.Count >= 8)
+                {
+                    rankData.LevelInfo = new LevelInfoDto
+                    {
+                        Describe = "Normal,,"
+                    };
+                }
+                continue;
+            }
+                
             if (levelInfo.Level.IsNullOrEmpty())
             {
                 levelInfo.Token = "";
@@ -118,7 +129,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
             }
             rankData.LevelInfo = levelInfo;
 
-            if (rankData.RankTwoToNine.Total > 0 && levelInfo.Describe.IsNullOrEmpty())
+            if (rankData.RankTwoToNine.TraitsProbability.Count >= 8 && levelInfo.Describe.IsNullOrEmpty())
             {
                 rankData.LevelInfo.Describe = "Normal,,";
             }
