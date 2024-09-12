@@ -298,7 +298,6 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             if (address.IsNullOrEmpty())
             {
                 _logger.LogInformation("GetCurrentUserAddress failed for adoption:{adoptId}}", adoptId);
-                return output;
             }
             
             _logger.LogInformation("GetCurrentUserAddress address for adoption:{adoptId}, addres:{address}", adoptId, address);

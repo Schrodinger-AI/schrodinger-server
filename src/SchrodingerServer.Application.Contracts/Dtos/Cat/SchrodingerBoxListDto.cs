@@ -22,7 +22,7 @@ public class BlindBoxDto
     // public int Rank { get; set; }
     public string Describe { get; set; }
     public string InscriptionImageUri { get; set; }
-    public List<TraitsInfo> Traits { get; set; }
+    public List<TraitDto> Traits { get; set; }
 }
 
 public class BoxImageConst
