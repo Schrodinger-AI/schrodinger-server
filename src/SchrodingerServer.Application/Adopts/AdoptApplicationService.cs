@@ -290,7 +290,14 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         {
             return output;
         }
-
+        
+        var aelfAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        if (aelfAddress.IsNullOrEmpty())
+        {
+            _logger.LogInformation("GetCurrentUserAddress failed for adoption:{adoptId}", adoptId);
+            return output;
+        }
+            
         output.AdoptImageInfo = new AdoptImageInfo
         {
             Attributes = adoptInfo.Attributes,
@@ -310,9 +317,6 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             output.AdoptImageInfo.BoxImage = BoxImageConst.NonGen9Box;
         }
         
-        var aelfAddress = await _userActionProvider.GetCurrentUserAddressAsync();
-        _logger.LogInformation("GetCurrentUserAddress:{adoptAddressId}", aelfAddress);
-        
         var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, aelfAddress);
         var provider = _imageDispatcher.CurrentProvider();
         var judgement1 = await _adoptImageService.HasSendRequest(adoptId);
@@ -323,7 +327,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         
         if (!hasSendRequest)
         {
-            _logger.LogInformation("send ai generation request for adoptId:{adoptId}", adoptId);
+            _logger.LogInformation("send ai generation request for adoptId:{adoptId}, addressId:{addressId}", adoptId, adoptAddressId);
             await _imageDispatcher.DispatchAIGenerationRequest(adoptAddressId, AdoptInfo2GenerateImage(adoptInfo), adoptId);
             await _adoptImageService.MarkRequest(adoptId);
         }

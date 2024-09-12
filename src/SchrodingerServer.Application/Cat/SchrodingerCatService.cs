@@ -499,7 +499,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             else if (x.Generation == 9)
             {
                 x.InscriptionImageUri = BoxImageConst.NormalBox;
-                x.Describe = "Normal,,";
+                x.Describe = "Common,,";
             }
             else
             {

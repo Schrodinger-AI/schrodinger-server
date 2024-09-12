@@ -112,7 +112,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
                 {
                     rankData.LevelInfo = new LevelInfoDto
                     {
-                        Describe = "Normal,,"
+                        Describe = "Common,,"
                     };
                 }
                 
@@ -132,7 +132,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
 
             if (input.IsGen9 && rankData.LevelInfo.Describe.IsNullOrEmpty())
             {
-                rankData.LevelInfo.Describe = "Normal,,";
+                rankData.LevelInfo.Describe = "Common,,";
             }
             
             if (isInWhiteList)
