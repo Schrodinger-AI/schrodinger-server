@@ -10,7 +10,7 @@ public class BlindBoxDetailDto
     public int Generation { get; set; }
     public int Decimals { get; set; }
    
-    public List<TraitsInfo> Traits { get; set; }
+    public List<TraitDto> Traits { get; set; }
     public long HolderAmount{ get; set; }
     public long ConsumeAmount { get; set; }
     public bool DirectAdoption { get; set; }

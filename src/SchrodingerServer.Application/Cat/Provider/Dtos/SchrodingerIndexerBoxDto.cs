@@ -25,7 +25,7 @@ public class SchrodingerIndexerBoxDto
     public long ConsumeAmount { get; set; }
     public bool DirectAdoption { get; set; }
     public int Rank { get; set; }
-    public List<TraitsInfo> Traits { get; set; }
+    public List<TraitDto> Traits { get; set; }
 }
 
 

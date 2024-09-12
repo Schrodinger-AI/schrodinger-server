@@ -533,7 +533,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         adoptTime,
                         rarity,
                         rank,
-                        traits{traitType,value}
+                        traits{traitType,value,percent,isRare}
                         consumeAmount,
                         directAdoption
                 }
