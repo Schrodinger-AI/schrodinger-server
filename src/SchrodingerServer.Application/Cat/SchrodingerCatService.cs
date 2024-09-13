@@ -488,22 +488,24 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         });
         
         var boxList = _objectMapper.Map<List<SchrodingerIndexerBoxDto>, List<BlindBoxDto>>(data);
+
+        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
         
         boxList.ForEach(x =>
         {
             if (x.Rarity.NotNullOrEmpty())
             {
-                x.InscriptionImageUri = BoxImageConst.RareBox;
+                x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.RareBoxTestnet : BoxImageConst.RareBox;
                 x.Describe = x.Rarity + ",,";
             }
             else if (x.Generation == 9)
             {
-                x.InscriptionImageUri = BoxImageConst.NormalBox;
+                x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NormalBoxTestnet : BoxImageConst.NormalBox;
                 x.Describe = "Common,,";
             }
             else
             {
-                x.InscriptionImageUri = BoxImageConst.NonGen9Box;
+                x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet : BoxImageConst.NonGen9Box;
             }
         });
         
@@ -523,18 +525,19 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         var boxDetail = await _schrodingerCatProvider.GetSchrodingerBoxDetailAsync(input);
         
+        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
         var resp = _objectMapper.Map<SchrodingerIndexerBoxDto, BlindBoxDetailDto>(boxDetail);
         if (resp.Rarity.NotNullOrEmpty())
         {
-            resp.InscriptionImageUri = BoxImageConst.RareBox;
+            resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.RareBoxTestnet : BoxImageConst.RareBox;
         }
         else if (resp.Generation == 9)
         {
-            resp.InscriptionImageUri = BoxImageConst.NormalBox;
+            resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NormalBoxTestnet : BoxImageConst.NormalBox;
         }
         else
         {
-            resp.InscriptionImageUri = BoxImageConst.NonGen9Box;
+            resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet :  BoxImageConst.NonGen9Box;
         }
 
         return resp;

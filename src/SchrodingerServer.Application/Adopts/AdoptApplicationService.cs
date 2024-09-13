@@ -21,6 +21,7 @@ using SchrodingerServer.Dtos.Adopts;
 using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Dtos.TraitsDto;
 using SchrodingerServer.Ipfs;
+using SchrodingerServer.Options;
 using SchrodingerServer.Users;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
@@ -46,13 +47,15 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
     private readonly IIpfsAppService _ipfsAppService;
     private readonly AwsS3Client _awsS3Client;
     private readonly IImageDispatcher _imageDispatcher;
+    private readonly IOptionsMonitor<LevelOptions> _levelOptions;
 
 
     public AdoptApplicationService(ILogger<AdoptApplicationService> logger, IOptionsMonitor<TraitsOptions> traitsOption,
         IAdoptImageService adoptImageService,
         IOptionsMonitor<ChainOptions> chainOptions, IAdoptGraphQLProvider adoptGraphQlProvider,
         IOptionsMonitor<CmsConfigOptions> cmsConfigOptions, IUserActionProvider userActionProvider,
-        ISecretProvider secretProvider, IIpfsAppService ipfsAppService, AwsS3Client awsS3Client, IImageDispatcher imageDispatcher)
+        ISecretProvider secretProvider, IIpfsAppService ipfsAppService, AwsS3Client awsS3Client, 
+        IImageDispatcher imageDispatcher, IOptionsMonitor<LevelOptions> levelOptions)
     {
         _logger = logger;
         _traitsOptions = traitsOption;
@@ -65,6 +68,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         _ipfsAppService = ipfsAppService;
         _awsS3Client = awsS3Client;
         _imageDispatcher = imageDispatcher;
+        _levelOptions = levelOptions;
     }
 
     private string GetCurChain()
@@ -308,18 +312,19 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             Attributes = adoptInfo.Attributes,
             Generation = adoptInfo.Generation,
         };
-        
+
+        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
         if (adoptInfo.Rarity.NotNullOrEmpty())
         {
-            output.AdoptImageInfo.BoxImage = BoxImageConst.RareBox;
+            output.AdoptImageInfo.BoxImage = chainId == "tDVW" ? BoxImageConst.RareBoxTestnet : BoxImageConst.RareBox;
         }
         else if (adoptInfo.Generation == 9)
         {
-            output.AdoptImageInfo.BoxImage = BoxImageConst.NormalBox;
+            output.AdoptImageInfo.BoxImage = chainId == "tDVW" ? BoxImageConst.NormalBoxTestnet : BoxImageConst.NormalBox;
         }
         else
         {
-            output.AdoptImageInfo.BoxImage = BoxImageConst.NonGen9Box;
+            output.AdoptImageInfo.BoxImage = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet : BoxImageConst.NonGen9Box;
         }
         
         var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, address);
