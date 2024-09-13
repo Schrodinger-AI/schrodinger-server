@@ -62,6 +62,15 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             indexerList = await GetSchrodingerCatAllList(input);
             var data = await SetLevelInfoAsync(indexerList, input.Address, input.ChainId);
+           
+            data.ForEach(item =>
+            {
+                if (item.Generation == 9 && item.Describe.IsNullOrEmpty())
+                {
+                    item.Describe = "Common,,";
+                }
+            });
+            
             var pageData = data
                 .Where(cat => input.Rarities.Contains(cat.Rarity))
                 .OrderByDescending(cat => cat.AdoptTime)
@@ -74,6 +83,15 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
             indexerList = schrodingerIndexerListDto.Data;
             var data = await SetLevelInfoAsync(indexerList, input.Address, input.ChainId);
+            
+            data.ForEach(item =>
+            {
+                if (item.Generation == 9 && item.Describe.IsNullOrEmpty())
+                {
+                    item.Describe = "Common,,";
+                }
+            });
+            
             result.Data = data;
             result.TotalCount = schrodingerIndexerListDto.TotalCount;
         }
@@ -214,6 +232,14 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 schrodingerDto.Token = "";
             }
         }
+        
+        list.ForEach(item =>
+        {
+            if(item.Generation == 9 && item.Describe.IsNullOrEmpty())
+            {
+                item.Describe = "Common,,";
+            }
+        });
         
         result.Data = list;
         result.TotalCount = schrodingerIndexerListDto.TotalCount;
