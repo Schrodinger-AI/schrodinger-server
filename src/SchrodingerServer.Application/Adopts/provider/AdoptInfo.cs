@@ -11,4 +11,5 @@ public class AdoptInfo
     public string Adopter { get; set; }
     public int ImageCount { get; set; }
     public int Generation { get; set; }
+    public string Rarity { get; set; }
 }

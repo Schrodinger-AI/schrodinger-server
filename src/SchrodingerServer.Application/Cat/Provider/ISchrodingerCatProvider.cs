@@ -34,6 +34,12 @@ public interface ISchrodingerCatProvider
     Task<SchrodingerIndexerListDto> GetSchrodingerHoldingListAsync(GetCatListInput input);
     
     Task<List<NFTActivityIndexDto>> GetSchrodingerTradeRecordAsync(GetSchrodingerTradeRecordInput input);
+
+    Task<SchrodingerIndexerBoxListDto> GetSchrodingerBoxListAsync(GetBlindBoxListInput input);
+    
+    Task<SchrodingerIndexerBoxDto> GetSchrodingerBoxDetailAsync(GetCatDetailInput input);
+    
+    Task<SchrodingerIndexerStrayCatsDto> GetStrayCatsListAsync(StrayCatsInput input);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -464,6 +470,132 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "getSchrodingerTradeRecord query GraphQL error");
             throw;
+        }
+    }
+    
+    public async Task<SchrodingerIndexerBoxListDto> GetSchrodingerBoxListAsync(GetBlindBoxListInput input)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxListQuery>(new GraphQLRequest
+            {
+                Query =
+                    @"query($adopter:String!, $adoptTime:Long!){
+                    getBlindBoxList(input: {adopter:$adopter, adoptTime:$adoptTime}){
+                        totalCount,
+                        data{
+                        symbol,
+                        tokenName,
+                        adoptId,
+                        amount,
+                        gen,
+                        decimals,
+                        adopter,
+                        adoptTime,
+                        rarity,
+                        rank,
+                        traits{traitType,value,isRare,percent}
+                    }
+                }
+            }",
+                Variables = new
+                {
+                    Adopter = input.Address,
+                    AdoptTime = input.AdoptTime
+                }
+            });
+
+            return indexerResult.GetBlindBoxList;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetSchrodingerBoxList Indexer error");
+            return new SchrodingerIndexerBoxListDto();
+        }
+    }
+
+    public async Task<SchrodingerIndexerBoxDto> GetSchrodingerBoxDetailAsync(GetCatDetailInput input)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxDetailQuery>(new GraphQLRequest
+            {
+                Query =
+                    @"query($symbol:String!){
+                    getBlindBoxDetail(input: {symbol:$symbol}){
+                        symbol,
+                        tokenName,
+                        adoptId,
+                        amount,
+                        gen,
+                        decimals,
+                        adopter,
+                        adoptTime,
+                        rarity,
+                        rank,
+                        traits{traitType,value,percent,isRare}
+                        consumeAmount,
+                        directAdoption
+                }
+            }",
+                Variables = new
+                {
+                    Symbol = input.Symbol
+                }
+            });
+
+            return indexerResult.GetBlindBoxDetail;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetSchrodingerBoxList Indexer error");
+            return new SchrodingerIndexerBoxDto();
+        }
+    }
+
+    public async Task<SchrodingerIndexerStrayCatsDto> GetStrayCatsListAsync(StrayCatsInput input)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerStrayCatsQuery>(new GraphQLRequest
+            {
+                Query =
+                    @"query($adopter:String!, $chainId:String!, $skipCount:Int!, $maxResultCount:Int!, $adoptTime:Long!){
+                    getStrayCats(input: {adopter:$adopter, chainId:$chainId, skipCount:$skipCount, maxResultCount:$maxResultCount adoptTime:$adoptTime}){
+                        totalCount,
+                        data{
+                        adoptId, 
+                        inscriptionImageUri,
+                        tokenName, 
+                        gen,
+                        symbol,
+                        consumeAmount,
+                        receivedAmount,
+                        decimals,
+                        parentTraits{traitType,value},
+                        nextTokenName,
+                        nextSymbol,
+                        nextAmount,
+                        directAdoption
+                    }
+                }
+            }",
+                Variables = new
+                {
+                    Adopter = input.Adopter,
+                    SkipCount = input.SkipCount,
+                    MaxResultCount = input.MaxResultCount,
+                    AdoptTime = input.AdoptTime,
+                    ChainId = input.ChainId
+                }
+            });
+
+            return indexerResult.GetStrayCats;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "StrayCats Indexer error");
+            return new SchrodingerIndexerStrayCatsDto();
         }
     }
 }

@@ -18,8 +18,10 @@ using SchrodingerServer.AwsS3;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dtos.Adopts;
+using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Dtos.TraitsDto;
 using SchrodingerServer.Ipfs;
+using SchrodingerServer.Options;
 using SchrodingerServer.Users;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
@@ -45,13 +47,15 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
     private readonly IIpfsAppService _ipfsAppService;
     private readonly AwsS3Client _awsS3Client;
     private readonly IImageDispatcher _imageDispatcher;
+    private readonly IOptionsMonitor<LevelOptions> _levelOptions;
 
 
     public AdoptApplicationService(ILogger<AdoptApplicationService> logger, IOptionsMonitor<TraitsOptions> traitsOption,
         IAdoptImageService adoptImageService,
         IOptionsMonitor<ChainOptions> chainOptions, IAdoptGraphQLProvider adoptGraphQlProvider,
         IOptionsMonitor<CmsConfigOptions> cmsConfigOptions, IUserActionProvider userActionProvider,
-        ISecretProvider secretProvider, IIpfsAppService ipfsAppService, AwsS3Client awsS3Client, IImageDispatcher imageDispatcher)
+        ISecretProvider secretProvider, IIpfsAppService ipfsAppService, AwsS3Client awsS3Client, 
+        IImageDispatcher imageDispatcher, IOptionsMonitor<LevelOptions> levelOptions)
     {
         _logger = logger;
         _traitsOptions = traitsOption;
@@ -64,6 +68,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         _ipfsAppService = ipfsAppService;
         _awsS3Client = awsS3Client;
         _imageDispatcher = imageDispatcher;
+        _levelOptions = levelOptions;
     }
 
     private string GetCurChain()
@@ -290,29 +295,59 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             return output;
         }
 
+        var address = input.Address;
+        if (address.IsNullOrEmpty())
+        {
+            address = await _userActionProvider.GetCurrentUserAddressAsync();
+            if (address.IsNullOrEmpty())
+            {
+                _logger.LogInformation("GetCurrentUserAddress failed for adoption:{adoptId}}", adoptId);
+            }
+            
+            _logger.LogInformation("GetCurrentUserAddress address for adoption:{adoptId}, addres:{address}", adoptId, address);
+        }
+            
         output.AdoptImageInfo = new AdoptImageInfo
         {
             Attributes = adoptInfo.Attributes,
             Generation = adoptInfo.Generation,
         };
-        var aelfAddress = await _userActionProvider.GetCurrentUserAddressAsync(GetCurChain());
-        var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, aelfAddress);
-        var provider = _imageDispatcher.CurrentProvider();
-        var hasSendRequest = await _adoptImageService.HasSendRequest(adoptId) && await provider.HasRequestId(adoptAddressId);
-        List<string> images;
-        if (!hasSendRequest)
-        {
-            _logger.LogInformation("send ai generation request for adoptId:{adoptId}", adoptId);
-            await _imageDispatcher.DispatchAIGenerationRequest(adoptAddressId, AdoptInfo2GenerateImage(adoptInfo), adoptId);
-            await _adoptImageService.MarkRequest(adoptId);
 
-            images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
+        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
+        if (adoptInfo.Rarity.NotNullOrEmpty())
+        {
+            output.AdoptImageInfo.BoxImage = chainId == "tDVW" ? BoxImageConst.RareBoxTestnet : BoxImageConst.RareBox;
+        }
+        else if (adoptInfo.Generation == 9)
+        {
+            output.AdoptImageInfo.BoxImage = chainId == "tDVW" ? BoxImageConst.NormalBoxTestnet : BoxImageConst.NormalBox;
         }
         else
         {
-            images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
+            output.AdoptImageInfo.BoxImage = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet : BoxImageConst.NonGen9Box;
         }
         
+        var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, address);
+        var provider = _imageDispatcher.CurrentProvider();
+        var judgement1 = await _adoptImageService.HasSendRequest(adoptId);
+        var judgement2 = await provider.HasRequestId(adoptAddressId);
+        _logger.LogInformation("send judgment for adoptAddressId:{adoptAddressId}, {judgement1}, {judgement2}", adoptAddressId,  judgement1, judgement2);
+        
+        var hasSendRequest = judgement1 && judgement2;
+        
+        if (!hasSendRequest)
+        {
+            _logger.LogInformation("send ai generation request for adoptId:{adoptId}, addressId:{addressId}", adoptId, adoptAddressId);
+            await _imageDispatcher.DispatchAIGenerationRequest(adoptAddressId, AdoptInfo2GenerateImage(adoptInfo), adoptId);
+            await _adoptImageService.MarkRequest(adoptId);
+        }
+        
+        if (input.AdoptOnly)
+        {
+            return output;
+        }
+
+        var images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
         output.AdoptImageInfo.Images = images;
         var imageCount = adoptInfo.ImageCount;
         if (!images.IsNullOrEmpty() && imageCount == 1)

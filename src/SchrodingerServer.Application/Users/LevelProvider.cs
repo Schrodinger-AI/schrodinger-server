@@ -106,7 +106,19 @@ public class LevelProvider : ApplicationService, ILevelProvider
         foreach (var rankData in rankDataList)
         {
             var levelInfo = await GetItemLevelDicAsync(rankData.Rank.Rank, price);
-            if (levelInfo == null) continue;
+            if (levelInfo == null)
+            {
+                if (input.IsGen9)
+                {
+                    rankData.LevelInfo = new LevelInfoDto
+                    {
+                        Describe = "Common,,"
+                    };
+                }
+                
+                continue;
+            }
+            
             if (levelInfo.Level.IsNullOrEmpty())
             {
                 levelInfo.Token = "";
@@ -117,6 +129,12 @@ public class LevelProvider : ApplicationService, ILevelProvider
                 levelInfo.AwakenPrice = (double.Parse(levelInfo.Token) * price).ToString();
             }
             rankData.LevelInfo = levelInfo;
+
+            if (input.IsGen9 && rankData.LevelInfo.Describe.IsNullOrEmpty())
+            {
+                rankData.LevelInfo.Describe = "Common,,";
+            }
+            
             if (isInWhiteList)
             {
                 continue;

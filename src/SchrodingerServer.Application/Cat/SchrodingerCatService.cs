@@ -62,6 +62,15 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             indexerList = await GetSchrodingerCatAllList(input);
             var data = await SetLevelInfoAsync(indexerList, input.Address, input.ChainId);
+           
+            data.ForEach(item =>
+            {
+                if (item.Generation == 9 && item.Describe.IsNullOrEmpty())
+                {
+                    item.Describe = "Common,,";
+                }
+            });
+            
             var pageData = data
                 .Where(cat => input.Rarities.Contains(cat.Rarity))
                 .OrderByDescending(cat => cat.AdoptTime)
@@ -74,6 +83,15 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
             indexerList = schrodingerIndexerListDto.Data;
             var data = await SetLevelInfoAsync(indexerList, input.Address, input.ChainId);
+            
+            data.ForEach(item =>
+            {
+                if (item.Generation == 9 && item.Describe.IsNullOrEmpty())
+                {
+                    item.Describe = "Common,,";
+                }
+            });
+            
             result.Data = data;
             result.TotalCount = schrodingerIndexerListDto.TotalCount;
         }
@@ -215,6 +233,14 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             }
         }
         
+        list.ForEach(item =>
+        {
+            if(item.Generation == 9 && item.Describe.IsNullOrEmpty())
+            {
+                item.Describe = "Common,,";
+            }
+        });
+        
         result.Data = list;
         result.TotalCount = schrodingerIndexerListDto.TotalCount;
         return result;
@@ -304,8 +330,16 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 }
                 else
                 {
-                    genTwoToNineTraitType.AddLast(traitsInfo.TraitType);
-                    genTwoToNineTraitValue.AddLast(traitsInfo.Value);
+                    var traitType = traitsInfo.TraitType;
+                    var traitValue = traitsInfo.Value;
+                        
+                    if (traitType == "Face" && traitValue == "WUKONG Face Paint")
+                    {
+                        traitValue = "Monkey King Face Paint";
+                    }
+                    
+                    genTwoToNineTraitType.AddLast(traitType);
+                    genTwoToNineTraitValue.AddLast(traitValue);
                 }
             }
 
@@ -427,5 +461,126 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         });
 
         return list;
+    }
+    
+    public async Task<SchrodingerBoxListDto> GetSchrodingerBoxListAsync(GetBlindBoxListInput input)
+    {
+        var address = await _userActionProvider.GetCurrentUserAddressAsync();
+        if (!address.IsNullOrEmpty())
+        {
+            input.Address = address;
+        }
+        _logger.LogInformation("GetSchrodingerBoxListAsync address:{address}",input.Address);
+        
+        var resp = new SchrodingerBoxListDto();
+
+        input.AdoptTime = _levelOptions.CurrentValue.AdoptTime;
+        var schrodingerIndexerBoxListDto = await _schrodingerCatProvider.GetSchrodingerBoxListAsync(input);
+
+        var data = schrodingerIndexerBoxListDto.Data;
+        if (data.IsNullOrEmpty())
+        {
+            return resp;
+        }
+        
+        // data = data.OrderBy(x => x.Rank).ThenBy(x => x.AdoptTime).ToList();
+        
+        data.Sort((x, y) => {
+            if (x.Rarity != y.Rarity) {
+                if (x.Rarity.IsNullOrEmpty())
+                {
+                    return 1;
+                }
+
+                if (y.Rarity.IsNullOrEmpty())
+                {
+                    return -1;
+                }
+
+                var indexX = BoxRarityConst.RarityList.IndexOf(x.Rarity);
+                var indexY = BoxRarityConst.RarityList.IndexOf(y.Rarity);
+
+                if (indexX < indexY)
+                {
+                    return -1;
+                }
+                else
+                {
+                    return 1;
+                }
+            } 
+            
+            return x.AdoptTime.CompareTo(y.AdoptTime);
+        });
+        
+        var boxList = _objectMapper.Map<List<SchrodingerIndexerBoxDto>, List<BlindBoxDto>>(data);
+
+        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
+        
+        boxList.ForEach(x =>
+        {
+            if (x.Rarity.NotNullOrEmpty())
+            {
+                x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.RareBoxTestnet : BoxImageConst.RareBox;
+                x.Describe = x.Rarity + ",,";
+            }
+            else if (x.Generation == 9)
+            {
+                x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NormalBoxTestnet : BoxImageConst.NormalBox;
+                x.Describe = "Common,,";
+            }
+            else
+            {
+                x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet : BoxImageConst.NonGen9Box;
+            }
+        });
+        
+        resp.Data = boxList.Skip(input.SkipCount).Take(input.MaxResultCount).ToList();
+        resp.TotalCount = schrodingerIndexerBoxListDto.TotalCount;
+        
+        return resp;
+    }
+    
+    public async Task<BlindBoxDetailDto> GetSchrodingerBoxDetailAsync(GetCatDetailInput input)
+    {
+        _logger.LogInformation("GetSchrodingerBoxDetailAsync symbol:{symbol}",input.Symbol);
+        if (input.Symbol.IsNullOrEmpty())
+        {
+            return new BlindBoxDetailDto();
+        }
+        
+        var boxDetail = await _schrodingerCatProvider.GetSchrodingerBoxDetailAsync(input);
+        
+        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
+        var resp = _objectMapper.Map<SchrodingerIndexerBoxDto, BlindBoxDetailDto>(boxDetail);
+        if (resp.Rarity.NotNullOrEmpty())
+        {
+            resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.RareBoxTestnet : BoxImageConst.RareBox;
+        }
+        else if (resp.Generation == 9)
+        {
+            resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NormalBoxTestnet : BoxImageConst.NormalBox;
+        }
+        else
+        {
+            resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet :  BoxImageConst.NonGen9Box;
+        }
+
+        return resp;
+    }
+
+    public async Task<StrayCatsListDto> GetStrayCatsAsync(StrayCatsInput input)
+    {
+        _logger.LogInformation("GetStrayCatsAsync adopter:{adopter}",input.Adopter);
+        if (input.Adopter.IsNullOrEmpty())
+        {
+            return new StrayCatsListDto();
+        }
+
+        input.AdoptTime = _levelOptions.CurrentValue.AdoptTime;
+        var boxDetail = await _schrodingerCatProvider.GetStrayCatsListAsync(input);
+        
+        var resp = _objectMapper.Map<SchrodingerIndexerStrayCatsDto, StrayCatsListDto>(boxDetail);
+        return resp;
     }
 }

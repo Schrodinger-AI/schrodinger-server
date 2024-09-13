@@ -7,6 +7,7 @@ public class AdoptImageInfo
     public int Generation { get; set; }
     public List<Attribute> Attributes { get; set; }
     public List<string> Images { get; set; }
+    public  string BoxImage { get; set; }
 }
 
 public class Attribute

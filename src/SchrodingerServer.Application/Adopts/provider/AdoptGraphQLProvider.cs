@@ -46,7 +46,8 @@ public class AdoptGraphQLProvider : IAdoptGraphQLProvider, ISingletonDependency
                           }
                           adopter,
                           imageCount,
-                          gen
+                          gen,
+                          rarity
                 }
             }",
             Variables = new
@@ -73,7 +74,8 @@ public class AdoptGraphQLProvider : IAdoptGraphQLProvider, ISingletonDependency
             }).ToList(),
             Adopter = adpotInfoDto.GetAdoptInfo.Adopter,
             ImageCount = adpotInfoDto.GetAdoptInfo.ImageCount,
-            Generation = adpotInfoDto.GetAdoptInfo.Gen
+            Generation = adpotInfoDto.GetAdoptInfo.Gen,
+            Rarity = adpotInfoDto.GetAdoptInfo.Rarity
         };
     }
     
