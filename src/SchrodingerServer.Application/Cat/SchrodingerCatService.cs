@@ -484,7 +484,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 }
             } 
             
-            return y.AdoptTime.CompareTo(x.AdoptTime);
+            return x.AdoptTime.CompareTo(y.AdoptTime);
         });
         
         var boxList = _objectMapper.Map<List<SchrodingerIndexerBoxDto>, List<BlindBoxDto>>(data);
