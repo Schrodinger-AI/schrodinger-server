@@ -200,7 +200,8 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Create token error");
+            // _logger.LogError(e, "Create token error");
+            _logger.LogError( "Create token error: {Message}", e.Message);
             return ForbidResult(OpenIddictConstants.Errors.ServerError, "Internal error.");
         }
     }
