@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using AElf;
 using AElf.Cryptography;
@@ -88,10 +89,26 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
             var signature = ByteArrayHelper.HexStringToByteArray(signatureVal);
             var signAddress = Address.FromPublicKey(publicKey);
 
+            // AssertHelper.IsTrue(CryptoHelper.RecoverPublicKey(signature,
+            //     HashHelper.ComputeFrom(string.Join("-", address, timestampVal)).ToByteArray(),
+            //     out var managerPublicKey), "Invalid signature.");
+            // AssertHelper.IsTrue(managerPublicKey.ToHex() == publicKeyVal, "Invalid publicKey or signature.");
+            
+            var newSignText = """
+                       Welcome to Schrodinger! Click to sign in to the world's first AI-powered 404 NFT platform! This request will not trigger any blockchain transaction or cost any gas fees.
+
+                       signature:
+                       """+string.Join("-", address, timestampVal);
+            
+            AssertHelper.IsTrue(CryptoHelper.RecoverPublicKey(signature,
+                HashHelper.ComputeFrom(Encoding.UTF8.GetBytes(newSignText).ToHex()).ToByteArray(),
+                out var managerPublicKey), "Invalid signature.");
+
             AssertHelper.IsTrue(CryptoHelper.RecoverPublicKey(signature,
                 HashHelper.ComputeFrom(string.Join("-", address, timestampVal)).ToByteArray(),
-                out var managerPublicKey), "Invalid signature.");
-            AssertHelper.IsTrue(managerPublicKey.ToHex() == publicKeyVal, "Invalid publicKey or signature.");
+                out var managerPublicKeyOld), "Invalid signature.");
+        
+            AssertHelper.IsTrue(managerPublicKey.ToHex() == publicKeyVal || managerPublicKeyOld.ToHex() == publicKeyVal, "Invalid publicKey or signature.");
 
             var time = DateTime.UnixEpoch.AddMilliseconds(timestamp);
             AssertHelper.IsTrue(
