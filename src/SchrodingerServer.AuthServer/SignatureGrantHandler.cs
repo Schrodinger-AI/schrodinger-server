@@ -95,10 +95,10 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
             // AssertHelper.IsTrue(managerPublicKey.ToHex() == publicKeyVal, "Invalid publicKey or signature.");
             
             var newSignText = """
-                       Welcome to Schrodinger! Click to sign in to the world's first AI-powered 404 NFT platform! This request will not trigger any blockchain transaction or cost any gas fees.
+                              Welcome to Schrodinger! Click to sign in to the world's first AI-powered 404 NFT platform! This request will not trigger any blockchain transaction or cost any gas fees.
 
-                       signature:
-                       """+string.Join("-", address, timestampVal);
+                              signature: 
+                              """+string.Join("-", address, timestampVal);
             
             AssertHelper.IsTrue(CryptoHelper.RecoverPublicKey(signature,
                 HashHelper.ComputeFrom(Encoding.UTF8.GetBytes(newSignText).ToHex()).ToByteArray(),
