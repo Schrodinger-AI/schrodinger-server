@@ -17,9 +17,9 @@ public class BlindBoxDto
     public int Decimals { get; set; }
     public string Adopter { get; set; }
     public long AdoptTime { get; set; }
-    // public string Level { get; set; }
+    public string Level { get; set; }
     public string Rarity { get; set; }
-    // public int Rank { get; set; }
+    public int Rank { get; set; }
     public string Describe { get; set; }
     public string InscriptionImageUri { get; set; }
     public List<TraitDto> Traits { get; set; }
