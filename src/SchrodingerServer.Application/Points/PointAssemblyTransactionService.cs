@@ -126,7 +126,7 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
         {
             var bizId = IdGenerateHelper.GetPointBizId(chainId, bizDate, pointName, Guid.NewGuid().ToString());
             _logger.LogInformation(
-                "Prepare to AssemblechainId:{chainId}  count: {count}  bizId: {bidId}", chainId,  tradeList.Count, bizId);
+                "Prepare to Assemble chainId:{chainId} count: {count} bizId: {bidId} tradeList:{tradeList}", chainId,  tradeList.Count, bizId, JsonConvert.SerializeObject(tradeList));
             try
             {
                 var pointSettleDto = PointSettleDto.Of(chainId, pointName, bizId, tradeList);

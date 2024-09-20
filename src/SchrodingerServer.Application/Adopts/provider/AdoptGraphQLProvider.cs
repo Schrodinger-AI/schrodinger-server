@@ -34,7 +34,7 @@ public class AdoptGraphQLProvider : IAdoptGraphQLProvider, ISingletonDependency
         var adpotInfoDto = await _graphQlHelper.QueryAsync<AdoptInfoQuery>(new GraphQLRequest
         {
             Query =
-                @"query($adoptId:String){
+                @"query($adoptId:String!){
                     getAdoptInfo(input: {adoptId:$adoptId}){
                           symbol,
                           tokenName,

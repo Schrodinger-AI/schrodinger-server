@@ -110,7 +110,7 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
             Address = currentAddress,
             MaxResultCount = input.MaxResultCount,
             SkipCount = input.SkipCount,
-            FilterSymbol = chainId == "tDVV" ? "SGR" : "SGRTEST",
+            FilterSymbol = "SGR",
             ChainId = chainId
         };
         var schrodingerIndexerListDto = await _messageProvider.GetSchrodingerSoldListAsync(getSoldListInput);

@@ -514,6 +514,25 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         });
         
         var boxList = _objectMapper.Map<List<SchrodingerIndexerBoxDto>, List<BlindBoxDto>>(data);
+        
+        var isInWhiteList = await _levelProvider.CheckAddressIsInWhiteListAsync(input.Address);
+        _logger.LogInformation("GetSchrodingerBoxListAsync, isInWhiteList: {isInWhiteList}", isInWhiteList);
+        var price = await _levelProvider.GetAwakenSGRPrice();
+        foreach (var schrodingerDto in boxList)
+        {
+            var levelInfoDto = await _levelProvider.GetItemLevelDicAsync(schrodingerDto.Rank, price);
+            _logger.LogInformation("rank info: {info}", JsonConvert.SerializeObject(levelInfoDto));
+            schrodingerDto.Describe = levelInfoDto?.Describe;
+
+            if (isInWhiteList)
+            {
+                schrodingerDto.Level = levelInfoDto?.Level;
+            }
+            else
+            {
+                schrodingerDto.Rank = 0;
+            }
+        }
 
         var chainId = _levelOptions.CurrentValue.ChainIdForReal;
         
@@ -522,7 +541,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             if (x.Rarity.NotNullOrEmpty())
             {
                 x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.RareBoxTestnet : BoxImageConst.RareBox;
-                x.Describe = x.Rarity + ",,";
+                // x.Describe = x.Rarity + ",,";
             }
             else if (x.Generation == 9)
             {
