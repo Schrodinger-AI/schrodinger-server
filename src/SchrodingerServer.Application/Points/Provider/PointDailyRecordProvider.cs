@@ -5,6 +5,7 @@ using AElf.Indexing.Elasticsearch;
 using GraphQL;
 using Microsoft.Extensions.Logging;
 using Nest;
+using Newtonsoft.Json;
 using Orleans;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.GraphQL;
@@ -118,7 +119,7 @@ public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDep
     {
         var bizId = settleDto.BizId;
         var userPointInfos = settleDto.UserPointsInfos;
-        _logger.LogInformation("UpdatePointDailyRecord bizId:{bizId} status:{status}", bizId, status);
+        _logger.LogInformation("UpdatePointDailyRecord bizId:{bizId} status:{status}, infos:{infos}", bizId, status, JsonConvert.SerializeObject(userPointInfos));
         foreach (var userPoints in userPointInfos)
         {
             try
