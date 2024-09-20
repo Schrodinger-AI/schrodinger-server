@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nest;
+using SchrodingerServer.Awaken.Provider;
 using SchrodingerServer.Cat.Provider;
 using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.Common;
@@ -34,6 +35,9 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
     private const int FixIndex = 81;
     private const int MinimumIndexGap = 24;
     private const int SnapShotCount = 2;
+    private const string USDT = "USDT";
+    private const string SGR = "SGR-1";
+    private const string ELF = "ELF";
 
     private readonly ILogger<PointAccumulateForSGR9Worker> _logger;
     private readonly IHolderBalanceProvider _holderBalanceProvider;
@@ -48,6 +52,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
     private readonly IDistributedCache<List<int>> _distributedCache;
     private readonly IPointDispatchProvider _pointDispatchProvider;
     private readonly IAbpDistributedLock _distributedLock;
+    private readonly IAwakenLiquidityProvider _awakenLiquidityProvider;
     private readonly string _lockKey = "PointAccumulateForSGR9Worker";
 
     public PointAccumulateForSGR9Worker(AbpAsyncTimer timer,IServiceScopeFactory serviceScopeFactory,ILogger<PointAccumulateForSGR9Worker> logger,
@@ -59,7 +64,8 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
         IPointDispatchProvider pointDispatchProvider,
         IAbpDistributedLock distributedLock,
         IOptionsMonitor<PointTradeOptions> pointTradeOptions,
-        ISchrodingerCatProvider schrodingerCatProvider): base(timer,
+        ISchrodingerCatProvider schrodingerCatProvider, 
+        IAwakenLiquidityProvider awakenLiquidityProvider): base(timer,
         serviceScopeFactory)
     {
         _logger = logger;
@@ -74,6 +80,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
         _pointDispatchProvider = pointDispatchProvider;
         _distributedLock = distributedLock;
         _schrodingerCatProvider = schrodingerCatProvider;
+        _awakenLiquidityProvider = awakenLiquidityProvider;
         timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 60 * 1000;
     }
 
@@ -229,9 +236,12 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             
             _logger.LogInformation("PointAccumulateForSGR9Worker  snapshot by address counts: {cnt}", snapshotByAddress.Count());
             
-            var symbols = new List<string> { baseSymbol };
-            var symbolPriceDict = await _symbolDayPriceProvider.GetSymbolPricesAsync(priceBizDate, symbols);
-            var symbolPrice = DecimalHelper.GetValueFromDict(symbolPriceDict, baseSymbol, baseSymbol);
+            // var symbols = new List<string> { baseSymbol };
+            // var symbolPriceDict = await _symbolDayPriceProvider.GetSymbolPricesAsync(priceBizDate, symbols);
+            // var symbolPrice = DecimalHelper.GetValueFromDict(symbolPriceDict, baseSymbol, baseSymbol);
+            
+            var elfPrice = await GetELFPrice();
+            var sgrPrice = await GetSGRPrice() * elfPrice;
             
             foreach (var snapshot in snapshotByAddress)
             {
@@ -244,7 +254,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
                     continue;
                 }
                 
-                await _pointDailyRecordService.HandlePointDailyChangeAsync(chainId, pointName, snapshot, symbolPrice);
+                await _pointDailyRecordService.HandlePointDailyChangeAsync(chainId, pointName, snapshot, sgrPrice);
             }
             
             await _pointDispatchProvider.SetDispatchAsync(PointDispatchConstants.SYNC_SGR9_PREFIX, bizDate,
@@ -331,5 +341,22 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
         _logger.LogInformation("PointAccumulateForSGR9Worker Generate Snapshot Index, {index1}, {index2}", randomNumber1, randomNumber2);
         
         return  data;
+    }
+    
+    private async Task<decimal> GetELFPrice()
+    {
+        var priceDto = await _awakenLiquidityProvider.GetPriceAsync(ELF, USDT, "tDVV", "0.0005");
+        var price = priceDto.Items.FirstOrDefault().Price;
+        AssertHelper.IsTrue(price != null && price > 0, "ELF price is null or zero");
+        return price;
+    }
+    
+    
+    private async Task<decimal> GetSGRPrice()
+    {
+        var priceDto = await _awakenLiquidityProvider.GetPriceAsync(SGR, ELF,"tDVV", "0.03");
+        var price = priceDto.Items.FirstOrDefault().Price;
+        AssertHelper.IsTrue(price != null && price > 0, "SGR price is null or zero");
+        return price;
     }
 }
