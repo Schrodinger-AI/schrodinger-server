@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using SchrodingerServer.Common;
@@ -119,7 +120,9 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
             if (source == SourcePortkey)
             {
                 var portkeyUrl = _graphQlOption.CurrentValue.PortkeyUrl;
+                _logger.LogInformation("GetCaHolderInfo, address: {address}", signAddress.ToBase58());
                 var caHolderInfos = await GetCaHolderInfo(portkeyUrl, signAddress.ToBase58());
+                _logger.LogInformation("GetCaHolderInfo finished, address: {address}, infos: {infos}", signAddress.ToBase58(),JsonConvert.SerializeObject(caHolderInfos));
                 AssertHelper.NotNull(caHolderInfos, "CaHolder not found.");
                 AssertHelper.NotEmpty(caHolderInfos.CaHolderManagerInfo, "CaHolder manager not found.");
                 AssertHelper.IsTrue(
