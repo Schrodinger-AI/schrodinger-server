@@ -240,6 +240,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             // var symbolPriceDict = await _symbolDayPriceProvider.GetSymbolPricesAsync(priceBizDate, symbols);
             // var symbolPrice = DecimalHelper.GetValueFromDict(symbolPriceDict, baseSymbol, baseSymbol);
             
+            
             var elfPrice = await GetELFPrice();
             var sgrPrice = await GetSGRPrice() * elfPrice;
             
