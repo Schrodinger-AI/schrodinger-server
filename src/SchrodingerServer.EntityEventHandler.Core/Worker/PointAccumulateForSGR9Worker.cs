@@ -258,6 +258,8 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
                 await _pointDailyRecordService.HandlePointDailyChangeAsync(chainId, pointName, snapshot, sgrPrice);
             }
             
+            _logger.LogInformation("PointAccumulateForSGR9Worker finished");
+            
             await _pointDispatchProvider.SetDispatchAsync(PointDispatchConstants.SYNC_SGR9_PREFIX, bizDate,
                 pointName, true);
         }

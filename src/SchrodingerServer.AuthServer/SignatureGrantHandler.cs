@@ -117,10 +117,10 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
             var caHash = string.Empty;
             var caAddressMain = string.Empty;
             var caAddressSide = new Dictionary<string, string>();
+            _logger.LogInformation("GetCaHolderInfo, address: {address}", signAddress.ToBase58());
             if (source == SourcePortkey)
             {
                 var portkeyUrl = _graphQlOption.CurrentValue.PortkeyUrl;
-                _logger.LogInformation("GetCaHolderInfo, address: {address}", signAddress.ToBase58());
                 var caHolderInfos = await GetCaHolderInfo(portkeyUrl, signAddress.ToBase58());
                 _logger.LogInformation("GetCaHolderInfo finished, address: {address}, infos: {infos}", signAddress.ToBase58(),JsonConvert.SerializeObject(caHolderInfos));
                 AssertHelper.NotNull(caHolderInfos, "CaHolder not found.");
