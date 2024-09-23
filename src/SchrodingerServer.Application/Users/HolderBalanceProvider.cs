@@ -145,7 +145,7 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
         }
         catch (Exception e)
         {
-            _logger.LogError("GetLastHoldingRecordAsync fail:{msg}", e.Message);
+            _logger.LogError("GetLastHoldingRecordAsync fail for: {msg}", e.Message);
             return null;
         }
     }

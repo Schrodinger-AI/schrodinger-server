@@ -239,7 +239,7 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
                 var dayBefore = TimeHelper.GetDateStrAddDays(bizDate, -1);
                 var excludeDate = new List<string> { dayBefore, bizDate };
                 var lastHoldingRecord = await _holderBalanceProvider.GetLastHoldingRecordAsync(chainId, holderInfo.Address, holderInfo.Symbol, excludeDate);
-                if (lastHoldingRecord == null || lastHoldingRecord.Balance <= 0)
+                if (lastHoldingRecord != null && lastHoldingRecord.Balance <= 0)
                 {
                     _logger.LogInformation("PointAccumulateForSGR12Worker Holding Cat Less Than 24hours, address: {address}", holderInfo.Address);
                     continue;
