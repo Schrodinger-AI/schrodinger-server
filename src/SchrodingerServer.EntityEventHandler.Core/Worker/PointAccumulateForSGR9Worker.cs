@@ -243,6 +243,7 @@ public class PointAccumulateForSGR9Worker :  AsyncPeriodicBackgroundWorkerBase
             
             var elfPrice = await GetELFPrice();
             var sgrPrice = await GetSGRPrice() * elfPrice;
+            _logger.LogInformation("PointAccumulateForSGR9Worker get sgr price: {price}", sgrPrice);
             
             foreach (var snapshot in snapshotByAddress)
             {
