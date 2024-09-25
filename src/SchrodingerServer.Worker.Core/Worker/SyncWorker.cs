@@ -187,13 +187,11 @@ public class SyncWorker : AsyncPeriodicBackgroundWorkerBase
             var chainData = respDto.CurrentVersion;
             foreach (var item in chainData.Items)
             {
-                if (item.ChainId != chainId)
+                if (item.ChainId == chainId)
                 {
-                    break;
+                    _logger.LogDebug("LastIrreversibleBlockHeight: {height}", item.LastIrreversibleBlockHeight);
+                    return item.LastIrreversibleBlockHeight;
                 }
-                
-                _logger.LogDebug("LastIrreversibleBlockHeight: {height}", item.LastIrreversibleBlockHeight);
-                return item.LastIrreversibleBlockHeight;
             }
 
             return 0;
