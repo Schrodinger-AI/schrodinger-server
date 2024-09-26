@@ -2,9 +2,12 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using Orleans;
 using SchrodingerServer.Common;
+using SchrodingerServer.Common.Http;
 using SchrodingerServer.Grains.Grain.Synchronize;
+using SchrodingerServer.Worker.Core.Dtos;
 using SchrodingerServer.Worker.Core.Options;
 using SchrodingerServer.Worker.Core.Provider;
 using Volo.Abp.BackgroundWorkers;
@@ -20,9 +23,11 @@ public class SyncWorker : AsyncPeriodicBackgroundWorkerBase
     private readonly IIndexerProvider _indexerProvider;
     private readonly ConcurrentQueue<string> _finishedQueue;
     private readonly IOptionsMonitor<WorkerOptions> _options;
+    private readonly IHttpProvider _httpProvider;
 
     public SyncWorker(AbpAsyncTimer timer, IOptionsMonitor<WorkerOptions> workerOptions, ILogger<SyncWorker> logger,
-        IServiceScopeFactory serviceScopeFactory, IIndexerProvider indexerProvider, IClusterClient clusterClient) :
+        IServiceScopeFactory serviceScopeFactory, IIndexerProvider indexerProvider, IClusterClient clusterClient, 
+        IHttpProvider httpProvider) :
         base(timer, serviceScopeFactory)
     {
         _logger = logger;
@@ -30,6 +35,7 @@ public class SyncWorker : AsyncPeriodicBackgroundWorkerBase
         _clusterClient = clusterClient;
         _indexerProvider = indexerProvider;
         _finishedQueue = new();
+        _httpProvider = httpProvider;
         Timer.Period = 1000 * _options.CurrentValue.SearchTimer;
     }
 
@@ -45,7 +51,7 @@ public class SyncWorker : AsyncPeriodicBackgroundWorkerBase
         if (_latestSubscribeHeight == 0) await SearchWorkerInitializing();
 
         var chainId = _options.CurrentValue.SyncSourceChainId;
-        var blockLatestHeight = await _indexerProvider.GetIndexBlockHeightAsync(chainId);
+        var blockLatestHeight = await GetIndexBlockHeightAsync(chainId);
         if (blockLatestHeight <= _latestSubscribeHeight)
         {
             _logger.LogDebug("[Search] {chain} confirmed height hasn't been updated yet, will try later.", chainId);
@@ -166,4 +172,34 @@ public class SyncWorker : AsyncPeriodicBackgroundWorkerBase
 
     private string GenerateSyncPendingListGrainId() =>
         GuidHelper.UniqGuid(_options.CurrentValue.SyncPendingListGrainId).ToString();
+
+    private async Task<long> GetIndexBlockHeightAsync(string chainId)
+    {
+        try
+        {
+            var resp = await _httpProvider.InvokeAsync(
+                HttpMethod.Get, _options.CurrentValue.AefinderApiUrl);
+            AssertHelper.NotNull(resp, "Response empty");
+            
+            var respDto = JsonConvert.DeserializeObject<SynStateResponse>(resp);
+            _logger.LogDebug("get chain data success");
+
+            var chainData = respDto.CurrentVersion;
+            foreach (var item in chainData.Items)
+            {
+                if (item.ChainId == chainId)
+                {
+                    _logger.LogDebug("LastIrreversibleBlockHeight: {height}", item.LastIrreversibleBlockHeight);
+                    return item.LastIrreversibleBlockHeight;
+                }
+            }
+
+            return 0;
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "get chain data failed");
+            return 0;
+        }
+    }
 }

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Configuration;
 using Orleans.Providers.MongoDB.Configuration;
+using SchrodingerServer.Common.Http;
 using SchrodingerServer.Grains;
 using SchrodingerServer.Worker.Core;
 using SchrodingerServer.Worker.Core.Options;
@@ -39,6 +40,7 @@ public class SchrodingerServerWorkerModule : AbpModule
 
         ConfigureGraphQl(context, configuration);
         ConfigureOrleans(context, configuration);
+        context.Services.AddSingleton<IHttpProvider, HttpProvider>();
     }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
