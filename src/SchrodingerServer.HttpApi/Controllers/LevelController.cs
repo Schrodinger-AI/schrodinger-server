@@ -25,6 +25,6 @@ public class LevelController : AbpController
     [HttpPost("item/level")]
     public async Task<List<RankData>> GetItemLevelInfoAsync(GetLevelInfoInputDto input)
     {
-        return await _levelProvider.GetRankLevelAsync(input);
+        return await _levelProvider.GetItemLevelAsync(input);
     }
 }

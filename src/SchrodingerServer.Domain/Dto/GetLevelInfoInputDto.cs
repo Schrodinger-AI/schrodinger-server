@@ -10,4 +10,5 @@ public class GetLevelInfoInputDto
     public List<List<List<List<string>>>> CatsTraits { get; set; }
     
     public bool IsGen9 { get; set; }
+    public string SpecialTag { get; set; } = "";
 }

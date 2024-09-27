@@ -393,10 +393,10 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                     var traitType = traitsInfo.TraitType;
                     var traitValue = traitsInfo.Value;
 
-                    if (traitType == "Face" && traitValue == "WUKONG Face Paint")
-                    {
-                        traitValue = "Monkey King Face Paint";
-                    }
+                    // if (traitType == "Face" && traitValue == "WUKONG Face Paint")
+                    // {
+                    //     traitValue = "Monkey King Face Paint";
+                    // }
 
                     genTwoToNineTraitType.Add(traitType);
                     genTwoToNineTraitValue.Add(traitValue);

@@ -13,6 +13,8 @@ using SchrodingerServer.Common.HttpClient;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dto;
 using SchrodingerServer.Dtos.Cat;
+using SchrodingerServer.Dtos.TraitsDto;
+using SchrodingerServer.Helper;
 using SchrodingerServer.Options;
 using SchrodingerServer.PointServer;
 using Volo.Abp.Application.Services;
@@ -55,6 +57,26 @@ public class LevelProvider : ApplicationService, ILevelProvider
         {
             var gen1Traits = catTraits.FirstOrDefault();
             var gen2To9Traits = catTraits.LastOrDefault();
+
+            var totalTraits = gen1Traits.Zip(gen2To9Traits, (a, b) =>
+            {
+                a.AddRange(b);
+                return a;
+            }).ToList();
+
+            var traitTypes = totalTraits.FirstOrDefault();
+            var traitValues = totalTraits.LastOrDefault();
+            var traitInfo = traitTypes.Zip(traitValues, (a, b) =>
+            {
+                return new TraitsInfo
+                {
+                    TraitType = a,
+                    Value = b
+                };
+            }).ToList();
+            
+            input.SpecialTag = TraitHelper.GetSpecialTrait(_traitOptions.CurrentValue, traitInfo);
+            input.IsGen9 = traitValues.Count >= 11;
             
             // var traitValues = gen2To9Traits.LastOrDefault();
             // input.IsGen9 = traitValues.Count >= 8;
@@ -76,6 +98,42 @@ public class LevelProvider : ApplicationService, ILevelProvider
     public async Task<List<RankData>> GetItemLevelAsync(GetLevelInfoInputDto input)
     {
         _logger.LogInformation("GetItemLevelAsync param: {param} ", JsonConvert.SerializeObject(input));
+        
+        var catsTraits = input.CatsTraits;
+        foreach (var catTraits in catsTraits)
+        {
+            var gen1Traits = catTraits.FirstOrDefault();
+            var gen2To9Traits = catTraits.LastOrDefault();
+
+            var totalTraits = gen1Traits.Zip(gen2To9Traits, (a, b) =>
+            {
+                a.AddRange(b);
+                return a;
+            }).ToList();
+
+            var traitTypes = totalTraits.FirstOrDefault();
+            var traitValues = totalTraits.LastOrDefault();
+            var traitInfo = traitTypes.Zip(traitValues, (a, b) =>
+            {
+                return new TraitsInfo
+                {
+                    TraitType = a,
+                    Value = b
+                };
+            }).ToList();
+            
+            input.SpecialTag = TraitHelper.GetSpecialTrait(_traitOptions.CurrentValue, traitInfo);
+            input.IsGen9 = traitValues.Count >= 11;
+            
+            var newGen1Values = TraitHelper.ReplaceTraitValues(_traitOptions.CurrentValue, gen1Traits.FirstOrDefault(), gen1Traits.LastOrDefault());
+            gen1Traits.RemoveAt(1);
+            gen1Traits.Add(newGen1Values);
+            
+            var newGen2To9Values = TraitHelper.ReplaceTraitValues(_traitOptions.CurrentValue, gen2To9Traits.FirstOrDefault(), gen2To9Traits.LastOrDefault());
+            gen2To9Traits.RemoveAt(1);
+            gen2To9Traits.Add(newGen2To9Values);
+        }
+        
         //get rank
         List<RankData> rankDataList;
         try
@@ -128,13 +186,15 @@ public class LevelProvider : ApplicationService, ILevelProvider
         foreach (var rankData in rankDataList)
         {
             var levelInfo = await GetItemLevelDicAsync(rankData.Rank.Rank, price);
+            
             if (levelInfo == null)
             {
                 if (input.IsGen9)
                 {
                     rankData.LevelInfo = new LevelInfoDto
                     {
-                        Describe = "Common,,"
+                        Describe = "Common,,",
+                        SpecialTrait = input.SpecialTag
                     };
                 }
                 
@@ -150,8 +210,9 @@ public class LevelProvider : ApplicationService, ILevelProvider
             {
                 levelInfo.AwakenPrice = (double.Parse(levelInfo.Token) * price).ToString();
             }
+            
             rankData.LevelInfo = levelInfo;
-
+            rankData.LevelInfo.SpecialTrait = input.SpecialTag;
             if (input.IsGen9 && rankData.LevelInfo.Describe.IsNullOrEmpty())
             {
                 rankData.LevelInfo.Describe = "Common,,";
