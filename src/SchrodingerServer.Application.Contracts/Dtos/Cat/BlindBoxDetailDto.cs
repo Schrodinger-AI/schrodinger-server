@@ -16,4 +16,5 @@ public class BlindBoxDetailDto
     public bool DirectAdoption { get; set; }
     public string AdoptId { get; set; }
     public string Rarity { get; set; }
+    public string SpecialTrait { get; set; }
 }

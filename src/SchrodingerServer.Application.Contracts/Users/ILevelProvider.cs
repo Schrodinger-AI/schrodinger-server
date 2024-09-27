@@ -7,6 +7,8 @@ namespace SchrodingerServer.Users;
 public interface ILevelProvider
 {
     Task<List<RankData>> GetItemLevelAsync(GetLevelInfoInputDto input);
+    
+    Task<List<RankData>> GetRankLevelAsync(GetLevelInfoInputDto input);
 
     Task<double> GetAwakenSGRPrice();
 

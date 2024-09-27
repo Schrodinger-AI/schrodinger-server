@@ -7,6 +7,7 @@ using SchrodingerServer.Common.Options;
 using SchrodingerServer.ContractInvoke.Eto;
 using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Dtos.Faucets;
+using SchrodingerServer.Dtos.TraitsDto;
 using SchrodingerServer.Dtos.Uniswap;
 using SchrodingerServer.Grains.Grain.ContractInvoke;
 using SchrodingerServer.Grains.Grain.Faucets;
@@ -61,5 +62,6 @@ public class SchrodingerServerApplicationAutoMapperProfile : Profile
             .ForMember(t => t.Generation, m => m.MapFrom(f => f.Gen))
             .ForMember(t => t.HolderAmount, m => m.MapFrom(f => f.Amount));
         CreateMap<SchrodingerIndexerStrayCatsDto, StrayCatsListDto>();
+        CreateMap<TraitDto, TraitInfo>();
     }
 }

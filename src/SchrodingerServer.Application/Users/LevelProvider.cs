@@ -12,6 +12,7 @@ using SchrodingerServer.Common;
 using SchrodingerServer.Common.HttpClient;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dto;
+using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Options;
 using SchrodingerServer.PointServer;
 using Volo.Abp.Application.Services;
@@ -23,34 +24,55 @@ public class LevelProvider : ApplicationService, ILevelProvider
 {
     private readonly ILogger<LevelProvider> _logger;
     private readonly IOptionsMonitor<LevelOptions> _levelOptions;
-    private readonly IClusterClient _clusterClient;
-    private readonly IPointServerProvider _pointServerProvider;
-    private readonly IDistributedCache<string> _checkDomainCache;
-    private readonly IOptionsMonitor<AccessVerifyOptions> _accessVerifyOptions;
     private readonly IUserInformationProvider _userInformationProvider;
     private readonly Dictionary<string, LevelInfoDto> _levelInfoDic = new ();
     private readonly Dictionary<string, decimal> LevelMinPriceDict = new ();
     private readonly IHttpProvider _httpProvider;
     private readonly AwsS3Client _awsS3Client;
+    private readonly IOptionsMonitor<TraitOptions> _traitOptions;
 
     private static readonly JsonSerializerSettings JsonSerializerSettings = JsonSettingsBuilder.New()
         .IgnoreNullValue()
         .WithCamelCasePropertyNamesResolver()
         .WithAElfTypesConverters()
         .Build();
-
-
-    public LevelProvider(IClusterClient clusterClient, IPointServerProvider pointServerProvider,
-        ILogger<LevelProvider> logger, IDistributedCache<string> checkDomainCache,
-        IOptionsMonitor<AccessVerifyOptions> accessVerifyOptions, IUserInformationProvider userInformationProvider,IHttpProvider httpProvider, 
-        IOptionsMonitor<LevelOptions> levelOptions, AwsS3Client awsS3Client)
+    
+    public LevelProvider(
+        ILogger<LevelProvider> logger, IHttpProvider httpProvider, 
+        IOptionsMonitor<LevelOptions> levelOptions, AwsS3Client awsS3Client, IOptionsMonitor<TraitOptions> traitOptions)
     {
-        _clusterClient = clusterClient;
         _logger = logger;
         _httpProvider = httpProvider;
         _levelOptions = levelOptions;
         _awsS3Client = awsS3Client;
+        _traitOptions = traitOptions;
     }
+
+    public async Task<List<RankData>> GetRankLevelAsync(GetLevelInfoInputDto input)
+    {
+        var catsTraits = input.CatsTraits;
+        foreach (var catTraits in catsTraits)
+        {
+            var gen1Traits = catTraits.FirstOrDefault();
+            var gen2To9Traits = catTraits.LastOrDefault();
+            
+            // var traitValues = gen2To9Traits.LastOrDefault();
+            // input.IsGen9 = traitValues.Count >= 8;
+            // LinkedListNode<string> currentNode = traitValues.First;
+            // while (currentNode != null)
+            // {
+            //     if (currentNode.Value == "WUKONG Face Paint")
+            //     {
+            //         currentNode.Value = "Monkey King Face Paint";
+            //         break;
+            //     }
+            //     currentNode = currentNode.Next;
+            // }
+        }
+        
+        return await GetItemLevelAsync(input);
+    }
+    
     public async Task<List<RankData>> GetItemLevelAsync(GetLevelInfoInputDto input)
     {
         _logger.LogInformation("GetItemLevelAsync param: {param} ", JsonConvert.SerializeObject(input));

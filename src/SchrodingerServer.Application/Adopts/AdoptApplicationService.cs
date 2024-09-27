@@ -350,7 +350,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         var images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
         output.AdoptImageInfo.Images = images;
         var imageCount = adoptInfo.ImageCount;
-        if (!images.IsNullOrEmpty() && imageCount == 1)
+        if (!images.IsNullOrEmpty() && images.Count == 1)
         {
             _logger.LogInformation("ai generated image ready for direct adoption: {adoptId}", adoptId);
             var waterMarkedInfo =  await UploadAndWatermarkAsync(images[0], input.AdoptId);
