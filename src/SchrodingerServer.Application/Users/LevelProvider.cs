@@ -81,12 +81,19 @@ public class LevelProvider : ApplicationService, ILevelProvider
             input.IsGen9 = traitValues.Count >= 11;
             
             var newGen1Values = TraitHelper.ReplaceTraitValues(_traitOptions.CurrentValue, gen1Traits.FirstOrDefault(), gen1Traits.LastOrDefault());
-            gen1Traits.RemoveAt(1);
-            gen1Traits.Add(newGen1Values);
+            if (!newGen1Values.SequenceEqual(gen1Traits[1]))
+            {
+                _logger.LogInformation("gen 1 trait different, new trait: {param} ", JsonConvert.SerializeObject(newGen1Values));
+            }
+            gen1Traits[1] = newGen1Values;
+            
             
             var newGen2To9Values = TraitHelper.ReplaceTraitValues(_traitOptions.CurrentValue, gen2To9Traits.FirstOrDefault(), gen2To9Traits.LastOrDefault());
-            gen2To9Traits.RemoveAt(1);
-            gen2To9Traits.Add(newGen2To9Values);
+            if (!newGen2To9Values.SequenceEqual(gen2To9Traits[1]))
+            {
+                _logger.LogInformation("gen 2to9 trait different, new trait: {param} ", JsonConvert.SerializeObject(newGen2To9Values));
+            }
+            gen2To9Traits[1] = newGen2To9Values;
         }
         
         //get rank
