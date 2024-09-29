@@ -9,7 +9,7 @@ public static class TraitHelper
 {
     public static string GetSpecialTrait(ActivityTraitOptions activityTraitOptions, List<TraitsInfo> Traits)
     {
-        var defaultTag = "default tag";
+        var defaultTag = "";
         
         var currentTrait = activityTraitOptions.SpecialTraits.Where(x => x.Id == activityTraitOptions.CurrentId).ToList().FirstOrDefault();
         if (currentTrait == null)
