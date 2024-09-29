@@ -71,7 +71,7 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
             Address = currentAddress,
             MaxResultCount = 1000,
             SkipCount = 0,
-            FilterSymbol = chainId == "tDVV" ? "SGR" : "SGRTEST",
+            FilterSymbol = "SGR",
             ChainId = chainId
         };
         
