@@ -59,22 +59,20 @@ public class LevelProvider : ApplicationService, ILevelProvider
         {
             var gen1Traits = catTraits.FirstOrDefault();
             var gen2To9Traits = catTraits.LastOrDefault();
-
+            
             var totalTraits = gen1Traits.Zip(gen2To9Traits, (a, b) =>
             {
-                a.AddRange(b);
-                return a;
+                var x = new List<string>(a);
+                x.AddRange(b);
+                return x;
             }).ToList();
 
             var traitTypes = totalTraits.FirstOrDefault();
             var traitValues = totalTraits.LastOrDefault();
-            var traitInfo = traitTypes.Zip(traitValues, (a, b) =>
+            var traitInfo = traitTypes.Zip(traitValues, (a, b) => new TraitsInfo
             {
-                return new TraitsInfo
-                {
-                    TraitType = a,
-                    Value = b
-                };
+                TraitType = a,
+                Value = b
             }).ToList();
             
             input.SpecialTag = TraitHelper.GetSpecialTrait(_traitOptions.CurrentValue, traitInfo);
