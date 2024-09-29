@@ -76,12 +76,17 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
         };
         
         var soldIdList = await  _messageProvider.GetAllSchrodingerSoldIdAsync(getSoldListInput);
-        _logger.LogDebug("sold id list: {info}", JsonConvert.SerializeObject(soldIdList));
+        _logger.LogDebug("sold id for address: {address}, list: {info}", currentAddress, JsonConvert.SerializeObject(soldIdList));
         
         var readIdList = await _messageProvider.GetAllReadMessagesAsync(currentAddress);
-        _logger.LogDebug("read id list: {info}", JsonConvert.SerializeObject(readIdList));
+        _logger.LogDebug("read id for address: {address}, list: {info}", currentAddress, JsonConvert.SerializeObject(readIdList));
 
         var unreadIds = soldIdList.Where(x => !readIdList.Contains(x)).ToList();
+        if (unreadIds.Count > 0)
+        {
+            _logger.LogDebug("there is unread message for address: {address}", currentAddress);
+        }
+        
         
         return new UnreadMessageCountDto()
         {

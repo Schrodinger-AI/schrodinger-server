@@ -151,13 +151,14 @@ public class LevelProvider : ApplicationService, ILevelProvider
             
             if (levelInfo == null)
             {
+                rankData.LevelInfo = new LevelInfoDto
+                {
+                    SpecialTrait = input.SpecialTag
+                };
+                
                 if (input.IsGen9)
                 {
-                    rankData.LevelInfo = new LevelInfoDto
-                    {
-                        Describe = "Common,,",
-                        SpecialTrait = input.SpecialTag
-                    };
+                    rankData.LevelInfo.Describe = "Common,,";
                 }
                 
                 continue;
