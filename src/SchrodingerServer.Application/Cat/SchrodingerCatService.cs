@@ -32,14 +32,14 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     private readonly ILogger<SchrodingerCatService> _logger;
     private readonly IUserInformationProvider _userInformationProvider;
     private readonly IUserActionProvider _userActionProvider;
-    private readonly IOptionsMonitor<TraitOptions> _traitsOptions;
+    private readonly IOptionsMonitor<ActivityTraitOptions> _traitsOptions;
 
     private static readonly List<string> GenOneTraitTypes = new() { "Background", "Clothes", "Breed" };
 
     public SchrodingerCatService(ISchrodingerCatProvider schrodingerCatProvider, ILevelProvider levelProvider,
         IObjectMapper objectMapper, ILogger<SchrodingerCatService> logger, IOptionsMonitor<LevelOptions> levelOptions,
         IUserInformationProvider userInformationProvider,IUserActionProvider userActionProvider, 
-        IOptionsMonitor<TraitOptions> traitsOptions)
+        IOptionsMonitor<ActivityTraitOptions> traitsOptions)
     {
         _schrodingerCatProvider = schrodingerCatProvider;
         _levelProvider = levelProvider;

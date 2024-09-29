@@ -1,6 +1,6 @@
 namespace SchrodingerServer.Common.Options;
 
-public class TraitOptions
+public class ActivityTraitOptions
 {
     public List<SpecialTrait> SpecialTraits { get; set; } = new();
     public string CurrentId { get; set; }

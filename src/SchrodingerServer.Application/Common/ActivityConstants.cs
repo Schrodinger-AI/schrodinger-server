@@ -6,6 +6,7 @@ public class ActivityConstants
 {
     public const string SGR5RankActivityId = "f7300bd9c9a8";
     public const string SGR7RankActivityId = "aea8b6b15364";
+    public const string ElonCatS1ActivityId = "217c8c563028";
     
     
     public static Dictionary<string, decimal> LevelPriceDictionary = new Dictionary<string, decimal>

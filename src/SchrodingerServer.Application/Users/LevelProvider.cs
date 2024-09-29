@@ -31,7 +31,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
     private readonly Dictionary<string, decimal> LevelMinPriceDict = new ();
     private readonly IHttpProvider _httpProvider;
     private readonly AwsS3Client _awsS3Client;
-    private readonly IOptionsMonitor<TraitOptions> _traitOptions;
+    private readonly IOptionsMonitor<ActivityTraitOptions> _traitOptions;
 
     private static readonly JsonSerializerSettings JsonSerializerSettings = JsonSettingsBuilder.New()
         .IgnoreNullValue()
@@ -41,58 +41,13 @@ public class LevelProvider : ApplicationService, ILevelProvider
     
     public LevelProvider(
         ILogger<LevelProvider> logger, IHttpProvider httpProvider, 
-        IOptionsMonitor<LevelOptions> levelOptions, AwsS3Client awsS3Client, IOptionsMonitor<TraitOptions> traitOptions)
+        IOptionsMonitor<LevelOptions> levelOptions, AwsS3Client awsS3Client, IOptionsMonitor<ActivityTraitOptions> traitOptions)
     {
         _logger = logger;
         _httpProvider = httpProvider;
         _levelOptions = levelOptions;
         _awsS3Client = awsS3Client;
         _traitOptions = traitOptions;
-    }
-
-    public async Task<List<RankData>> GetRankLevelAsync(GetLevelInfoInputDto input)
-    {
-        var catsTraits = input.CatsTraits;
-        foreach (var catTraits in catsTraits)
-        {
-            var gen1Traits = catTraits.FirstOrDefault();
-            var gen2To9Traits = catTraits.LastOrDefault();
-
-            var totalTraits = gen1Traits.Zip(gen2To9Traits, (a, b) =>
-            {
-                a.AddRange(b);
-                return a;
-            }).ToList();
-
-            var traitTypes = totalTraits.FirstOrDefault();
-            var traitValues = totalTraits.LastOrDefault();
-            var traitInfo = traitTypes.Zip(traitValues, (a, b) =>
-            {
-                return new TraitsInfo
-                {
-                    TraitType = a,
-                    Value = b
-                };
-            }).ToList();
-            
-            input.SpecialTag = TraitHelper.GetSpecialTrait(_traitOptions.CurrentValue, traitInfo);
-            input.IsGen9 = traitValues.Count >= 11;
-            
-            // var traitValues = gen2To9Traits.LastOrDefault();
-            // input.IsGen9 = traitValues.Count >= 8;
-            // LinkedListNode<string> currentNode = traitValues.First;
-            // while (currentNode != null)
-            // {
-            //     if (currentNode.Value == "WUKONG Face Paint")
-            //     {
-            //         currentNode.Value = "Monkey King Face Paint";
-            //         break;
-            //     }
-            //     currentNode = currentNode.Next;
-            // }
-        }
-        
-        return await GetItemLevelAsync(input);
     }
     
     public async Task<List<RankData>> GetItemLevelAsync(GetLevelInfoInputDto input)

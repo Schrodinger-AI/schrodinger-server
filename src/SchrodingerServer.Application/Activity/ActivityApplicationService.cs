@@ -260,7 +260,7 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 StartTime = TimeHelper.ToUtcMilliSeconds(inprogressStageTime.StartTime),
                 EndTime = TimeHelper.ToUtcMilliSeconds(inprogressStageTime.EndTime)
             },
-            Displayed = new StageTime
+            Displayed = displayedStageTime == null ? null : new StageTime
             {
                 StartTime = TimeHelper.ToUtcMilliSeconds(displayedStageTime.StartTime),
                 EndTime = TimeHelper.ToUtcMilliSeconds(displayedStageTime.EndTime)
@@ -290,6 +290,14 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 return GetInProgressStageTimeForSGR5();
             case ActivityConstants.SGR7RankActivityId:
                 return GetInProgressStageTimeForSGR7();
+            case ActivityConstants.ElonCatS1ActivityId:
+                var activityOptions = _activityOptions.CurrentValue;
+                var elonCateS1Config = activityOptions.ActivityList.FirstOrDefault(x => x.ActivityId == ActivityConstants.ElonCatS1ActivityId);
+                return new StageTimeInDateTime
+                {
+                    StartTime = TimeHelper.GetDateTimeFromTimeStamp(elonCateS1Config.BeginTime),
+                    EndTime = TimeHelper.GetDateTimeFromTimeStamp(elonCateS1Config.EndTime)
+                };
             default:
                 return GetInProgressStageTimeForSGR5();
         }
@@ -362,6 +370,8 @@ public class ActivityApplicationService : ApplicationService, IActivityApplicati
                 return GetDisplayedStageTimeForSGR5();
             case ActivityConstants.SGR7RankActivityId:
                 return GetDisplayedStageTimeForSGR7();
+            case ActivityConstants.ElonCatS1ActivityId:
+                return null;
             default:
                 return GetDisplayedStageTimeForSGR5();
         }

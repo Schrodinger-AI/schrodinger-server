@@ -7,11 +7,11 @@ namespace SchrodingerServer.Helper;
 
 public static class TraitHelper
 {
-    public static string GetSpecialTrait(TraitOptions traitOptions, List<TraitsInfo> Traits)
+    public static string GetSpecialTrait(ActivityTraitOptions activityTraitOptions, List<TraitsInfo> Traits)
     {
         var defaultTag = "Elon S1";
         
-        var currentTrait = traitOptions.SpecialTraits.Where(x => x.Id == traitOptions.CurrentId).ToList().FirstOrDefault();
+        var currentTrait = activityTraitOptions.SpecialTraits.Where(x => x.Id == activityTraitOptions.CurrentId).ToList().FirstOrDefault();
         if (currentTrait == null)
         {
             return defaultTag;
@@ -36,7 +36,7 @@ public static class TraitHelper
     }
     
     
-    public static List<string> ReplaceTraitValues(TraitOptions traitOptions, List<string> traitTypes, List<string> traitValues)
+    public static List<string> ReplaceTraitValues(ActivityTraitOptions activityTraitOptions, List<string> traitTypes, List<string> traitValues)
     {
         var newValues = new List<string>();
 
@@ -47,7 +47,7 @@ public static class TraitHelper
             var traitValue = traitValues[i];
             var newValue = traitValue;
             
-            foreach (var specialTrait in traitOptions.SpecialTraits)
+            foreach (var specialTrait in activityTraitOptions.SpecialTraits)
             {
                 var replaceItems = specialTrait.ReplaceTraits;
                 if (!replaceItems.ContainsKey(traitType))
