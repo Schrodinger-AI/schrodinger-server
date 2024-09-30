@@ -78,6 +78,7 @@ namespace SchrodingerServer
             Configure<PointTradeOptions>(configuration.GetSection("PointTradeOptions"));
             Configure<ActivityOptions>(configuration.GetSection("ActivityOptions"));
             Configure<ActivityRankOptions>(configuration.GetSection("ActivityRankOptions"));
+            Configure<ActivityTraitOptions>(configuration.GetSection("ActivityTraitOptions"));
 
             ConfigureConventionalControllers();
             ConfigureAuthentication(context, configuration);

@@ -20,6 +20,8 @@ public class LevelInfoDto
 
     public string AwakenPrice{ get; set; }
     
+    public string SpecialTrait { get; set; }
+    
     public LevelInfoDto DeepCopy()
     {
         var json = JsonConvert.SerializeObject(this);

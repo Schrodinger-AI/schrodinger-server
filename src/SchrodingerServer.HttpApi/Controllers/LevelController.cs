@@ -25,27 +25,6 @@ public class LevelController : AbpController
     [HttpPost("item/level")]
     public async Task<List<RankData>> GetItemLevelInfoAsync(GetLevelInfoInputDto input)
     {
-        var catsTraits = input.CatsTraits;
-        foreach (var catTraits in catsTraits)
-        {
-            var gen2To9Traits = catsTraits.LastOrDefault();
-            foreach (var traits in gen2To9Traits)
-            {
-                var traitValues = traits.LastOrDefault();
-                input.IsGen9 = traitValues.Count >= 8;
-                LinkedListNode<string> currentNode = traitValues.First;
-                while (currentNode != null)
-                {
-                    if (currentNode.Value == "WUKONG Face Paint")
-                    {
-                        currentNode.Value = "Monkey King Face Paint";
-                        break;
-                    }
-                    currentNode = currentNode.Next;
-                }
-            }
-        }
-        
         return await _levelProvider.GetItemLevelAsync(input);
     }
 }

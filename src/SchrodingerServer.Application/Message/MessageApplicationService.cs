@@ -71,17 +71,22 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
             Address = currentAddress,
             MaxResultCount = 1000,
             SkipCount = 0,
-            FilterSymbol = chainId == "tDVV" ? "SGR" : "SGRTEST",
+            FilterSymbol = "SGR",
             ChainId = chainId
         };
         
         var soldIdList = await  _messageProvider.GetAllSchrodingerSoldIdAsync(getSoldListInput);
-        _logger.LogDebug("sold id list: {info}", JsonConvert.SerializeObject(soldIdList));
+        _logger.LogDebug("sold id for address: {address}, list: {info}", currentAddress, JsonConvert.SerializeObject(soldIdList));
         
         var readIdList = await _messageProvider.GetAllReadMessagesAsync(currentAddress);
-        _logger.LogDebug("read id list: {info}", JsonConvert.SerializeObject(readIdList));
+        _logger.LogDebug("read id for address: {address}, list: {info}", currentAddress, JsonConvert.SerializeObject(readIdList));
 
         var unreadIds = soldIdList.Where(x => !readIdList.Contains(x)).ToList();
+        if (unreadIds.Count > 0)
+        {
+            _logger.LogDebug("there is unread message for address: {address}", currentAddress);
+        }
+        
         
         return new UnreadMessageCountDto()
         {
@@ -113,17 +118,19 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
             FilterSymbol = "SGR",
             ChainId = chainId
         };
-        var schrodingerIndexerListDto = await _messageProvider.GetSchrodingerSoldListAsync(getSoldListInput);
+        // var schrodingerIndexerListDto = await _messageProvider.GetSchrodingerSoldListAsync(getSoldListInput);
+        var schrodingerIndexerListDto = await GetAllSoldRecordAsync(getSoldListInput);
         _logger.LogDebug("GetSchrodingerSoldList: {info}", JsonConvert.SerializeObject(schrodingerIndexerListDto));
 
         if (schrodingerIndexerListDto == null || schrodingerIndexerListDto.TotalRecordCount == 0)
         {
             return response;
         }
-
+        
+        var data = schrodingerIndexerListDto.Data.Skip(input.SkipCount).Take(input.MaxResultCount);
         var messageInfoList = new List<MessageInfo>();
         var price = await _levelProvider.GetAwakenSGRPrice();
-        foreach (var soldDto in schrodingerIndexerListDto.Data)
+        foreach (var soldDto in data)
         {
             _logger.LogDebug("sold info: {info}", JsonConvert.SerializeObject(soldDto));
             var messageInfo = _objectMapper.Map<NFTActivityIndexDto, MessageInfo>(soldDto);
@@ -189,6 +196,41 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
         response.Data = messageInfoList;
         response.TotalCount = schrodingerIndexerListDto.TotalRecordCount;
         return response;
+    }
+    
+    private async Task<NFTActivityIndexListDto> GetAllSoldRecordAsync(GetSchrodingerSoldListInput input)
+    {
+        var list = new List<NFTActivityIndexDto>();
+        var count = 0;
+        var newInput = new GetSchrodingerSoldListInput
+        {
+            Address = input.Address,
+            FilterSymbol = input.FilterSymbol,
+            ChainId = input.ChainId,
+            MaxResultCount = 100,
+            SkipCount = 0
+        };
+        
+        do
+        {
+            var data = await _messageProvider.GetSchrodingerSoldListAsync(newInput);
+            if (!data.Data.IsNullOrEmpty())
+            {
+                list.AddRange(data.Data);
+                count += data.Data.Count;
+                newInput.SkipCount += newInput.MaxResultCount;
+            }
+            else
+            {
+                break;
+            }
+        } while (true);
+
+        return new NFTActivityIndexListDto
+        {
+            TotalRecordCount = count,
+            Data = list
+        };
     }
     
     private static string RemovePrefix(string input)

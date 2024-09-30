@@ -8,8 +8,10 @@ using Newtonsoft.Json;
 using SchrodingerServer.Cat.Provider;
 using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.Common;
+using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dto;
 using SchrodingerServer.Dtos.Cat;
+using SchrodingerServer.Helper;
 using SchrodingerServer.Options;
 using SchrodingerServer.Users;
 using Volo.Abp;
@@ -30,12 +32,14 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     private readonly ILogger<SchrodingerCatService> _logger;
     private readonly IUserInformationProvider _userInformationProvider;
     private readonly IUserActionProvider _userActionProvider;
+    private readonly IOptionsMonitor<ActivityTraitOptions> _traitsOptions;
 
     private static readonly List<string> GenOneTraitTypes = new() { "Background", "Clothes", "Breed" };
 
     public SchrodingerCatService(ISchrodingerCatProvider schrodingerCatProvider, ILevelProvider levelProvider,
         IObjectMapper objectMapper, ILogger<SchrodingerCatService> logger, IOptionsMonitor<LevelOptions> levelOptions,
-        IUserInformationProvider userInformationProvider,IUserActionProvider userActionProvider)
+        IUserInformationProvider userInformationProvider,IUserActionProvider userActionProvider, 
+        IOptionsMonitor<ActivityTraitOptions> traitsOptions)
     {
         _schrodingerCatProvider = schrodingerCatProvider;
         _levelProvider = levelProvider;
@@ -44,6 +48,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         _levelOptions = levelOptions;
         _userInformationProvider = userInformationProvider;
         _userActionProvider = userActionProvider;
+        _traitsOptions = traitsOptions;
     }
 
     public async Task<SchrodingerListDto> GetSchrodingerCatListAsync(GetCatListInput input)
@@ -94,6 +99,12 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             
             result.Data = data;
             result.TotalCount = schrodingerIndexerListDto.TotalCount;
+        }
+
+        foreach (var item in result.Data)
+        {
+            var specialTag = TraitHelper.GetSpecialTrait(_traitsOptions.CurrentValue, item.Traits);
+            item.SpecialTrait = specialTag;
         }
 
         return result;
@@ -239,6 +250,9 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             {
                 item.Describe = "Common,,";
             }
+            
+            var specialTag = TraitHelper.GetSpecialTrait(_traitsOptions.CurrentValue, item.Traits);
+            item.SpecialTrait = specialTag;
         });
         
         result.Data = list;
@@ -298,7 +312,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             {
                 Address = input.Address,
                 SearchAddress = input.SearchAddress,
-                CatsTraits = new LinkedList<LinkedList<LinkedList<LinkedList<string>>>>(batchItems)
+                CatsTraits = new List<List<List<List<string>>>>(batchItems)
             };
 
             var batchResult = await _levelProvider.GetItemLevelAsync(batchInput);
@@ -310,49 +324,97 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     private static GetLevelInfoInputDto BuildParams(List<List<TraitsInfo>> traitInfosList, string address,
         string chainId, string searchAddress = "")
     {
-        var catsTraits = new LinkedList<LinkedList<LinkedList<LinkedList<string>>>>();
+        // var catsTraits = new LinkedList<LinkedList<LinkedList<LinkedList<string>>>>();
+        // foreach (var traitsInfos in traitInfosList)
+        // {
+        //     var catTraits = new LinkedList<LinkedList<LinkedList<string>>>();
+        //     var genOneTraits = new LinkedList<LinkedList<string>>();
+        //     var genTwoToNineTraits = new LinkedList<LinkedList<string>>();
+        //     var genOneTraitType = new LinkedList<string>();
+        //     var genOneTraitValue = new LinkedList<string>();
+        //
+        //     var genTwoToNineTraitType = new LinkedList<string>();
+        //     var genTwoToNineTraitValue = new LinkedList<string>();
+        //     foreach (var traitsInfo in traitsInfos)
+        //     {
+        //         if (GenOneTraitTypes.Contains(traitsInfo.TraitType))
+        //         {
+        //             genOneTraitType.AddLast(traitsInfo.TraitType);
+        //             genOneTraitValue.AddLast(traitsInfo.Value);
+        //         }
+        //         else
+        //         {
+        //             var traitType = traitsInfo.TraitType;
+        //             var traitValue = traitsInfo.Value;
+        //                 
+        //             if (traitType == "Face" && traitValue == "WUKONG Face Paint")
+        //             {
+        //                 traitValue = "Monkey King Face Paint";
+        //             }
+        //             
+        //             genTwoToNineTraitType.AddLast(traitType);
+        //             genTwoToNineTraitValue.AddLast(traitValue);
+        //         }
+        //     }
+        //
+        //     genOneTraits.AddLast(genOneTraitType);
+        //     genOneTraits.AddLast(genOneTraitValue);
+        //
+        //     genTwoToNineTraits.AddLast(genTwoToNineTraitType);
+        //     genTwoToNineTraits.AddLast(genTwoToNineTraitValue);
+        //
+        //     catTraits.AddLast(genOneTraits);
+        //     catTraits.AddLast(genTwoToNineTraits);
+        //     catsTraits.AddLast(catTraits);
+        // }
+        
+        var catsTraits = new List<List<List<List<string>>>>();
         foreach (var traitsInfos in traitInfosList)
         {
-            var catTraits = new LinkedList<LinkedList<LinkedList<string>>>();
-            var genOneTraits = new LinkedList<LinkedList<string>>();
-            var genTwoToNineTraits = new LinkedList<LinkedList<string>>();
-            var genOneTraitType = new LinkedList<string>();
-            var genOneTraitValue = new LinkedList<string>();
+            var catTraits = new List<List<List<string>>>();
+            var genOneTraits = new List<List<string>>();
+            var genTwoToNineTraits = new List<List<string>>();
+    
+            var genOneTraitType = new List<string>();
+            var genOneTraitValue = new List<string>();
 
-            var genTwoToNineTraitType = new LinkedList<string>();
-            var genTwoToNineTraitValue = new LinkedList<string>();
+            var genTwoToNineTraitType = new List<string>();
+            var genTwoToNineTraitValue = new List<string>();
+
             foreach (var traitsInfo in traitsInfos)
             {
                 if (GenOneTraitTypes.Contains(traitsInfo.TraitType))
                 {
-                    genOneTraitType.AddLast(traitsInfo.TraitType);
-                    genOneTraitValue.AddLast(traitsInfo.Value);
+                    genOneTraitType.Add(traitsInfo.TraitType);
+                    genOneTraitValue.Add(traitsInfo.Value);
                 }
                 else
                 {
                     var traitType = traitsInfo.TraitType;
                     var traitValue = traitsInfo.Value;
-                        
-                    if (traitType == "Face" && traitValue == "WUKONG Face Paint")
-                    {
-                        traitValue = "Monkey King Face Paint";
-                    }
-                    
-                    genTwoToNineTraitType.AddLast(traitType);
-                    genTwoToNineTraitValue.AddLast(traitValue);
+
+                    // if (traitType == "Face" && traitValue == "WUKONG Face Paint")
+                    // {
+                    //     traitValue = "Monkey King Face Paint";
+                    // }
+
+                    genTwoToNineTraitType.Add(traitType);
+                    genTwoToNineTraitValue.Add(traitValue);
                 }
             }
 
-            genOneTraits.AddLast(genOneTraitType);
-            genOneTraits.AddLast(genOneTraitValue);
+            genOneTraits.Add(genOneTraitType);
+            genOneTraits.Add(genOneTraitValue);
 
-            genTwoToNineTraits.AddLast(genTwoToNineTraitType);
-            genTwoToNineTraits.AddLast(genTwoToNineTraitValue);
+            genTwoToNineTraits.Add(genTwoToNineTraitType);
+            genTwoToNineTraits.Add(genTwoToNineTraitValue);
 
-            catTraits.AddLast(genOneTraits);
-            catTraits.AddLast(genTwoToNineTraits);
-            catsTraits.AddLast(catTraits);
+            catTraits.Add(genOneTraits);
+            catTraits.Add(genTwoToNineTraits);
+
+            catsTraits.Add(catTraits);
         }
+        
 
         return new GetLevelInfoInputDto
         {
@@ -422,12 +484,16 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
         
         var nftInfoDict = nftInfoList.ToDictionary(i => i.NftSymbol, i => i);
-        list.Data.ForEach(i =>
+        list.Data.ForEach(item =>
         {
-            if (nftInfoDict.TryGetValue(i.Symbol, out var value))
+            if (nftInfoDict.TryGetValue(item.Symbol, out var value))
             {
-                i.ForestPrice = value.ListingPrice;
+                item.ForestPrice = value.ListingPrice;
             }
+            
+            var specialTag = TraitHelper.GetSpecialTrait(_traitsOptions.CurrentValue, item.Traits);
+            item.SpecialTrait = specialTag;
+            
         });
 
         return list;
@@ -452,12 +518,16 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
         
         var nftInfoDict = nftInfoList.ToDictionary(i => i.NftSymbol, i => i);
-        list.Data.ForEach(i =>
+        list.Data.ForEach(item =>
         {
-            if (nftInfoDict.TryGetValue(i.Symbol, out var value))
+            if (nftInfoDict.TryGetValue(item.Symbol, out var value))
             {
-                i.ForestPrice = value.ListingPrice;
+                item.ForestPrice = value.ListingPrice;
             }
+            
+            var specialTag = TraitHelper.GetSpecialTrait(_traitsOptions.CurrentValue, item.Traits);
+            item.SpecialTrait = specialTag;
+            
         });
 
         return list;
@@ -552,6 +622,10 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             {
                 x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet : BoxImageConst.NonGen9Box;
             }
+            
+            var specialTag = TraitHelper.GetSpecialTrait(_traitsOptions.CurrentValue, _objectMapper.Map<List<TraitDto>, List<TraitsInfo>>(x.Traits));
+            x.SpecialTrait = specialTag;
+            
         });
         
         resp.Data = boxList.Skip(input.SkipCount).Take(input.MaxResultCount).ToList();
@@ -584,6 +658,9 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet :  BoxImageConst.NonGen9Box;
         }
+        
+        var specialTag = TraitHelper.GetSpecialTrait(_traitsOptions.CurrentValue, _objectMapper.Map<List<TraitDto>, List<TraitsInfo>>(resp.Traits));
+        resp.SpecialTrait = specialTag;
 
         return resp;
     }

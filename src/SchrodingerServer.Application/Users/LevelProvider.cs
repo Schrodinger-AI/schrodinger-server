@@ -12,6 +12,9 @@ using SchrodingerServer.Common;
 using SchrodingerServer.Common.HttpClient;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dto;
+using SchrodingerServer.Dtos.Cat;
+using SchrodingerServer.Dtos.TraitsDto;
+using SchrodingerServer.Helper;
 using SchrodingerServer.Options;
 using SchrodingerServer.PointServer;
 using Volo.Abp.Application.Services;
@@ -23,37 +26,74 @@ public class LevelProvider : ApplicationService, ILevelProvider
 {
     private readonly ILogger<LevelProvider> _logger;
     private readonly IOptionsMonitor<LevelOptions> _levelOptions;
-    private readonly IClusterClient _clusterClient;
-    private readonly IPointServerProvider _pointServerProvider;
-    private readonly IDistributedCache<string> _checkDomainCache;
-    private readonly IOptionsMonitor<AccessVerifyOptions> _accessVerifyOptions;
     private readonly IUserInformationProvider _userInformationProvider;
     private readonly Dictionary<string, LevelInfoDto> _levelInfoDic = new ();
     private readonly Dictionary<string, decimal> LevelMinPriceDict = new ();
     private readonly IHttpProvider _httpProvider;
     private readonly AwsS3Client _awsS3Client;
+    private readonly IOptionsMonitor<ActivityTraitOptions> _traitOptions;
 
     private static readonly JsonSerializerSettings JsonSerializerSettings = JsonSettingsBuilder.New()
         .IgnoreNullValue()
         .WithCamelCasePropertyNamesResolver()
         .WithAElfTypesConverters()
         .Build();
-
-
-    public LevelProvider(IClusterClient clusterClient, IPointServerProvider pointServerProvider,
-        ILogger<LevelProvider> logger, IDistributedCache<string> checkDomainCache,
-        IOptionsMonitor<AccessVerifyOptions> accessVerifyOptions, IUserInformationProvider userInformationProvider,IHttpProvider httpProvider, 
-        IOptionsMonitor<LevelOptions> levelOptions, AwsS3Client awsS3Client)
+    
+    public LevelProvider(
+        ILogger<LevelProvider> logger, IHttpProvider httpProvider, 
+        IOptionsMonitor<LevelOptions> levelOptions, AwsS3Client awsS3Client, IOptionsMonitor<ActivityTraitOptions> traitOptions)
     {
-        _clusterClient = clusterClient;
         _logger = logger;
         _httpProvider = httpProvider;
         _levelOptions = levelOptions;
         _awsS3Client = awsS3Client;
+        _traitOptions = traitOptions;
     }
+    
     public async Task<List<RankData>> GetItemLevelAsync(GetLevelInfoInputDto input)
     {
         _logger.LogInformation("GetItemLevelAsync param: {param} ", JsonConvert.SerializeObject(input));
+        
+        var catsTraits = input.CatsTraits;
+        foreach (var catTraits in catsTraits)
+        {
+            var gen1Traits = catTraits.FirstOrDefault();
+            var gen2To9Traits = catTraits.LastOrDefault();
+            
+            var totalTraits = gen1Traits.Zip(gen2To9Traits, (a, b) =>
+            {
+                var x = new List<string>(a);
+                x.AddRange(b);
+                return x;
+            }).ToList();
+
+            var traitTypes = totalTraits.FirstOrDefault();
+            var traitValues = totalTraits.LastOrDefault();
+            var traitInfo = traitTypes.Zip(traitValues, (a, b) => new TraitsInfo
+            {
+                TraitType = a,
+                Value = b
+            }).ToList();
+            
+            input.SpecialTag = TraitHelper.GetSpecialTrait(_traitOptions.CurrentValue, traitInfo);
+            input.IsGen9 = traitValues.Count >= 11;
+            
+            var newGen1Values = TraitHelper.ReplaceTraitValues(_traitOptions.CurrentValue, gen1Traits.FirstOrDefault(), gen1Traits.LastOrDefault());
+            if (!newGen1Values.SequenceEqual(gen1Traits[1]))
+            {
+                _logger.LogInformation("gen 1 trait different, new trait: {param} ", JsonConvert.SerializeObject(newGen1Values));
+            }
+            gen1Traits[1] = newGen1Values;
+            
+            
+            var newGen2To9Values = TraitHelper.ReplaceTraitValues(_traitOptions.CurrentValue, gen2To9Traits.FirstOrDefault(), gen2To9Traits.LastOrDefault());
+            if (!newGen2To9Values.SequenceEqual(gen2To9Traits[1]))
+            {
+                _logger.LogInformation("gen 2to9 trait different, new trait: {param} ", JsonConvert.SerializeObject(newGen2To9Values));
+            }
+            gen2To9Traits[1] = newGen2To9Values;
+        }
+        
         //get rank
         List<RankData> rankDataList;
         try
@@ -106,14 +146,17 @@ public class LevelProvider : ApplicationService, ILevelProvider
         foreach (var rankData in rankDataList)
         {
             var levelInfo = await GetItemLevelDicAsync(rankData.Rank.Rank, price);
+            
             if (levelInfo == null)
             {
+                rankData.LevelInfo = new LevelInfoDto
+                {
+                    SpecialTrait = input.SpecialTag
+                };
+                
                 if (input.IsGen9)
                 {
-                    rankData.LevelInfo = new LevelInfoDto
-                    {
-                        Describe = "Common,,"
-                    };
+                    rankData.LevelInfo.Describe = "Common,,";
                 }
                 
                 continue;
@@ -128,8 +171,9 @@ public class LevelProvider : ApplicationService, ILevelProvider
             {
                 levelInfo.AwakenPrice = (double.Parse(levelInfo.Token) * price).ToString();
             }
+            
             rankData.LevelInfo = levelInfo;
-
+            rankData.LevelInfo.SpecialTrait = input.SpecialTag;
             if (input.IsGen9 && rankData.LevelInfo.Describe.IsNullOrEmpty())
             {
                 rankData.LevelInfo.Describe = "Common,,";

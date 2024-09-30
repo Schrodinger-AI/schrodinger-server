@@ -23,6 +23,7 @@ public class BlindBoxDto
     public string Describe { get; set; }
     public string InscriptionImageUri { get; set; }
     public List<TraitDto> Traits { get; set; }
+    public string SpecialTrait { get; set; }
 }
 
 public class BoxImageConst
