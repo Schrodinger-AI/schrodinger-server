@@ -17,10 +17,12 @@ using SchrodingerServer.Grains.State.ZealyScore;
 using SchrodingerServer.Message.Dtos;
 using SchrodingerServer.Message.Provider.Dto;
 using SchrodingerServer.ScoreRepair.Dtos;
+using SchrodingerServer.Tasks.Dtos;
 using SchrodingerServer.Uniswap.Index;
 using SchrodingerServer.Users;
 using SchrodingerServer.Users.Dto;
 using SchrodingerServer.Users.Eto;
+using SchrodingerServer.Users.Index;
 using SchrodingerServer.Zealy;
 using RankItem = SchrodingerServer.Dtos.Cat.RankItem;
 
@@ -63,5 +65,9 @@ public class SchrodingerServerApplicationAutoMapperProfile : Profile
             .ForMember(t => t.HolderAmount, m => m.MapFrom(f => f.Amount));
         CreateMap<SchrodingerIndexerStrayCatsDto, StrayCatsListDto>();
         CreateMap<TraitDto, TraitsInfo>();
+        CreateMap<TasksIndex, TasksDto>();
+        CreateMap<TaskConfig, TasksDto>();
+        CreateMap<TasksDto, TaskData>();
+        CreateMap<TasksDto, ClaimOutput>();
     }
 }
