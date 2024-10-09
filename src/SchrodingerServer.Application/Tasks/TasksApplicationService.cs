@@ -25,6 +25,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     private readonly IObjectMapper _objectMapper;
     private readonly IUserActionProvider _userActionProvider;
     private readonly IAbpDistributedLock _distributedLock;
+    private const string LoginTaskId = "login";
+    private const string InviteTaskId = "invite";
     
     public TasksApplicationService(
         ITasksProvider tasksProvider, 
@@ -81,19 +83,31 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
         if (dailyTaskList.IsNullOrEmpty())
         {
-            var newTasks = _objectMapper.Map<List<TaskConfig>, List<TasksDto>>(taskInfoList);
-            foreach (var tasksDto in newTasks)
+            dailyTaskList = _objectMapper.Map<List<TaskConfig>, List<TasksDto>>(taskInfoList);
+            foreach (var tasksDto in dailyTaskList)
             { 
                 tasksDto.CreatedTime = DateTime.UtcNow;
                 tasksDto.UpdatedTime = DateTime.UtcNow;
                 tasksDto.Date = bizDate;
-                tasksDto.Status = UserTaskStatus.Created;
+                tasksDto.Status = tasksDto.TaskId == LoginTaskId ? UserTaskStatus.Finished : UserTaskStatus.Created;
                 tasksDto.Address = address;
                 tasksDto.Id = bizDate + address + tasksDto.TaskId;
             }
-            await  _tasksProvider.AddTasksAsync(newTasks);
-            _logger.LogDebug("add task for address:{address}, tasks:{tasks}", address, newTasks);
-            return newTasks;
+            await _tasksProvider.AddTasksAsync(dailyTaskList);
+            _logger.LogDebug("add task for address:{address}, tasks:{tasks}", address, dailyTaskList);
+        }
+        
+        foreach (var tasksDto in dailyTaskList)
+        {
+            if (tasksDto.TaskId == InviteTaskId && tasksDto.Status == UserTaskStatus.Created)
+            {
+                var inviterRecordsToday = await _tasksProvider.GetInviteRecordsToday(new List<string> { tasksDto.Address });
+                if (!inviterRecordsToday.IsNullOrEmpty())
+                {
+                    tasksDto.Status = UserTaskStatus.Finished;
+                    await _tasksProvider.AddTasksAsync(new List<TasksDto> { tasksDto });
+                }
+            }
         }
         
         return dailyTaskList;

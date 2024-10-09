@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using AElf.Indexing.Elasticsearch;
+using GraphQL;
 using Microsoft.Extensions.Logging;
 using Nest;
+using SchrodingerServer.Common;
 using SchrodingerServer.Common.GraphQL;
 using SchrodingerServer.Tasks.Dtos;
 using SchrodingerServer.Users.Index;
@@ -21,6 +24,7 @@ public interface ITasksProvider
     Task<decimal> UpdateUserTaskScoreAsync(string address, decimal score);
     Task AddTaskScoreDetailAsync(AddTaskScoreDetailInput input);
     Task<decimal> GetScoreAsync(string address);
+    Task<List<UserReferralDto>> GetInviteRecordsToday(List<string> addressList);
 }
 
 public class TasksProvider : ITasksProvider, ISingletonDependency
@@ -177,5 +181,59 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         }
 
         return 0;
+    }
+    
+    public async Task<List<UserReferralDto>> GetInviteRecordsToday(List<string> addressList)
+    {
+        var res = new List<UserReferralDto>();
+        var skipCount = 0;
+        var maxResultCount = 5000;
+        List<UserReferralDto> list;
+        do
+        {
+            list = await GetUserReferralRecordsAsync(addressList, skipCount, maxResultCount);
+            var count = list.Count;
+            res.AddRange(list);
+            if (list.IsNullOrEmpty() || count < maxResultCount)
+            {
+                break;
+            }
+
+            skipCount += count;
+        } while (!list.IsNullOrEmpty());
+        
+        DateTime currentUtcTime = DateTime.UtcNow;
+        DateTime todayUtcStart = new DateTime(currentUtcTime.Year, currentUtcTime.Month, currentUtcTime.Day, 0, 0, 0, DateTimeKind.Utc);
+        var dayInMillis = TimeHelper.ToUtcMilliSeconds(todayUtcStart);
+        list = list.Where(i => i.CreateTime >= dayInMillis).ToList();
+        return list;
+    }
+    
+    private async Task<List<UserReferralDto>> GetUserReferralRecordsAsync(List<string> addressList, long skipCount = 0,
+        long maxResultCount = 1000)
+    {
+        var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.PointPlatform).SendQueryAsync<UserReferralQueryResultDto>(new GraphQLRequest
+        {
+            Query =
+                @"query($referrerList:[String!]!,$skipCount:Int!,$maxResultCount:Int!){
+                    getUserReferralRecords(input: {referrerList:$referrerList,skipCount:$skipCount,maxResultCount:$maxResultCount}){
+                        totalRecordCount
+                        data{
+                          domain
+                          dappId
+                          referrer
+                          invitee
+                          inviter
+                          createTime
+                    }
+                }
+            }",
+            Variables = new
+            {
+                referrerList = addressList, skipCount = skipCount, maxResultCount = maxResultCount
+            }
+        });
+        return res.Data?.GetUserReferralRecords.Data;
+        
     }
 }
