@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Orleans.Providers.MongoDB" Version="7.0.0" />  
       <PackageReference Include="Com.Ctrip.Framework.Apollo.Configuration" Version="2.10.2" />  
       <PackageReference Include="GraphQL.Client" Version="5.1.0" />
       <PackageReference Include="GraphQL.Client.Serializer.Newtonsoft" Version="5.1.0" />

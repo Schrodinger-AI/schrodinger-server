@@ -103,7 +103,7 @@ public class SchrodingerServerAuthServerModule : AbpModule
             option.TimeRange = Convert.ToInt32(configuration["TimeRange"]);
         });
         
-        ConfigureOrleans(context, configuration);
+        // ConfigureOrleans(context, configuration);
         context.Services.AddSingleton<IUserInformationProvider, UserInformationProvider>();
         context.Services.AddTransient<SignatureGrantHandler>();
         
@@ -221,35 +221,35 @@ public class SchrodingerServerAuthServerModule : AbpModule
         });
     }
     
-    private static void ConfigureOrleans(ServiceConfigurationContext context, IConfiguration configuration)
-    {
-        context.Services.AddSingleton<IClusterClient>(o =>
-        {
-            return new ClientBuilder()
-                .ConfigureDefaults()
-                .UseMongoDBClient(configuration["Orleans:MongoDBClient"])
-                .UseMongoDBClustering(options =>
-                {
-                    options.DatabaseName = configuration["Orleans:DataBase"];;
-                    options.Strategy = MongoDBMembershipStrategy.SingleDocument;
-                })
-                .Configure<ClusterOptions>(options =>
-                {
-                    options.ClusterId = configuration["Orleans:ClusterId"];
-                    options.ServiceId = configuration["Orleans:ServiceId"];
-                })
-                .ConfigureApplicationParts(parts =>
-                    parts.AddApplicationPart(typeof(SchrodingerServerGrainsModule).Assembly).WithReferences())
-                .ConfigureLogging(builder => builder.AddProvider(o.GetService<ILoggerProvider>()))
-                .Build();
-        });
-    }
-    
-    public override void OnPreApplicationInitialization(ApplicationInitializationContext context)
-    {
-        var client = context.ServiceProvider.GetRequiredService<IClusterClient>();
-        AsyncHelper.RunSync(async ()=> await client.Connect());
-    }
+    // private static void ConfigureOrleans(ServiceConfigurationContext context, IConfiguration configuration)
+    // {
+    //     context.Services.AddSingleton<IClusterClient>(o =>
+    //     {
+    //         return new ClientBuilder()
+    //             .ConfigureDefaults()
+    //             .UseMongoDBClient(configuration["Orleans:MongoDBClient"])
+    //             .UseMongoDBClustering(options =>
+    //             {
+    //                 options.DatabaseName = configuration["Orleans:DataBase"];;
+    //                 options.Strategy = MongoDBMembershipStrategy.SingleDocument;
+    //             })
+    //             .Configure<ClusterOptions>(options =>
+    //             {
+    //                 options.ClusterId = configuration["Orleans:ClusterId"];
+    //                 options.ServiceId = configuration["Orleans:ServiceId"];
+    //             })
+    //             .ConfigureApplicationParts(parts =>
+    //                 parts.AddApplicationPart(typeof(SchrodingerServerGrainsModule).Assembly).WithReferences())
+    //             .ConfigureLogging(builder => builder.AddProvider(o.GetService<ILoggerProvider>()))
+    //             .Build();
+    //     });
+    // }
+    //
+    // public override void OnPreApplicationInitialization(ApplicationInitializationContext context)
+    // {
+    //     var client = context.ServiceProvider.GetRequiredService<IClusterClient>();
+    //     AsyncHelper.RunSync(async ()=> await client.Connect());
+    // }
 
     public override void OnApplicationInitialization(ApplicationInitializationContext context)
     {
@@ -289,9 +289,9 @@ public class SchrodingerServerAuthServerModule : AbpModule
         app.UseConfiguredEndpoints();
     }
     
-    public override void OnApplicationShutdown(ApplicationShutdownContext context)
-    {
-        var client = context.ServiceProvider.GetRequiredService<IClusterClient>();
-        AsyncHelper.RunSync(client.Close);
-    }
+    // public override void OnApplicationShutdown(ApplicationShutdownContext context)
+    // {
+    //     var client = context.ServiceProvider.GetRequiredService<IClusterClient>();
+    //     AsyncHelper.RunSync(client.Close);
+    // }
 }
