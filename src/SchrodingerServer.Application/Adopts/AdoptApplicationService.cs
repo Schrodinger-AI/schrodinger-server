@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using AElf;
 using AElf.Cryptography;
+using AElf.ExceptionHandler;
 using AElf.Types;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -20,6 +21,7 @@ using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dtos.Adopts;
 using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Dtos.TraitsDto;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Ipfs;
 using SchrodingerServer.Options;
 using SchrodingerServer.Users;
@@ -154,31 +156,25 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return imageInfo;
     }
 
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleException))]
     public async Task<bool> IsOverLoadedAsync()
     {
-        try
-        {
-            using var httpClient = new HttpClient();
-            var response = await httpClient.GetAsync(_traitsOptions.CurrentValue.IsOverLoadedUrl);
-            if (response.IsSuccessStatusCode)
-            {
-                var responseString = await response.Content.ReadAsStringAsync();
-                _logger.LogInformation("IsOverLoadedAsync get result Success");
-                var resp = JsonConvert.DeserializeObject<IsOverLoadedResponse>(responseString);
-                return resp.isOverLoaded;
-            }
-            else
-            {
-                _logger.LogError("IsOverLoadedAsync get result Success fail, {resp}", response.ToString());
-            }
 
-            return true;
-        }
-        catch (Exception e)
+        using var httpClient = new HttpClient();
+        var response = await httpClient.GetAsync(_traitsOptions.CurrentValue.IsOverLoadedUrl);
+        if (response.IsSuccessStatusCode)
         {
-            _logger.LogError(e, "IsOverLoadedAsync get result Success fail error, {err}", e.ToString());
-            return true;
+            var responseString = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("IsOverLoadedAsync get result Success");
+            var resp = JsonConvert.DeserializeObject<IsOverLoadedResponse>(responseString);
+            return resp.isOverLoaded;
         }
+        else
+        {
+            _logger.LogError("IsOverLoadedAsync get result Success fail, {resp}", response.ToString());
+        }
+
+        return true;    
     }
 
 
@@ -193,19 +189,12 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return resp;
     }
 
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionString))]
     private async Task<string> UploadToS3Async(string base64String, string fileName)
     {
-        try
-        {
-            byte[] imageBytes = Convert.FromBase64String(base64String);
-            var stream = new MemoryStream(imageBytes);
-            return await _awsS3Client.UpLoadFileForNFTAsync(stream, fileName);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "upload to s3 error, {err}", e.ToString());
-            return string.Empty;
-        }
+        byte[] imageBytes = Convert.FromBase64String(base64String);
+        var stream = new MemoryStream(imageBytes);
+        return await _awsS3Client.UpLoadFileForNFTAsync(stream, fileName);
     }
 
     private string GenerateSignature(byte[] privateKey, string adoptId, string image)
@@ -249,38 +238,32 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return await _adoptGraphQlProvider.QueryAdoptInfoAsync(adoptId);
     }
 
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionNull))]
     private async Task<WatermarkResponse> GetWatermarkImageAsync(WatermarkInput input)
     {
-        try
+ 
+        using var httpClient = new HttpClient();
+        var jsonString = ImageProviderHelper.ConvertObjectToJsonString(input);
+        var requestContent = new StringContent(jsonString, Encoding.UTF8, "application/json");
+        httpClient.DefaultRequestHeaders.Add("accept", "*/*");
+        var start = DateTime.Now;
+        var response = await httpClient.PostAsync(_traitsOptions.CurrentValue.ImageProcessUrl, requestContent);
+        var cost = (DateTime.Now - start).TotalMilliseconds;
+        if (response.IsSuccessStatusCode)
         {
-            using var httpClient = new HttpClient();
-            var jsonString = ImageProviderHelper.ConvertObjectToJsonString(input);
-            var requestContent = new StringContent(jsonString, Encoding.UTF8, "application/json");
-            httpClient.DefaultRequestHeaders.Add("accept", "*/*");
-            var start = DateTime.Now;
-            var response = await httpClient.PostAsync(_traitsOptions.CurrentValue.ImageProcessUrl, requestContent);
-            var cost = (DateTime.Now - start).TotalMilliseconds;
-            if (response.IsSuccessStatusCode)
-            {
-                var responseString = await response.Content.ReadAsStringAsync();
-                _logger.LogInformation("Get Watermark Image Success timeCost={cost}", cost);
+            var responseString = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Get Watermark Image Success timeCost={cost}", cost);
 
-                var resp = JsonConvert.DeserializeObject<WatermarkResponse>(responseString);
+            var resp = JsonConvert.DeserializeObject<WatermarkResponse>(responseString);
 
-                return resp;
-            }
-            else
-            {
-                _logger.LogError("Get Watermark Image Success fail, {resp}", response.ToString());
-            }
-
-            return null;
+            return resp;
         }
-        catch (Exception e)
+        else
         {
-            _logger.LogError(e, "Get Watermark Image Success fail error, {err}", e.ToString());
-            return null;
+            _logger.LogError("Get Watermark Image Success fail, {resp}", response.ToString());
         }
+
+        return null;
     }
 
 
