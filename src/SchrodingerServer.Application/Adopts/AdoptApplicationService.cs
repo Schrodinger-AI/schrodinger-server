@@ -189,7 +189,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
 
     public async Task<GetWaterMarkImageInfoOutput> GetWaterMarkImageInfoAsync(GetWaterMarkImageInfoInput input)
     {
-        _logger.Info("GetWaterMarkImageInfoAsync, AdoptId: {req}, dataLength: {length}", input.AdoptId, 
+        _logger.LogInformation("GetWaterMarkImageInfoAsync, AdoptId: {req}, dataLength: {length}", input.AdoptId, 
             input.Image.Length);
 
         var resp = await UploadAndWatermarkAsync(input.Image, input.AdoptId);
@@ -406,11 +406,11 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
     private async Task<GetWaterMarkImageInfoOutput> UploadAndWatermarkAsync(string image, string adoptId)
     {
         var images = await _adoptImageService.GetImagesAsync(adoptId);
-        _logger.Info("AI generated images count: {}", images.Count);
+        _logger.LogDebug("AI generated images count: {}", images.Count);
 
         if (images.IsNullOrEmpty() || !images.Contains(image))
         {
-            _logger.Info("Invalid adopt image, images:{}", JsonConvert.SerializeObject(images));
+            _logger.LogDebug("Invalid adopt image, images:{}", JsonConvert.SerializeObject(images));
             throw new UserFriendlyException("Invalid adopt image");
         }
 
@@ -419,11 +419,11 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         if (hasWaterMark)
         {
             var info = await _adoptImageService.GetWatermarkImageInfoAsync(adoptId);
-            _logger.Info("GetWatermarkImageInfo from grain, info: {info}", JsonConvert.SerializeObject(info));
+            _logger.LogDebug("GetWatermarkImageInfo from grain, info: {info}", JsonConvert.SerializeObject(info));
 
             if (info == null || info.ImageUri == null || info.ResizedImage == null)
             {
-                _logger.Info("Invalid watermark info, uri:{0}, resizeImage{1}", info.ImageUri, info.ResizedImage);
+                _logger.LogDebug("Invalid watermark info, uri:{0}, resizeImage{1}", info.ImageUri, info.ResizedImage);
                 throw new UserFriendlyException("Invalid watermark info");
             }
 
@@ -445,7 +445,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         }
 
         var adoptInfo = await QueryAdoptInfoAsync(adoptId);
-        _logger.Info("QueryAdoptInfoAsync, {adoptInfo}", JsonConvert.SerializeObject(adoptInfo));
+        _logger.LogDebug("QueryAdoptInfoAsync, {adoptInfo}", JsonConvert.SerializeObject(adoptInfo));
         if (adoptInfo == null)
         {
             throw new UserFriendlyException("query adopt info failed adoptId = " + adoptId);
@@ -515,7 +515,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         _logger.LogInformation("ConfirmAdoptionAsync Begin, adoptId: {adoptId}", adoptId);
         
         var adoptInfo = await QueryAdoptInfoAsync(adoptId);
-        _logger.Info("QueryAdoptInfoAsync, {adoptInfo}", JsonConvert.SerializeObject(adoptInfo));
+        _logger.LogDebug("QueryAdoptInfoAsync, {adoptInfo}", JsonConvert.SerializeObject(adoptInfo));
         if (adoptInfo == null)
         {
             _logger.LogError("Invalid adopt id: {id}", adoptId);
@@ -523,7 +523,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         }
         
         var images = await _adoptImageService.GetImagesAsync(adoptId);
-        _logger.Info("AI generated images count: {}", images.Count);
+        _logger.LogDebug("AI generated images count: {}", images.Count);
 
         if (images.IsNullOrEmpty())
         {
@@ -542,11 +542,11 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         if (hasWaterMark)
         {
             var info = await _adoptImageService.GetWatermarkImageInfoAsync(adoptId);
-            _logger.Info("GetWatermarkImageInfo from grain, info: {info}", JsonConvert.SerializeObject(info));
+            _logger.LogDebug("GetWatermarkImageInfo from grain, info: {info}", JsonConvert.SerializeObject(info));
 
             if (info == null || info.ImageUri == null || info.ResizedImage == null)
             {
-                _logger.Info("Invalid watermark info, uri:{0}, resizeImage{1}", info.ImageUri, info.ResizedImage);
+                _logger.LogDebug("Invalid watermark info, uri:{0}, resizeImage{1}", info.ImageUri, info.ResizedImage);
                 throw new UserFriendlyException("Invalid watermark info");
             }
 
