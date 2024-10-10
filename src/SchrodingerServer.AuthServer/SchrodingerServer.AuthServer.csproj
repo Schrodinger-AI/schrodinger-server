@@ -45,7 +45,7 @@
     <PackageReference Include="Serilog.Sinks.Async" Version="1.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="6.0.7" />
     <PackageReference Include="DistributedLock.Redis" Version="1.0.2" />
-    <PackageReference Include="Volo.Abp.EventBus.RabbitMQ" Version="7.0.0" />
+    <PackageReference Include="Volo.Abp.EventBus.RabbitMQ" Version="8.2.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -54,13 +54,13 @@
 
   <ItemGroup>
     <PackageReference Include="Com.Ctrip.Framework.Apollo.Configuration" Version="2.10.1" />
-    <PackageReference Include="Volo.Abp.Autofac" Version="7.0.0" />
-    <PackageReference Include="Volo.Abp.Caching.StackExchangeRedis" Version="7.0.0" />
-    <PackageReference Include="Volo.Abp.DistributedLocking" Version="7.0.0" />
-    <PackageReference Include="Volo.Abp.AspNetCore.Serilog" Version="7.0.0" />
-    <PackageReference Include="Volo.Abp.Account.Web.OpenIddict" Version="7.0.0" />
-    <PackageReference Include="Volo.Abp.Account.Application" Version="7.0.0" />
-    <PackageReference Include="Volo.Abp.Account.HttpApi" Version="7.0.0" />
+    <PackageReference Include="Volo.Abp.Autofac" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.Caching.StackExchangeRedis" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.DistributedLocking" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.AspNetCore.Serilog" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.Account.Web.OpenIddict" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.Account.Application" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.Account.HttpApi" Version="8.2.0" />
     <ProjectReference Include="..\SchrodingerServer.Application\SchrodingerServer.Application.csproj" />
     <ProjectReference Include="..\SchrodingerServer.MongoDB\SchrodingerServer.MongoDB.csproj" />
   </ItemGroup>
