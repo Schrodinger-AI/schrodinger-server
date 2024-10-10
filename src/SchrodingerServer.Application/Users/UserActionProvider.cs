@@ -52,7 +52,7 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
 
     public async Task<bool> CheckDomainAsync(string domain)
     {
-        _logger.Info("CheckDomain :{domain}", domain);
+        _logger.LogDebug("CheckDomain :{domain}", domain);
         if (_domainDict.TryGetValue(domain, out var value))
         {
             domain = value;
@@ -124,7 +124,7 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
         }
 
         input.Domain = info.RegisterDomain;
-        _logger.Info("GetMyPoints by {0} {1}", input.Address, input.Domain);
+        _logger.LogDebug("GetMyPoints by {0} {1}", input.Address, input.Domain);
         
         var res = await _pointServerProvider.GetMyPointsAsync(input);
 
