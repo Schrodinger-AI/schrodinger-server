@@ -101,45 +101,37 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
             var bizId = IdGenerateHelper.GetPointBizId(chainId, bizDate, pointName, Guid.NewGuid().ToString());
             _logger.LogInformation("SettlePoints process for bizId:{id}", bizId);
 
-            try
+            var pointSettleDto = new PointSettleDto
             {
-                var pointSettleDto = new PointSettleDto
+                ChainId = chainId,
+                PointName = pointName,
+                BizId = bizId,
+                UserPointsInfos = tradeList.Select(item => new UserPointInfo
                 {
-                    ChainId = chainId,
-                    PointName = pointName,
-                    BizId = bizId,
-                    UserPointsInfos = tradeList.Select(item => new UserPointInfo
-                    {
-                        Id = item.Id,
-                        Address = aelfAddress,
-                        PointAmount = item.PointAmount
-                    }).ToList()
-                }; 
+                    Id = item.Id,
+                    Address = aelfAddress,
+                    PointAmount = item.PointAmount
+                }).ToList()
+            }; 
                 
-                var aggPointSettleDto = new PointSettleDto
-                    {
-                        ChainId = chainId,
-                        PointName = pointName,
-                        BizId = bizId,
-                        UserPointsInfos = new List<UserPointInfo>()
-                        {
-                            new UserPointInfo
-                            {
-                                Id = tradeList.First().Id,
-                                Address = aelfAddress,
-                                PointAmount = tradeList.Sum(item => item.PointAmount)
-                            }
-                        }
-                    }; 
-                await _pointSettleService.BatchSettleAsync(aggPointSettleDto);
-                
-                await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(pointSettleDto, PointRecordStatus.Success.ToString());
-            }
-            catch (Exception e)
+            var aggPointSettleDto = new PointSettleDto
             {
-                _logger.LogError(e, "SettlePoints error, bizId:{bizId} ids:{ids}", bizId, 
-                    string.Join(",", tradeList.Select(item => item.Id)));
-            }
+                ChainId = chainId,
+                PointName = pointName,
+                BizId = bizId,
+                UserPointsInfos = new List<UserPointInfo>()
+                {
+                    new UserPointInfo
+                    {
+                        Id = tradeList.First().Id,
+                        Address = aelfAddress,
+                        PointAmount = tradeList.Sum(item => item.PointAmount)
+                    }
+                }
+            }; 
+            await _pointSettleService.BatchSettleAsync(aggPointSettleDto);
+                
+            await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(pointSettleDto, PointRecordStatus.Success.ToString());
         }
     }
     
