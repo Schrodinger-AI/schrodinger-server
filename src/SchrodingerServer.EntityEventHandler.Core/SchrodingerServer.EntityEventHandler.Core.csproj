@@ -7,14 +7,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Volo.Abp.DistributedLocking" Version="7.0.0" />
+        <PackageReference Include="Volo.Abp.DistributedLocking" Version="8.2.0" />
         <PackageReference Include="RedisRateLimiting.AspNetCore" Version="1.1.0" />
         <PackageReference Include="Volo.Abp.Core" Version="8.2.0" />
-        <PackageReference Include="Volo.Abp.ObjectMapping" Version="7.0.0" />
+        <PackageReference Include="Volo.Abp.ObjectMapping" Version="8.2.0" />
         <PackageReference Include="Hangfire.Core" Version="1.8.3" />
-        <PackageReference Include="Volo.Abp.BackgroundJobs.Hangfire" Version="7.0.0" />
+        <PackageReference Include="Volo.Abp.BackgroundJobs.Hangfire" Version="8.2.0" />
         <PackageReference Include="Hangfire.Mongo" Version="1.7.1" />
         <PackageReference Include="DistributedLock.Redis" Version="1.0.2" />
+        <PackageReference Include="AElf.ExceptionHandler" Version="1.2.0" />
 
     </ItemGroup>
     
