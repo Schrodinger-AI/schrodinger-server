@@ -30,23 +30,6 @@ public static class ExpressionHelper
         ["VersionInRange"] = VersionInRangeFunction,
     };
 
-    public static bool Evaluate(string expression, Dictionary<string, object> variables = null)
-    {
-        try
-        {
-            return Evaluate<bool>(expression, variables);
-        }
-        catch (Exception)
-        {
-            return false;
-        }
-    }
-    
-    public static bool Evaluate(IEnumerable<string> multilineExpression, Dictionary<string, object> variables = null)
-    {
-        return Evaluate(string.Join("", multilineExpression), variables);
-    }
-
     public static T Evaluate<T>(string expression, Dictionary<string, object> variables = null)
     {
         AssertHelper.NotEmpty(expression, "Expression cannot be null or whitespace.");

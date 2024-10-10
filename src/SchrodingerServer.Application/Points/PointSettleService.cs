@@ -83,14 +83,7 @@ public class PointSettleService : IPointSettleService, ISingletonDependency
             throw new UserFriendlyException($"Create Contract Invoke fail, bizId: {dto.BizId}.");
         }
 
-        try
-        {
-            await _distributedEventBus.PublishAsync(
-                _objectMapper.Map<ContractInvokeGrainDto, ContractInvokeEto>(result.Data));
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "BatchSettle PublishAsync error, bizId:{bizId}", dto.BizId);
-        }
+        await _distributedEventBus.PublishAsync(
+            _objectMapper.Map<ContractInvokeGrainDto, ContractInvokeEto>(result.Data));
     }
 }

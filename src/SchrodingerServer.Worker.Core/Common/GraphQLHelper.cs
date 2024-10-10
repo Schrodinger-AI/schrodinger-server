@@ -35,28 +35,14 @@ public class GraphQLHelper : IGraphQLHelper, ISingletonDependency
         var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_options.QueryTimeout));
         var startTime = DateTime.Now;
 
-        try
+        var graphQlResponse = await _client.SendQueryAsync<T>(request, cts.Token);
+        if (graphQlResponse.Errors is not { Length: > 0 })
         {
-            var graphQlResponse = await _client.SendQueryAsync<T>(request, cts.Token);
-            if (graphQlResponse.Errors is not { Length: > 0 })
-            {
-                return graphQlResponse.Data;
-            }
+            return graphQlResponse.Data;
+        }
 
-            _logger.LogError("[GraphQLHelper] Query graphQL err, errors = {Errors}",
-                string.Join(",", graphQlResponse.Errors.Select(e => e.Message).ToList()));
-            return default;
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogError("[GraphQLHelper] Query graphQL timed out, Took {time} ms.",
-                DateTime.Now.Subtract(startTime).TotalMilliseconds);
-            throw;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "[GraphQLHelper] Query graphQL fail.");
-            throw;
-        }
+        _logger.LogError("[GraphQLHelper] Query graphQL err, errors = {Errors}",
+            string.Join(",", graphQlResponse.Errors.Select(e => e.Message).ToList()));
+        return default;
     }
 }

@@ -1,8 +1,10 @@
 using System;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using AElf.Indexing.Elasticsearch;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Users.Eto;
 using SchrodingerServer.Users.Index;
 using Volo.Abp.DependencyInjection;
@@ -25,18 +27,12 @@ public class PointDailyRecordHandler : IDistributedEventHandler<PointDailyRecord
         _objectMapper = objectMapper;
         _logger = logger;
     }
-
+    
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task HandleEventAsync(PointDailyRecordEto eventData)
     {
-        try
-        {
-            var contact = _objectMapper.Map<PointDailyRecordEto, PointDailyRecordIndex>(eventData);
-            await _repository.AddOrUpdateAsync(contact);
-            _logger.LogDebug("HandleEventAsync PointDailyRecordEto success");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "{Message}", JsonConvert.SerializeObject(eventData));
-        }
+        var contact = _objectMapper.Map<PointDailyRecordEto, PointDailyRecordIndex>(eventData);
+        await _repository.AddOrUpdateAsync(contact);
+        _logger.LogDebug("HandleEventAsync PointDailyRecordEto success");
     }
 }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using AElf.Indexing.Elasticsearch;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -13,6 +14,7 @@ using SchrodingerServer.Background.Providers;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.ContractInvoke.Index;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Grains.Grain.ZealyScore;
 using SchrodingerServer.Grains.Grain.ZealyScore.Dtos;
 using SchrodingerServer.Options;
@@ -101,27 +103,21 @@ public class XpScoreResultService : IXpScoreResultService, ISingletonDependency
             maxResultCount);
         await HandleXpResultAsync(newSkipCount, maxResultCount);
     }
-
+    
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task HandleRecordAsync(ZealyUserXpRecordIndex record, List<ContractInvokeIndex> contractInfos)
     {
-        try
+        var contractInfo = contractInfos.FirstOrDefault(t => t.BizId == record.BizId);
+        if (contractInfo == null)
         {
-            var contractInfo = contractInfos.FirstOrDefault(t => t.BizId == record.BizId);
-            if (contractInfo == null)
-            {
-                _logger.LogWarning(
-                    "modify record status fail, contract info is null, recordId:{recordId}, bizId:{bizId}",
-                    record.Id, record.BizId ?? "-");
-                return;
-            }
+            _logger.LogWarning(
+                "modify record status fail, contract info is null, recordId:{recordId}, bizId:{bizId}",
+                record.Id, record.BizId ?? "-");
+            return;
+        }
 
-            // update grain
-            await SetFinalStatusAsync(record.Id, contractInfo.Status, record.BizId);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "handle pending record error, record:{record}", JsonConvert.SerializeObject(record));
-        }
+        // update grain
+        await SetFinalStatusAsync(record.Id, contractInfo.Status, record.BizId);
     }
 
     private async Task SetFinalStatusAsync(string orderId, string status, string bizId, string remark = "")

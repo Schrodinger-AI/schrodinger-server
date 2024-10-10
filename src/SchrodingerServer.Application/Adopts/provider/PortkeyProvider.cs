@@ -31,11 +31,9 @@ public class PortkeyProvider : IPortkeyProvider, ISingletonDependency
     
     public async Task<IsEOAAddressDto> IsEOAAddress(string address)
     {
-        try
+        var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.PortkeyClient).SendQueryAsync<CaHolderInfoDto>(new GraphQLRequest
         {
-            var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.PortkeyClient).SendQueryAsync<CaHolderInfoDto>(new GraphQLRequest
-            {
-                Query = @"query (
+            Query = @"query (
                     $skipCount:Int!,
                     $maxResultCount:Int!,
                     $address:[String!]
@@ -53,33 +51,25 @@ public class PortkeyProvider : IPortkeyProvider, ISingletonDependency
                          
                     }
                 }",
-                Variables = new
-                {
-                    address = address, 
-                    skipCount = 0, 
-                    maxResultCount = 10000,
-                }
-            });
-            return new IsEOAAddressDto()
+            Variables = new
             {
-                IsEOAAddress = res.Data.CaHolderInfo.Count == 0,
-            };
-        }
-        catch (Exception e)
+                address = address, 
+                skipCount = 0, 
+                maxResultCount = 10000,
+            }
+        });
+        return new IsEOAAddressDto()
         {
-            _logger.LogError(e, "portkey query GraphQL error");
-            return null;
-        }
+            IsEOAAddress = res.Data.CaHolderInfo.Count == 0,
+        };
     }
     
     
     public async Task<List<CaHolderInfo>> BatchGetAddressInfo(List<string> addressList)
     {
-        try
+        var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.PortkeyClient).SendQueryAsync<CaHolderInfoDto>(new GraphQLRequest
         {
-            var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.PortkeyClient).SendQueryAsync<CaHolderInfoDto>(new GraphQLRequest
-            {
-                Query = @"query (
+            Query = @"query (
                     $skipCount:Int!,
                     $maxResultCount:Int!,
                     $addressList:[String!]
@@ -97,20 +87,14 @@ public class PortkeyProvider : IPortkeyProvider, ISingletonDependency
                          
                     }
                 }",
-                Variables = new
-                {
-                    addressList = addressList, 
-                    skipCount = 0, 
-                    maxResultCount = 10000,
-                }
-            });
-            return res.Data.CaHolderInfo;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "portkey query GraphQL error");
-            return null;
-        }
+            Variables = new
+            {
+                addressList = addressList, 
+                skipCount = 0, 
+                maxResultCount = 10000,
+            }
+        });
+        return res.Data.CaHolderInfo;
     }
     
 }

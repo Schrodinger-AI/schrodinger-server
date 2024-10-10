@@ -40,20 +40,13 @@ public class UserActionGrain : Grain<UserActionState>, IUserActionGrain
 
     public async Task<GrainResultDto<UserActionGrainDto>> AddActionAsync(ActionType actionType)
     {
-        try
+        if (!State.ActionData.ContainsKey(actionType.ToString()))
         {
-            if (!State.ActionData.ContainsKey(actionType.ToString()))
-            {
-                State.ActionData[actionType.ToString()] = DateTime.UtcNow.ToUtcMilliSeconds();
-                await WriteStateAsync();
-            }
+            State.ActionData[actionType.ToString()] = DateTime.UtcNow.ToUtcMilliSeconds();
+            await WriteStateAsync();
+        }
             
-            var dto = _objectMapper.Map<UserActionState, UserActionGrainDto>(State);
-            return new GrainResultDto<UserActionGrainDto>(dto);
-        }
-        catch (Exception e)
-        {
-            return new GrainResultDto<UserActionGrainDto>().Error(e.Message);
-        }
+        var dto = _objectMapper.Map<UserActionState, UserActionGrainDto>(State);
+        return new GrainResultDto<UserActionGrainDto>(dto);
     }
 }

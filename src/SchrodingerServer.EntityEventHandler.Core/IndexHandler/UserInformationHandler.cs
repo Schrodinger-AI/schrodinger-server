@@ -1,8 +1,10 @@
 using System;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using AElf.Indexing.Elasticsearch;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Users.Eto;
 using SchrodingerServer.Users.Index;
 using Volo.Abp.DependencyInjection;
@@ -25,20 +27,13 @@ public class UserInformationHandler : IDistributedEventHandler<UserInformationEt
         _logger = logger;
     }
 
-
+    
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task HandleEventAsync(UserInformationEto eventData)
     {
-        try
-        {
-            var contact = _objectMapper.Map<UserInformationEto, UserIndex>(eventData);
-            await _userRepository.AddOrUpdateAsync(contact);
-            _logger.LogDebug("HandleEventAsync UserInformationEto success");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "{Message}", JsonConvert.SerializeObject(eventData));
-        }
-        
+        var contact = _objectMapper.Map<UserInformationEto, UserIndex>(eventData);
+        await _userRepository.AddOrUpdateAsync(contact);
+        _logger.LogDebug("HandleEventAsync UserInformationEto success");
     }
     
     

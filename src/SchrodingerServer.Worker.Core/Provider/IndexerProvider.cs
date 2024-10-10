@@ -25,31 +25,22 @@ public class IndexerProvider : IIndexerProvider, ISingletonDependency
 
     public async Task<List<string>> SubscribeConfirmedAsync(string chainId, long to, long from)
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<IndexerConfirmedListDto>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<IndexerConfirmedListDto>(new GraphQLRequest
-            {
-                Query =
-                    @"query($chainId:String!,$fromBlockHeight:Long!,$toBlockHeight:Long!){
+            Query =
+                @"query($chainId:String!,$fromBlockHeight:Long!,$toBlockHeight:Long!){
                     getAdoptInfoList(input: {chainId:$chainId,fromBlockHeight:$fromBlockHeight,toBlockHeight:$toBlockHeight}){
                         transactionIds
                 }
             }",
-                Variables = new
-                {
-                    chainId = chainId, fromBlockHeight = from, toBlockHeight = to
-                }
-            });
-            return indexerResult.GetAdoptInfoList == null
-                ? new List<string>()
-                : indexerResult.GetAdoptInfoList.TransactionIds;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "[Indexer] SubscribeLogs failed.");
-            return new List<string>();
-        }
-
+            Variables = new
+            {
+                chainId = chainId, fromBlockHeight = from, toBlockHeight = to
+            }
+        });
+        return indexerResult.GetAdoptInfoList == null
+            ? new List<string>()
+            : indexerResult.GetAdoptInfoList.TransactionIds;
 
         // return new IndexerConfirmedListDto
         // {
@@ -63,31 +54,23 @@ public class IndexerProvider : IIndexerProvider, ISingletonDependency
         //     }
         // };
     }
-
+    
     public async Task<long> GetIndexBlockHeightAsync(string chainId)
     {
-        try
+        var res = await _graphQlHelper.QueryAsync<ConfirmedBlockHeightRecord>(new GraphQLRequest
         {
-            var res = await _graphQlHelper.QueryAsync<ConfirmedBlockHeightRecord>(new GraphQLRequest
-            {
-                Query = @"
+            Query = @"
 			    query($chainId:String!,$filterType:BlockFilterType!) {
                     syncState(input: {chainId:$chainId,filterType:$filterType}){
                         confirmedBlockHeight
                 }
             }",
-                Variables = new
-                {
-                    chainId, filterType = BlockFilterType.LOG_EVENT
-                }
-            });
+            Variables = new
+            {
+                chainId, filterType = BlockFilterType.LOG_EVENT
+            }
+        });
 
-            return res.SyncState.ConfirmedBlockHeight;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "[Indexer] GetIndexBlockHeight failed.");
-            return 0;
-        }
+        return res.SyncState.ConfirmedBlockHeight;
     }
 }

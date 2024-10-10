@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using Hangfire;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -9,6 +10,7 @@ using Orleans;
 using SchrodingerServer.Background.Providers;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Grains.Grain.ZealyScore;
 using SchrodingerServer.Grains.Grain.ZealyScore.Dtos;
 using SchrodingerServer.Options;
@@ -109,49 +111,46 @@ public class XpScoreSettleService : IXpScoreSettleService, ISingletonDependency
 
         foreach (var record in records)
         {
-            try
-            {
-                var recordGrain = _clusterClient.GetGrain<IXpRecordGrain>(record.Id);
-                var result = await recordGrain.GetAsync();
-
-                if (!result.Success)
-                {
-                    _logger.LogError(
-                        "get record grain fail, message:{message}, recordId:{recordId}",
-                        result.Message, record.Id);
-                    continue;
-                }
-
-                if (result.Data.Status != ContractInvokeStatus.ToBeCreated.ToString())
-                {
-                    await _distributedEventBus.PublishAsync(
-                        _objectMapper.Map<XpRecordGrainDto, XpRecordEto>(result.Data), false, false);
-                    _logger.LogWarning("record already handled, recordId:{recordId}", record.Id);
-                    continue;
-                }
-
-                var updateResult = await recordGrain.SetStatusToPendingAsync(bizId);
-                if (!updateResult.Success)
-                {
-                    _logger.LogError(
-                        "update record grain status fail, message:{message}, recordId:{recordId}",
-                        updateResult.Message, record.Id);
-                    continue;
-                }
-
-                _logger.LogInformation("settle record, recordId:{recordId}", record.Id);
-                var recordEto = _objectMapper.Map<XpRecordGrainDto, XpRecordEto>(updateResult.Data);
-                await _distributedEventBus.PublishAsync(recordEto, false, false);
-
-                pointRecords.Add(record);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "handle pending record error, recordId:{recordId}", record.Id);
-                continue;
-            }
+            await ProcessRecord(record, bizId);
+            pointRecords.Add(record);
         }
 
         return pointRecords;
+    }
+
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
+    private async Task ProcessRecord(ZealyUserXpRecordIndex record, string bizId)
+    {
+        var recordGrain = _clusterClient.GetGrain<IXpRecordGrain>(record.Id);
+        var result = await recordGrain.GetAsync();
+
+        if (!result.Success)
+        {
+            _logger.LogError(
+                "get record grain fail, message:{message}, recordId:{recordId}",
+                result.Message, record.Id);
+            return;
+        }
+
+        if (result.Data.Status != ContractInvokeStatus.ToBeCreated.ToString())
+        {
+            await _distributedEventBus.PublishAsync(
+                _objectMapper.Map<XpRecordGrainDto, XpRecordEto>(result.Data), false, false);
+            _logger.LogWarning("record already handled, recordId:{recordId}", record.Id);
+            return;
+        }
+
+        var updateResult = await recordGrain.SetStatusToPendingAsync(bizId);
+        if (!updateResult.Success)
+        {
+            _logger.LogError(
+                "update record grain status fail, message:{message}, recordId:{recordId}",
+                updateResult.Message, record.Id);
+            return;
+        }
+
+        _logger.LogInformation("settle record, recordId:{recordId}", record.Id);
+        var recordEto = _objectMapper.Map<XpRecordGrainDto, XpRecordEto>(updateResult.Data);
+        await _distributedEventBus.PublishAsync(recordEto, false, false);
     }
 }

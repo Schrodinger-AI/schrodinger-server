@@ -25,21 +25,4 @@ public static class ValidHelper
     {
         return symbol.MatchesPattern(UppercaseNumericHyphen);
     }
-    
-    public static bool MatchesAddress(this string address)
-    {
-        try
-        {
-            if (address.IndexOf(Underline) > -1)
-            {
-                var parts = address.Split(Underline);
-                address = parts[1];
-            }
-            return Base58CheckEncoding.Verify(address);
-        }
-        catch (Exception)
-        {
-            return false;
-        }
-    }
 }

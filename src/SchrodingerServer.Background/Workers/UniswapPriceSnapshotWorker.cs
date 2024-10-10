@@ -46,29 +46,21 @@ public class UniswapPriceSnapshotWorker : AsyncPeriodicBackgroundWorkerBase
             return;
         }
         _logger.LogInformation("begin execute UniswapPriceSnapshotWorker.");
-        try
+        var date = TimeHelper.GetUtcDaySeconds();
+        var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + date);
+        if (dateTime != null)
         {
-            var date = TimeHelper.GetUtcDaySeconds();
-            var dateTime = await _distributedCache.GetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + date);
-            if (dateTime != null)
-            {
-                _logger.LogInformation("UniswapPriceSnapshotWorker has been executed today.");
-                return;
-            }
-            var tokenRes = await _uniSwapV3Provider.GetLatestUSDPriceAsync(date);
-            if (tokenRes != null)
-            {
-                await _xgrPriceService.SaveXgrDayPriceAsync(true);
-                await _distributedCache.SetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + date, DateTime.UtcNow.ToUtcSeconds().ToString(),  new DistributedCacheEntryOptions()
-                {
-                    SlidingExpiration = TimeSpan.FromDays(2)
-                });
-           }
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "UniswapPriceSnapshotWorker error.");
+            _logger.LogInformation("UniswapPriceSnapshotWorker has been executed today.");
             return;
+        }
+        var tokenRes = await _uniSwapV3Provider.GetLatestUSDPriceAsync(date);
+        if (tokenRes != null)
+        {
+            await _xgrPriceService.SaveXgrDayPriceAsync(true);
+            await _distributedCache.SetAsync(PointDispatchConstants.UNISWAP_PRICE_PREFIX + date, DateTime.UtcNow.ToUtcSeconds().ToString(),  new DistributedCacheEntryOptions()
+            {
+                SlidingExpiration = TimeSpan.FromDays(2)
+            });
         }
         _logger.LogInformation("finish execute UniswapPriceSnapshotWorker.");
     }
