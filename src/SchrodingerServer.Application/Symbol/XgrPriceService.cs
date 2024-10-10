@@ -131,58 +131,45 @@ public class XgrPriceService : IXgrPriceService,ISingletonDependency
             MaxResultCount = 1
         };
         decimal usdPrice = 0;
-        try
+        bool isGen0Symbol  = GetIsGen0FromSymbol(symbol);
+        if (isGen0 && isGen0Symbol)
         {
-            bool isGen0Symbol  = GetIsGen0FromSymbol(symbol);
-            if (isGen0 && isGen0Symbol)
+            if (_exchangeOptions.CurrentValue.UseUniswap)
             {
-                if (_exchangeOptions.CurrentValue.UseUniswap)
+                var tokenResponse  = await _uniswapV3Provider.GetLatestUSDPriceAsync(date);
+                if (tokenResponse != null )
                 {
-                    var tokenResponse  = await _uniswapV3Provider.GetLatestUSDPriceAsync(date);
-                    if (tokenResponse != null )
-                    {
-                        usdPrice = Convert.ToDecimal(tokenResponse.PriceUSD);
-                    }
-                }
-                else
-                {
-                    var gateIo = _exchangeOptions.CurrentValue.GateIo;
-                    var tokenExchange  = await _exchangeProvider.LatestAsync(gateIo.FromSymbol,gateIo.ToSymbol);
-                    if (tokenExchange != null)
-                    {
-                        var symbolUsdPrice = await _tokenPriceProvider.GetPriceByCacheAsync(gateIo.ToSymbol);
-                        usdPrice = tokenExchange.Exchange * symbolUsdPrice;
-                    }
-                }
-
-            }else if(!isGen0 && !isGen0Symbol)
-            {
-                var listingDto = await _symbolPriceGraphProvider.GetNFTListingsAsync(getMyNftListingsDto);
-                if (listingDto != null && listingDto.TotalCount > 0)
-                {
-                    var tokenPrice = listingDto.Items[0].Prices;
-                    var symbolUsdPrice = await _tokenPriceProvider.GetPriceByCacheAsync(listingDto.Items[0].PurchaseToken.Symbol);
-                    usdPrice = tokenPrice* symbolUsdPrice;
+                    usdPrice = Convert.ToDecimal(tokenResponse.PriceUSD);
                 }
             }
-            return  usdPrice;
-        }catch (Exception e)
+            else
+            {
+                var gateIo = _exchangeOptions.CurrentValue.GateIo;
+                var tokenExchange  = await _exchangeProvider.LatestAsync(gateIo.FromSymbol,gateIo.ToSymbol);
+                if (tokenExchange != null)
+                {
+                    var symbolUsdPrice = await _tokenPriceProvider.GetPriceByCacheAsync(gateIo.ToSymbol);
+                    usdPrice = tokenExchange.Exchange * symbolUsdPrice;
+                }
+            }
+
+        }else if(!isGen0 && !isGen0Symbol)
         {
-            _logger.LogError(e, "GetSymbolPrice error symbol:{symbol} date {date}", symbol,date);
+            var listingDto = await _symbolPriceGraphProvider.GetNFTListingsAsync(getMyNftListingsDto);
+            if (listingDto != null && listingDto.TotalCount > 0)
+            {
+                var tokenPrice = listingDto.Items[0].Prices;
+                var symbolUsdPrice = await _tokenPriceProvider.GetPriceByCacheAsync(listingDto.Items[0].PurchaseToken.Symbol);
+                usdPrice = tokenPrice* symbolUsdPrice;
+            }
         }
-        return 0;
+        
+        return  usdPrice;
     }
     
     public static bool GetIsGen0FromSymbol(string symbol)
     {
-        try
-        {
-            return Convert.ToInt32(symbol.Split(CommonConstant.Separator)[1]) == 1;
-        }
-        catch (Exception)
-        {
-            return false;
-        }
+        return Convert.ToInt32(symbol.Split(CommonConstant.Separator)[1]) == 1;
     }
 }
 

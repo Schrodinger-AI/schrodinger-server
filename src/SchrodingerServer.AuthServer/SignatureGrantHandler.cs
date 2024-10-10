@@ -68,9 +68,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
 
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
     {
-        try
-        {
-            var publicKeyVal = context.Request.GetParameter("publickey").ToString();
+        var publicKeyVal = context.Request.GetParameter("publickey").ToString();
             var signatureVal = context.Request.GetParameter("signature").ToString();
             var timestampVal = context.Request.GetParameter("timestamp").ToString();
             var address = context.Request.GetParameter("address").ToString();
@@ -190,18 +188,6 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
             await context.HttpContext.RequestServices.GetRequiredService<AbpOpenIddictClaimDestinationsManager>()
                 .SetAsync(principal);
             return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
-        }
-        catch (UserFriendlyException e)
-        {
-            _logger.LogWarning("Create token failed: {Message}", e.Message);
-            return ForbidResult(OpenIddictConstants.Errors.InvalidRequest, e.Message);
-        }
-        catch (Exception e)
-        {
-            // _logger.LogError(e, "Create token error");
-            _logger.LogError( "Create token error: {Message}", e.Message);
-            return ForbidResult(OpenIddictConstants.Errors.ServerError, "Internal error.");
-        }
     }
 
     private static ForbidResult ForbidResult(string errorType, string errorDescription)

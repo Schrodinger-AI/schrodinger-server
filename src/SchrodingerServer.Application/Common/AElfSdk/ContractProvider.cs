@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AElf;
 using AElf.Client.Dto;
 using AElf.Client.Service;
+using AElf.ExceptionHandler;
 using AElf.Types;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
@@ -12,6 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using SchrodingerServer.Common.AElfSdk.Dtos;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.ExceptionHandling;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Threading;
 
@@ -74,7 +77,7 @@ public class ContractProvider : IContractProvider, ISingletonDependency
             var address = (chainInfo?.ContractAddress ?? new Dictionary<string, Dictionary<string, string>>())
                 .GetValueOrDefault(chainId, _emptyDict)
                 .GetValueOrDefault(name, null);
-            if (address.IsNullOrEmpty() && SystemContractName.All.Contains(name))
+            if (CollectionUtilities.IsNullOrEmpty(address) && SystemContractName.All.Contains(name))
                 address = AsyncHelper
                     .RunSync(() => Client(chainId).GetContractAddressByNameAsync(HashHelper.ComputeFrom(name)))
                     .ToBase58();
@@ -84,7 +87,8 @@ public class ContractProvider : IContractProvider, ISingletonDependency
             return address;
         });
     }
-
+    
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task SendTransactionAsync(string chainId, Transaction signedTransaction)
     {
         var client = Client(chainId);

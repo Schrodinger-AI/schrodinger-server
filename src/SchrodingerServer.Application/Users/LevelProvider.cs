@@ -96,52 +96,37 @@ public class LevelProvider : ApplicationService, ILevelProvider
         
         //get rank
         List<RankData> rankDataList;
-        try
+        var respRank = await _httpProvider.InvokeAsync<CatsRankRespDto>(
+            _levelOptions.CurrentValue.SchrodingerUrl, PointServerProvider.Api.CatsRank,
+            body: JsonConvert.SerializeObject(input, JsonSerializerSettings));
+        if (respRank is not { Code: "20000" })
         {
-            var resp = await _httpProvider.InvokeAsync<CatsRankRespDto>(
-                _levelOptions.CurrentValue.SchrodingerUrl, PointServerProvider.Api.CatsRank,
-                body: JsonConvert.SerializeObject(input, JsonSerializerSettings));
-            if (resp is not { Code: "20000" })
-            {
-                _logger.LogError("CatsRank get failed,response:{response}",(resp == null ? "non result" : resp.Code));
-                return new List<RankData>();
-            }
-
-            rankDataList = resp.Data; 
-        }
-        catch (Exception e)
-        {
-            _logger.LogError("CatsRank get failed",e);
+            _logger.LogError("CatsRank get failed,response:{response}",(respRank == null ? "non result" : respRank.Code));
             return new List<RankData>();
         }
+
+        rankDataList = respRank.Data; 
         
         //check is in white list
         var address = !string.IsNullOrEmpty(input.Address) ? input.Address : input.SearchAddress;
         var isInWhiteList = await CheckAddressIsInWhiteListAsync(address);
         //get awaken price
         var price = 0.0;
-        try
-        {
-            var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
-                PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
-                {
-                    ["token0Symbol"] = "SGR-1",
-                    ["token1Symbol"] = "ELF",
-                    ["feeRate"] = "0.03",
-                    ["chainId"] = _levelOptions.CurrentValue.ChainId
-                });
-            if (resp is not { Code: "20000" })
+        var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
+            PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
             {
-                _logger.LogError("AwakenPrice get failed,response:{response}",(resp == null ? "non result" : resp.Code));
-                return null;
-            }
-
-            price = (double)(resp.Data.Items?.First().ValueLocked1 / resp.Data.Items?.First().ValueLocked0);
-        }
-        catch (Exception e)
+                ["token0Symbol"] = "SGR-1",
+                ["token1Symbol"] = "ELF",
+                ["feeRate"] = "0.03",
+                ["chainId"] = _levelOptions.CurrentValue.ChainId
+            });
+        if (resp is not { Code: "20000" })
         {
-            _logger.LogError("AwakenPrice get failed",e);
+            _logger.LogError("AwakenPrice get failed,response:{response}",(resp == null ? "non result" : resp.Code));
+            return null;
         }
+
+        price = (double)(resp.Data.Items?.First().ValueLocked1 / resp.Data.Items?.First().ValueLocked0);
         //get LevelInfo config 
         foreach (var rankData in rankDataList)
         {
@@ -196,28 +181,21 @@ public class LevelProvider : ApplicationService, ILevelProvider
     {
         //get awaken price
         var price = 0.0;
-        try
-        {
-            var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
-                PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
-                {
-                    ["token0Symbol"] = "SGR-1",
-                    ["token1Symbol"] = "ELF",
-                    ["feeRate"] = "0.03",
-                    ["chainId"] = _levelOptions.CurrentValue.ChainId
-                });
-            if (resp is not { Code: "20000" })
+        var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
+            PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
             {
-                _logger.LogError("AwakenPrice get failed,response:{response}",(resp == null ? "non result" : resp.Code));
-                return price;
-            }
-
-            price = (double)(resp.Data.Items?.First().ValueLocked1 / resp.Data.Items?.First().ValueLocked0);
-        }
-        catch (Exception e)
+                ["token0Symbol"] = "SGR-1",
+                ["token1Symbol"] = "ELF",
+                ["feeRate"] = "0.03",
+                ["chainId"] = _levelOptions.CurrentValue.ChainId
+            });
+        if (resp is not { Code: "20000" })
         {
-            _logger.LogError("AwakenPrice get failed",e);
+            _logger.LogError("AwakenPrice get failed,response:{response}",(resp == null ? "non result" : resp.Code));
+            return price;
         }
+
+        price = (double)(resp.Data.Items?.First().ValueLocked1 / resp.Data.Items?.First().ValueLocked0);
 
         return price;
     }
@@ -237,27 +215,18 @@ public class LevelProvider : ApplicationService, ILevelProvider
             address = "ELF_" + address + "_" + chainId;
         }
         
-        try
-        {
-            var resp = await _httpProvider.InvokeAsync<WhiteListResponse>(_levelOptions.CurrentValue.SchrodingerUrl,
-                PointServerProvider.Api.CheckIsInWhiteList, param: new Dictionary<string, string>
-                {
-                    ["address"] = address
-                });
-            if (resp is not { Code: "20000" })
+        var resp = await _httpProvider.InvokeAsync<WhiteListResponse>(_levelOptions.CurrentValue.SchrodingerUrl,
+            PointServerProvider.Api.CheckIsInWhiteList, param: new Dictionary<string, string>
             {
-                _logger.LogError("CheckAddressIsInWhiteListAsync get failed,response:{response}",(resp == null ? "non result" : resp.Code));
-                return false;
-            }
-
-            return resp.Data.IsAddressValid;
-        }
-        catch (Exception e)
+                ["address"] = address
+            });
+        if (resp is not { Code: "20000" })
         {
-            _logger.LogError("CheckAddressIsInWhiteListAsync get failed",e);
+            _logger.LogError("CheckAddressIsInWhiteListAsync get failed,response:{response}",(resp == null ? "non result" : resp.Code));
+            return false;
         }
 
-        return false;
+        return resp.Data.IsAddressValid;
     }
 
     public async Task<LevelInfoDto> GetItemLevelDicAsync(int rank, double price)
@@ -313,33 +282,25 @@ public class LevelProvider : ApplicationService, ILevelProvider
 
     public async Task<List<NftInfo>> BatchGetForestNftInfoAsync(List<string> nftIdList, string chainId)
     {
-        try
-        {
-            var resp = await _httpProvider.InvokeAsync<BatchGetForestNftInfoDto>(
-                _levelOptions.CurrentValue.ForestUrl, PointServerProvider.Api.GetForestInfo,
-                body: JsonConvert.SerializeObject(new BatchGetForestNftINfoInput
-                {
-                    CollectionId = chainId + "-SGR-0",
-                    CollectionType = "nft",
-                    Sorting = "Low to High",
-                    ChainList = new List<string> {chainId},
-                    SkipCount = 0,
-                    MaxResultCount = nftIdList.Count,
-                    NFTIdList = nftIdList
-                }, JsonSerializerSettings));
-            if (resp is not { Code: "20000" })
+        var resp = await _httpProvider.InvokeAsync<BatchGetForestNftInfoDto>(
+            _levelOptions.CurrentValue.ForestUrl, PointServerProvider.Api.GetForestInfo,
+            body: JsonConvert.SerializeObject(new BatchGetForestNftINfoInput
             {
-                _logger.LogError("BatchGetForestNftInfo Error,response:{response}",(resp == null ? "non result" : resp.Code));
-                return new List<NftInfo>();
-            }
-
-            return resp.Data.Items;
-        }
-        catch (Exception e)
+                CollectionId = chainId + "-SGR-0",
+                CollectionType = "nft",
+                Sorting = "Low to High",
+                ChainList = new List<string> {chainId},
+                SkipCount = 0,
+                MaxResultCount = nftIdList.Count,
+                NFTIdList = nftIdList
+            }, JsonSerializerSettings));
+        if (resp is not { Code: "20000" })
         {
-            _logger.LogError("BatchGetForestNftInfoAsync Failed, {msg}", e);
+            _logger.LogError("BatchGetForestNftInfo Error,response:{response}",(resp == null ? "non result" : resp.Code));
             return new List<NftInfo>();
         }
+
+        return resp.Data.Items;
     }
     
 }

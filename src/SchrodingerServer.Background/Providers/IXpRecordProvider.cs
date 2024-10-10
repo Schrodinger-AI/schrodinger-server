@@ -52,111 +52,80 @@ public class XpRecordProvider : IXpRecordProvider, ISingletonDependency
     [AutomaticRetry(Attempts = 20, DelaysInSeconds = new[] { 40 })]
     public async Task CreateRecordAsync(string userId, string address, decimal currentXp, decimal xp)
     {
-        try
+        var recordId = $"{userId}-{DateTime.UtcNow:yyyy-MM-dd}";
+        _logger.LogInformation("begin create, recordId:{recordId}", recordId);
+
+        var recordDto = new XpRecordGrainDto
         {
-            var recordId = $"{userId}-{DateTime.UtcNow:yyyy-MM-dd}";
-            _logger.LogInformation("begin create, recordId:{recordId}", recordId);
+            Id = recordId,
+            IncreaseXp = xp,
+            CurrentXp = currentXp,
+            PointsAmount = DecimalHelper.MultiplyByPowerOfTen(xp * _options.Coefficient, 8),
+            BizId = string.Empty,
+            Status = ContractInvokeStatus.ToBeCreated.ToString(),
+            UserId = userId,
+            Address = address
+        };
 
-            var recordDto = new XpRecordGrainDto
-            {
-                Id = recordId,
-                IncreaseXp = xp,
-                CurrentXp = currentXp,
-                PointsAmount = DecimalHelper.MultiplyByPowerOfTen(xp * _options.Coefficient, 8),
-                BizId = string.Empty,
-                Status = ContractInvokeStatus.ToBeCreated.ToString(),
-                UserId = userId,
-                Address = address
-            };
+        var recordGrain = _clusterClient.GetGrain<IXpRecordGrain>(recordId);
+        var result = await recordGrain.CreateAsync(recordDto);
 
-            var recordGrain = _clusterClient.GetGrain<IXpRecordGrain>(recordId);
-            var result = await recordGrain.CreateAsync(recordDto);
+        // clear recordInfos
+        BackgroundJob.Enqueue(() => HandleRecordInfosAsync(userId));
 
-            // clear recordInfos
-            BackgroundJob.Enqueue(() => HandleRecordInfosAsync(userId));
-
-            if (!result.Success)
-            {
-                _logger.LogError(
-                    "add record grain fail, message:{message}, userId:{userId}, address:{address}, xp:{xp}",
-                    result.Message, userId, address, xp);
-                return;
-            }
-
-            var recordEto = _objectMapper.Map<XpRecordGrainDto, XpRecordEto>(result.Data);
-            await _distributedEventBus.PublishAsync(recordEto, false, false);
-            _logger.LogInformation("end create record, recordId:{recordId}", recordId);
-        }
-        catch (Exception e)
+        if (!result.Success)
         {
-            _logger.LogError(e, "create record error, userId:{userId}, address:{address}, xp:{xp}", userId, address,
-                xp);
-            throw;
+            _logger.LogError(
+                "add record grain fail, message:{message}, userId:{userId}, address:{address}, xp:{xp}",
+                result.Message, userId, address, xp);
+            return;
         }
+
+        var recordEto = _objectMapper.Map<XpRecordGrainDto, XpRecordEto>(result.Data);
+        await _distributedEventBus.PublishAsync(recordEto, false, false);
+        _logger.LogInformation("end create record, recordId:{recordId}", recordId);
     }
 
     [AutomaticRetry(Attempts = 20, DelaysInSeconds = new[] { 40 })]
     public async Task SetStatusToPendingAsync(PointSettleDto pointSettleDto)
     {
-        try
-        {
-            await _pointSettleService.BatchSettleAsync(pointSettleDto);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "call BatchSettleAsync error, bizId:{bizId}", pointSettleDto.BizId);
-            throw;
-        }
+        await _pointSettleService.BatchSettleAsync(pointSettleDto);
     }
 
     public async Task HandleRecordInfosAsync(string userId)
     {
-        try
+        var userGrain = _clusterClient.GetGrain<IZealyUserXpGrain>(userId);
+        var userDto = await userGrain.GetUserXpInfoAsync();
+
+        if (!userDto.Success)
         {
-            var userGrain = _clusterClient.GetGrain<IZealyUserXpGrain>(userId);
-            var userDto = await userGrain.GetUserXpInfoAsync();
-
-            if (!userDto.Success)
-            {
-                _logger.LogError("get user xp info error, userId:{userId}", userId);
-                return;
-            }
-
-            var recordInfos = userDto.Data.RecordInfos;
-            if (recordInfos.IsNullOrEmpty())
-            {
-                return;
-            }
-
-            // grain
-            foreach (var recordInfo in recordInfos)
-            {
-                try
-                {
-                    var recordId = $"{userId}-{recordInfo.Date}";
-                    var recordGrain = _clusterClient.GetGrain<IXpRecordGrain>(recordId);
-                    var result = await recordGrain.HandleRecordAsync(recordInfo, userDto.Data.Id, userDto.Data.Address);
-                    if (!result.Success)
-                    {
-                        _logger.LogError(
-                            "handle record info fail, message:{message}, userId:{userId}, recordInfo:{recordInfo}",
-                            result.Message, userId, JsonConvert.SerializeObject(recordInfo));
-                        return;
-                    }
-
-                    var recordEto = _objectMapper.Map<XpRecordGrainDto, AddXpRecordEto>(result.Data);
-                    await _distributedEventBus.PublishAsync(recordEto, false, false);
-                    _logger.LogInformation("handle record info success, recordId:{recordId}", recordId);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "HandleRecordInfosAsync error, userId:{userId}", userId);
-                }
-            }
+            _logger.LogError("get user xp info error, userId:{userId}", userId);
+            return;
         }
-        catch (Exception e)
+
+        var recordInfos = userDto.Data.RecordInfos;
+        if (recordInfos.IsNullOrEmpty())
         {
-            _logger.LogError(e, "HandleRecordInfosAsync error, userId:{userId}", userId);
+            return;
+        }
+
+        // grain
+        foreach (var recordInfo in recordInfos)
+        {
+            var recordId = $"{userId}-{recordInfo.Date}";
+            var recordGrain = _clusterClient.GetGrain<IXpRecordGrain>(recordId);
+            var result = await recordGrain.HandleRecordAsync(recordInfo, userDto.Data.Id, userDto.Data.Address);
+            if (!result.Success)
+            {
+                _logger.LogError(
+                    "handle record info fail, message:{message}, userId:{userId}, recordInfo:{recordInfo}",
+                    result.Message, userId, JsonConvert.SerializeObject(recordInfo));
+                return;
+            }
+
+            var recordEto = _objectMapper.Map<XpRecordGrainDto, AddXpRecordEto>(result.Data);
+            await _distributedEventBus.PublishAsync(recordEto, false, false);
+            _logger.LogInformation("handle record info success, recordId:{recordId}", recordId);
         }
     }
 }

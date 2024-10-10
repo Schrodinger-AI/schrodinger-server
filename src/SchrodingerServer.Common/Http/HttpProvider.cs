@@ -77,14 +77,7 @@ public class HttpProvider : IHttpProvider
     {
         var resp = await InvokeAsync(apiInfo.Method, domain + apiInfo.Path, pathParams, param, body, header,
             withInfoLog, withDebugLog);
-        try
-        {
-            return JsonConvert.DeserializeObject<T>(resp, settings ?? DefaultJsonSettings);
-        }
-        catch (Exception ex)
-        {
-            throw new HttpRequestException($"Error deserializing service [{apiInfo.Path}] response body: {resp}", ex);
-        }
+        return JsonConvert.DeserializeObject<T>(resp, settings ?? DefaultJsonSettings);
     }
 
     public async Task<HttpResponseMessage> InvokeResponseAsync(string domain, ApiInfo apiInfo,
@@ -115,14 +108,7 @@ public class HttpProvider : IHttpProvider
         bool withInfoLog = false, bool withDebugLog = true)
     {
         var resp = await InvokeAsync(method, url, pathParams, param, body, header, withInfoLog, withDebugLog);
-        try
-        {
-            return JsonConvert.DeserializeObject<T>(resp, settings ?? DefaultJsonSettings);
-        }
-        catch (Exception ex)
-        {
-            throw new HttpRequestException($"Error deserializing service [{url}] response body: {resp}", ex);
-        }
+        return JsonConvert.DeserializeObject<T>(resp, settings ?? DefaultJsonSettings);
     }
 
     public async Task<string> InvokeAsync(HttpMethod method, string url,

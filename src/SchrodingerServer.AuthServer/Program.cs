@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SchrodingerServer.Extension;
 using Serilog;
+using Log = Serilog.Log;
 
 namespace SchrodingerServer;
 

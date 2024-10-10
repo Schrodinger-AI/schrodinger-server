@@ -216,14 +216,7 @@ public class ContractInvokeGrain : Grain<ContractInvokeState>, IContractInvokeGr
     
     private async Task SendTransactionAsync(string chainId, Transaction signedTransaction)
     {
-        try
-        {
-            await _contractProvider.SendTransactionAsync(chainId, signedTransaction);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "SendTransaction error, txId:{txId}, err:{err}", signedTransaction.GetHash().ToHex(), e.ToString());
-        }
+        await _contractProvider.SendTransactionAsync(chainId, signedTransaction);
     }
     
     private GrainResultDto<ContractInvokeGrainDto> OfContractInvokeGrainResultDto(bool success, string message = null)
