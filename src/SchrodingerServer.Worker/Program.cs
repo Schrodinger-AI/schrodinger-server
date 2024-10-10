@@ -62,6 +62,7 @@ namespace SchrodingerServer.Worker
             .ConfigureAppConfiguration(build => { build.AddJsonFile("appsettings.secrets.json", optional: true); })
             .ConfigureServices((hostContext, services) => { services.AddApplication<SchrodingerServerWorkerModule>(); })
             .UseAutofac()
+            .UseOrleansClient()
             .UseSerilog();
     }
 }
