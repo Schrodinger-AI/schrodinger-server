@@ -1,10 +1,12 @@
 using System;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using AElf.Indexing.Elasticsearch;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using SchrodingerServer.ContractInvoke.Eto;
 using SchrodingerServer.ContractInvoke.Index;
+using SchrodingerServer.ExceptionHandling;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.EventBus.Distributed;
 using Volo.Abp.ObjectMapping;
@@ -25,18 +27,12 @@ public class ContractInvokeHandler : IDistributedEventHandler<ContractInvokeEto>
         _objectMapper = objectMapper;
         _logger = logger;
     }
-
+    
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionNull))]
     public async Task HandleEventAsync(ContractInvokeEto eventData)
     {
-        try
-        {
-            var contact = _objectMapper.Map<ContractInvokeEto, ContractInvokeIndex>(eventData);
-            await _repository.AddOrUpdateAsync(contact);
-            _logger.LogDebug("HandleEventAsync ContractInvokeEto success");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "{Message}", JsonConvert.SerializeObject(eventData));
-        }
+        var contact = _objectMapper.Map<ContractInvokeEto, ContractInvokeIndex>(eventData);
+        await _repository.AddOrUpdateAsync(contact);
+        _logger.LogDebug("HandleEventAsync ContractInvokeEto success");
     }
 }

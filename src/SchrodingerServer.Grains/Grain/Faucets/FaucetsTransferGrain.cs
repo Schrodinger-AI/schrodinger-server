@@ -41,94 +41,77 @@ public class FaucetsTransferGrain : Grain<FaucetsState>, IFaucetsGrain
     public async Task<GrainResultDto<FaucetsGrainDto>> FaucetsTransfer(FaucetsTransferGrainDto input)
     {
         var result = new GrainResultDto<FaucetsGrainDto>();
-        try
-        {
-            var address = input.Address;
-            if (string.IsNullOrEmpty(State.Id))
-            {
-                State.Id = address;
-            }
+        var address = input.Address;
+         if (string.IsNullOrEmpty(State.Id))
+         {
+             State.Id = address;
+         }
 
-            if (State.Mined)
-            {
-                _logger.LogWarning(FaucetsTransferMessage.TransferRestrictionsMessage);
-                result.Message = FaucetsTransferMessage.TransferRestrictionsMessage;
-                result.Success = false;
-                return result;
-            }
+         if (State.Mined)
+         {
+             _logger.LogWarning(FaucetsTransferMessage.TransferRestrictionsMessage);
+             result.Message = FaucetsTransferMessage.TransferRestrictionsMessage;
+             result.Success = false;
+             return result;
+         }
 
-            var chainId = _faucetsOptions.CurrentValue.ChainId;
-            if (!string.IsNullOrEmpty(State.TransactionId))
-            {
-                var txResult = await _blockchainClientFactory.GetClient(chainId)
-                    .GetTransactionResultAsync(State.TransactionId);
-                switch (txResult.Status)
-                {
-                    case "PENDING":
-                        _logger.LogWarning(FaucetsTransferMessage.TransferPendingMessage);
-                        result.Message = FaucetsTransferMessage.TransferPendingMessage;
-                        result.Success = false;
-                        return result;
-                    case "MINED":
-                        State.Mined = true;
-                        await WriteStateAsync();
-                        _logger.LogWarning(FaucetsTransferMessage.TransferRestrictionsMessage);
-                        result.Message = FaucetsTransferMessage.TransferRestrictionsMessage;
-                        result.Success = false;
-                        return result;
-                }
-            }
+         var chainId = _faucetsOptions.CurrentValue.ChainId;
+         if (!string.IsNullOrEmpty(State.TransactionId))
+         {
+             var txResult = await _blockchainClientFactory.GetClient(chainId)
+                 .GetTransactionResultAsync(State.TransactionId);
+             switch (txResult.Status)
+             {
+                 case "PENDING":
+                     _logger.LogWarning(FaucetsTransferMessage.TransferPendingMessage);
+                     result.Message = FaucetsTransferMessage.TransferPendingMessage;
+                     result.Success = false;
+                     return result;
+                 case "MINED":
+                     State.Mined = true;
+                     await WriteStateAsync();
+                     _logger.LogWarning(FaucetsTransferMessage.TransferRestrictionsMessage);
+                     result.Message = FaucetsTransferMessage.TransferRestrictionsMessage;
+                     result.Success = false;
+                     return result;
+             }
+         }
 
-            var symbol = _faucetsOptions.CurrentValue.FaucetsTransferSymbol;
-            var amount = _faucetsOptions.CurrentValue.FaucetsTransferAmount;
+         var symbol = _faucetsOptions.CurrentValue.FaucetsTransferSymbol;
+         var amount = _faucetsOptions.CurrentValue.FaucetsTransferAmount;
 
-            if (!await CheckFaucetsBalance())
-            {
-                _logger.LogWarning("There is no balance in the management account!");
-                result.Message = FaucetsTransferMessage.SuspendUseMessage;
-                result.Success = false;
-                return result;
-            }
+         if (!await CheckFaucetsBalance())
+         {
+             _logger.LogWarning("There is no balance in the management account!");
+             result.Message = FaucetsTransferMessage.SuspendUseMessage;
+             result.Success = false;
+             return result;
+         }
 
-            _logger.LogInformation("Prepare to issue {amount} {symbol} to address {addr}", amount, symbol, address);
+         _logger.LogInformation("Prepare to issue {amount} {symbol} to address {addr}", amount, symbol, address);
 
-            var param = new TransferInput
-            {
-                Symbol = symbol,
-                Amount = ((long)amount).Mul((long)Math.Pow(10, _faucetsOptions.CurrentValue.SymbolDecimal)),
-                To = Address.FromBase58(address)
-            };
+         var param = new TransferInput
+         {
+             Symbol = symbol,
+             Amount = ((long)amount).Mul((long)Math.Pow(10, _faucetsOptions.CurrentValue.SymbolDecimal)),
+             To = Address.FromBase58(address)
+         };
             
-            var rawTxResult = await _contractProvider.CreateTransactionAsync(chainId, 
-                _chainOptions.CurrentValue.ChainInfos[chainId].FaucetsPublicKey,
-                _chainOptions.CurrentValue.ChainInfos[chainId].TokenContractAddress, 
-                MethodName.Transfer, param.ToByteString().ToBase64());
-            await _contractProvider.SendTransactionAsync(chainId, rawTxResult.transaction);
+         var rawTxResult = await _contractProvider.CreateTransactionAsync(chainId, 
+             _chainOptions.CurrentValue.ChainInfos[chainId].FaucetsPublicKey,
+             _chainOptions.CurrentValue.ChainInfos[chainId].TokenContractAddress, 
+             MethodName.Transfer, param.ToByteString().ToBase64());
+         await _contractProvider.SendTransactionAsync(chainId, rawTxResult.transaction);
             
-            State.TransactionId = rawTxResult.transactionId.ToHex();
-            State.Address = input.Address;
-            State.Symbol = symbol;
-            State.Amount = amount;
+         State.TransactionId = rawTxResult.transactionId.ToHex();
+         State.Address = input.Address;
+         State.Symbol = symbol;
+         State.Amount = amount;
 
-            await WriteStateAsync();
+         await WriteStateAsync();
 
-            result.Data = _objectMapper.Map<FaucetsState, FaucetsGrainDto>(State);
-            return result;
-        }
-        catch (FormatException)
-        {
-            _logger.LogError("Invalid Address.");
-            result.Message = FaucetsTransferMessage.InvalidAddressMessage;
-            result.Success = false;
-            return result;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Faucets transfer failed.");
-            result.Message = e.Message;
-            result.Success = false;
-            return result;
-        }
+         result.Data = _objectMapper.Map<FaucetsState, FaucetsGrainDto>(State);
+         return result;
     }
 
     private async Task<bool> CheckFaucetsBalance()

@@ -88,24 +88,17 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
             Logger.LogWarning($"can not get the token {symbol}");
             return 0;
         }
-        try
-        {
-            var coinData =
-                await RequestAsync(async () =>
-                    await _coinGeckoClient.SimpleClient.GetSimplePrice(new[] { coinId }, new[] { UsdSymbol }));
+        
+        var coinData =
+            await RequestAsync(async () =>
+                await _coinGeckoClient.SimpleClient.GetSimplePrice(new[] { coinId }, new[] { UsdSymbol }));
 
-            if (!coinData.TryGetValue(coinId, out var value))
-            {
-                return 0;
-            }
-
-            return value[UsdSymbol].Value;
-        }
-        catch (Exception ex)
+        if (!coinData.TryGetValue(coinId, out var value))
         {
-            Logger.LogError(ex, $"can not get current price :{symbol}.");
             return 0;
         }
+
+        return value[UsdSymbol].Value;
     }
 
     public async Task<decimal> GetHistoryPriceAsync(string symbol, DateTime dateTime)
@@ -122,24 +115,16 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
             return 0;
         }
 
-        try
-        {
-            var coinData =
-                await RequestAsync(async () => await _coinGeckoClient.CoinsClient.GetHistoryByCoinId(coinId,
-                    dateTime.ToString("dd-MM-yyyy"), "false"));
+        var coinData =
+            await RequestAsync(async () => await _coinGeckoClient.CoinsClient.GetHistoryByCoinId(coinId,
+                dateTime.ToString("dd-MM-yyyy"), "false"));
 
-            if (coinData.MarketData == null)
-            {
-                return 0;
-            }
-
-            return (decimal)coinData.MarketData.CurrentPrice[UsdSymbol].Value;
-        }
-        catch (Exception ex)
+        if (coinData.MarketData == null)
         {
-            Logger.LogError(ex, $"can not get :{symbol} price.");
             return 0;
         }
+
+        return (decimal)coinData.MarketData.CurrentPrice[UsdSymbol].Value;
     }
 
     private string GetCoinIdAsync(string symbol)

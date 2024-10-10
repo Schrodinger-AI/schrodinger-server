@@ -1,8 +1,10 @@
 using System;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using AElf.Indexing.Elasticsearch;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Zealy;
 using SchrodingerServer.Zealy.Eto;
 using Volo.Abp.DependencyInjection;
@@ -25,32 +27,20 @@ public class XpRecordHandler : IDistributedEventHandler<XpRecordEto>, IDistribut
         _objectMapper = objectMapper;
         _logger = logger;
     }
-
+    
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionNull))]
     public async Task HandleEventAsync(XpRecordEto eventData)
     {
-        try
-        {
-            var contact = _objectMapper.Map<XpRecordEto, ZealyUserXpRecordIndex>(eventData);
-            await _repository.AddOrUpdateAsync(contact);
-            _logger.LogInformation("add or update xp record success, recordId:{recordId}", eventData.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "add or update xp record error, data:{data}", JsonConvert.SerializeObject(eventData));
-        }
+        var contact = _objectMapper.Map<XpRecordEto, ZealyUserXpRecordIndex>(eventData);
+        await _repository.AddOrUpdateAsync(contact);
+        _logger.LogInformation("add or update xp record success, recordId:{recordId}", eventData.Id);
     }
-
+    
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task HandleEventAsync(AddXpRecordEto eventData)
     {
-        try
-        {
-            var contact = _objectMapper.Map<AddXpRecordEto, ZealyUserXpRecordIndex>(eventData);
-            await _repository.AddAsync(contact);
-            _logger.LogInformation("add xp record success, recordId:{recordId}", eventData.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "add xp record error, data:{data}", JsonConvert.SerializeObject(eventData));
-        }
+        var contact = _objectMapper.Map<AddXpRecordEto, ZealyUserXpRecordIndex>(eventData);
+        await _repository.AddAsync(contact);
+        _logger.LogInformation("add xp record success, recordId:{recordId}", eventData.Id);
     }
 }

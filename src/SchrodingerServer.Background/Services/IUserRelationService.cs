@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using AElf.Indexing.Elasticsearch;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,7 @@ using SchrodingerServer.Background.Dtos;
 using SchrodingerServer.Background.Providers;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Zealy;
 using Volo.Abp.Caching;
 using Volo.Abp.DependencyInjection;
@@ -67,18 +69,10 @@ public class UserRelationService : IUserRelationService, ISingletonDependency
         }
 
         _logger.LogInformation("add zealy user from begin, nextCursor:{nextCursor}", nextCursor);
-        try
-        {
-            await AddZealyUserFromBeginAsync(nextCursor);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "add zealy user error.");
-
-            //todo: retry logic
-        }
+        await AddZealyUserFromBeginAsync(nextCursor);
     }
 
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task AddZealyUserFromBeginAsync(string nextCursor)
     {
         var uri = CommonConstant.GetReviewsUri + $"?questId={_options.QuestId}&limit={_options.Limit}";
@@ -123,19 +117,10 @@ public class UserRelationService : IUserRelationService, ISingletonDependency
             nextCursor = cursorInfo.NextCursor;
         }
 
-        _logger.LogInformation("begin to add zealy user, nextCursor:{nextCursor}", nextCursor);
-        try
-        {
-            await AddZealyUserAsync(nextCursor);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "add zealy user error.");
-
-            //todo: retry logic
-        }
+        await AddZealyUserAsync(nextCursor);
     }
-
+    
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task AddZealyUserAsync(string nextCursor)
     {
         var uri = CommonConstant.GetReviewsUri + $"?questId={_options.QuestId}&limit={_options.Limit}";
@@ -175,41 +160,33 @@ public class UserRelationService : IUserRelationService, ISingletonDependency
 
         foreach (var item in reviewItems)
         {
-            try
+            if (item.Tasks.Count == 0)
             {
-                if (item.Tasks.Count == 0)
-                {
-                    _logger.LogError("user share wallet address task empty, data:{data}",
-                        JsonConvert.SerializeObject(item));
-                    continue;
-                }
-
-                if (item.Tasks.Count > 1)
-                {
-                    _logger.LogError("user share wallet address task count more than 1, data:{data}",
-                        JsonConvert.SerializeObject(item));
-                    continue;
-                }
-
-                var shareTask = item.Tasks.First();
-
-                var address = GetAddress(shareTask.Value);
-
-                var user = new ZealyUserIndex
-                {
-                    Id = item.User.Id,
-                    Address = address,
-                    CreateTime = item.Tasks.First().CreatedAt,
-                    UpdateTime = DateTime.UtcNow
-                };
-
-                users.Add(user);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "map to user error, data:{data}", JsonConvert.SerializeObject(item));
+                _logger.LogError("user share wallet address task empty, data:{data}",
+                    JsonConvert.SerializeObject(item));
                 continue;
             }
+
+            if (item.Tasks.Count > 1)
+            {
+                _logger.LogError("user share wallet address task count more than 1, data:{data}",
+                    JsonConvert.SerializeObject(item));
+                continue;
+            }
+
+            var shareTask = item.Tasks.First();
+
+            var address = GetAddress(shareTask.Value);
+
+            var user = new ZealyUserIndex
+            {
+                Id = item.User.Id,
+                Address = address,
+                CreateTime = item.Tasks.First().CreatedAt,
+                UpdateTime = DateTime.UtcNow
+            };
+
+            users.Add(user);
         }
 
         return users;

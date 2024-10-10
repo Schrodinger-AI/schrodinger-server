@@ -38,27 +38,18 @@ public class DeviceInfoMiddleware
 
     private DeviceInfo ExtractDeviceInfo(HttpContext context)
     {
-        try
-        {
-            var headers = context.Request.Headers;
-            var clientTypeExists = headers.TryGetValue("Client-Type", out var clientType);
-            var clientVersionExists = headers.TryGetValue("Version", out var clientVersion);
-            var hostHeader = _ipWhiteListOptions.CurrentValue.HostHeader ?? "Host";
+        var headers = context.Request.Headers;
+        var clientTypeExists = headers.TryGetValue("Client-Type", out var clientType);
+        var clientVersionExists = headers.TryGetValue("Version", out var clientVersion);
+        var hostHeader = _ipWhiteListOptions.CurrentValue.HostHeader ?? "Host";
 
-            return new DeviceInfo
-            {
-                ClientType = clientTypeExists ? clientType.ToString() : null,
-                Version = clientVersionExists ? clientVersion.ToString() : null,
-                ClientIp = GetClientIp(context),
-                Host = headers[hostHeader].FirstOrDefault() ?? CommonConstant.EmptyString
-            };
-        }
-        catch (Exception e)
+        return new DeviceInfo
         {
-            _logger.LogError(e, "Decode device info error");
-        }
-
-        return null;
+            ClientType = clientTypeExists ? clientType.ToString() : null,
+            Version = clientVersionExists ? clientVersion.ToString() : null,
+            ClientIp = GetClientIp(context),
+            Host = headers[hostHeader].FirstOrDefault() ?? CommonConstant.EmptyString
+        };
     }
 
     private string GetClientIp(HttpContext context)

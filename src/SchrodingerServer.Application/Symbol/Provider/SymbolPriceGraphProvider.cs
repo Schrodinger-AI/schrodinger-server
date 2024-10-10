@@ -26,12 +26,11 @@ public class SymbolPriceGraphProvider: ISymbolPriceGraphProvider, ISingletonDepe
         _logger = logger;
     }
 
-    public async Task<PagedResultDto<IndexerNFTListingInfo>> GetNFTListingsAsync(GetNFTListingsDto dto){
-        try
+    public async Task<PagedResultDto<IndexerNFTListingInfo>> GetNFTListingsAsync(GetNFTListingsDto dto)
+    {
+        var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.ForestClient).SendQueryAsync<NFTListingPage>(new GraphQLRequest
         {
-            var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.ForestClient).SendQueryAsync<NFTListingPage>(new GraphQLRequest
-            {
-                Query = @"query (
+            Query = @"query (
                     $skipCount:Int!,
                     $maxResultCount:Int!,
                     $chainId:String,
@@ -63,21 +62,15 @@ public class SymbolPriceGraphProvider: ISymbolPriceGraphProvider, ISingletonDepe
                     }
                   }
                 }",
-                Variables = new
-                {
-                    chainId = dto.ChainId, 
-                    symbol = dto.Symbol, 
-                    skipCount = dto.SkipCount, 
-                    maxResultCount = dto.MaxResultCount,
-                }
-            });
-            return res.Data?.nftListingInfo;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "GetNFTListingsAsync query GraphQL error");
-            throw;
-        }
+            Variables = new
+            {
+                chainId = dto.ChainId, 
+                symbol = dto.Symbol, 
+                skipCount = dto.SkipCount, 
+                maxResultCount = dto.MaxResultCount,
+            }
+        });
+        return res.Data?.nftListingInfo;
     }
 
     

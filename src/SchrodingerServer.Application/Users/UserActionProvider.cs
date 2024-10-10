@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -9,6 +10,7 @@ using Orleans;
 using Orleans.Runtime;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Grains.Grain.Users;
 using SchrodingerServer.PointServer;
 using SchrodingerServer.Users.Dto;
@@ -66,31 +68,24 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
                 await CheckPointsDomainWithCacheAsync(domain));
     }
 
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionFalse))]
     private async Task<bool> CheckPointsDomainWithCacheAsync(string domain)
     {
-        try
-        {
-            var cacheKey = "DomainCheck:" + domain;
-            var cachedData = await _checkDomainCache.GetAsync(cacheKey);
-            if (cachedData.NotNullOrEmpty())
-                return bool.TryParse(cachedData, out var cachedValue) && cachedValue;
+        var cacheKey = "DomainCheck:" + domain;
+        var cachedData = await _checkDomainCache.GetAsync(cacheKey);
+        if (cachedData.NotNullOrEmpty())
+            return bool.TryParse(cachedData, out var cachedValue) && cachedValue;
 
-            var pointsServerCheck = await _pointServerProvider.CheckDomainAsync(domain);
-            if (!pointsServerCheck) return false;
+        var pointsServerCheck = await _pointServerProvider.CheckDomainAsync(domain);
+        if (!pointsServerCheck) return false;
 
-            // Only existing domain data is stored in the cache
-            await _checkDomainCache.SetAsync(cacheKey, true.ToString(), new DistributedCacheEntryOptions
-            {
-                AbsoluteExpiration =
-                    DateTimeOffset.Now.AddSeconds(_accessVerifyOptions.CurrentValue.DomainCacheSeconds)
-            });
-            return true;
-        }
-        catch (Exception e)
+        // Only existing domain data is stored in the cache
+        await _checkDomainCache.SetAsync(cacheKey, true.ToString(), new DistributedCacheEntryOptions
         {
-            _logger.LogError(e, "Check domain error");
-            return false;
-        }
+            AbsoluteExpiration =
+                DateTimeOffset.Now.AddSeconds(_accessVerifyOptions.CurrentValue.DomainCacheSeconds)
+        });
+        return true;
     }
 
     public async Task<DateTime?> GetActionTimeAsync(ActionType actionType)

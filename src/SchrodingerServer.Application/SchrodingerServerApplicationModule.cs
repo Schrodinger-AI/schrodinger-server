@@ -1,3 +1,4 @@
+using AElf.ExceptionHandler;
 using Microsoft.Extensions.DependencyInjection;
 using SchrodingerServer.Cat;
 using SchrodingerServer.Common;
@@ -25,7 +26,8 @@ namespace SchrodingerServer;
     typeof(AbpTenantManagementApplicationModule),
     typeof(AbpFeatureManagementApplicationModule),
     typeof(SchrodingerServerGrainsModule),
-    typeof(AbpSettingManagementApplicationModule)
+    typeof(AbpSettingManagementApplicationModule),
+    typeof(AOPExceptionModule)
 )]
 public class SchrodingerServerApplicationModule : AbpModule
 {
