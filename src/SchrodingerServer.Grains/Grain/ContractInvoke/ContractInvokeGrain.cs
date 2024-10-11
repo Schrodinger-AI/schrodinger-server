@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using AElf.Client.Dto;
 using AElf.Client.Service;
+using AElf.ExceptionHandler;
 using AElf.Types;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -9,6 +11,7 @@ using SchrodingerServer.Common;
 using SchrodingerServer.Common.ApplicationHandler;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Grains.Grain.ApplicationHandler;
+using SchrodingerServer.Grains.Grain.Users;
 using SchrodingerServer.Grains.State.ContractInvoke;
 using Volo.Abp.ObjectMapping;
 
@@ -80,30 +83,35 @@ public class ContractInvokeGrain : Grain<ContractInvokeState>, IContractInvokeGr
         }
         
         var status = EnumConverter.ConvertToEnum<ContractInvokeStatus>(State.Status);
+        
+        var res = await ProcessJob(status);
 
-        try
+        if (!res)
         {
-            switch (status)
-            {
-                case ContractInvokeStatus.ToBeCreated:
-                    await HandleCreatedAsync();
-                    break;
-                case ContractInvokeStatus.Pending:
-                    await HandlePendingAsync();
-                    break;
-                case ContractInvokeStatus.Failed:
-                    await HandleFailedAsync();
-                    break;
-            }
+            _logger.LogError( "An error occurred during job execution and will be retried bizId:{bizId} txHash: {TxHash} err: {err}",
+                State.BizId, State.TransactionId);
+        }
+        
+        return OfContractInvokeGrainResultDto(res);
+    }
+    
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(GrainExceptionHandlingService), MethodName = nameof(GrainExceptionHandlingService.HandleExceptionFalse))]
+    private async Task<bool> ProcessJob(ContractInvokeStatus status)
+    {
+        switch (status)
+        {
+            case ContractInvokeStatus.ToBeCreated:
+                await HandleCreatedAsync();
+                break;
+            case ContractInvokeStatus.Pending:
+                await HandlePendingAsync();
+                break;
+            case ContractInvokeStatus.Failed:
+                await HandleFailedAsync();
+                break;
+        }
 
-            return OfContractInvokeGrainResultDto(true);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "An error occurred during job execution and will be retried bizId:{bizId} txHash: {TxHash} err: {err}",
-                State.BizId, State.TransactionId,  ex.ToString());
-            return OfContractInvokeGrainResultDto(false);
-        }
+        return true;
     }
 
     private async Task HandleCreatedAsync()
