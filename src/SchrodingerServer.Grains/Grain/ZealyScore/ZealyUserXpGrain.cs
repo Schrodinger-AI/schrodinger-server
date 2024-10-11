@@ -1,4 +1,6 @@
+using AElf.ExceptionHandler;
 using Orleans;
+using SchrodingerServer.Grains.Grain.Users;
 using SchrodingerServer.Grains.Grain.ZealyScore.Dtos;
 using SchrodingerServer.Grains.State.ZealyScore;
 using Volo.Abp.ObjectMapping;
@@ -94,6 +96,7 @@ public class ZealyUserXpGrain : Grain<ZealyUserXpState>, IZealyUserXpGrain
         return Success();
     }
 
+    [ExceptionHandler(typeof(Exception), Message = "ClearRecordInfo error", TargetType = typeof(GrainExceptionHandlingService), MethodName = nameof(GrainExceptionHandlingService.HandleExceptionDefault))]
     public async Task<GrainResultDto<ZealyUserXpGrainDto>> ClearRecordInfo(string date)
     {
         var recordInfo = State.RecordInfos.FirstOrDefault(t => t.Date == date);

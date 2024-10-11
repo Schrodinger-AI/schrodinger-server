@@ -28,7 +28,7 @@ public class ContractInvokeHandler : IDistributedEventHandler<ContractInvokeEto>
         _logger = logger;
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionNull))]
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task HandleEventAsync(ContractInvokeEto eventData)
     {
         var contact = _objectMapper.Map<ContractInvokeEto, ContractInvokeIndex>(eventData);

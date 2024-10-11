@@ -180,7 +180,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         }
         else
         {
-            _logger.LogError("IsOverLoadedAsync get result Success fail, {resp}", response.ToString());
+            _logger.LogError("IsOverLoadedAsync get result fail, {resp}", response.ToString());
         }
 
         return true;    
@@ -198,7 +198,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return resp;
     }
 
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionString))]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New)]
     private async Task<string> UploadToS3Async(string base64String, string fileName)
     {
         byte[] imageBytes = Convert.FromBase64String(base64String);
@@ -247,7 +247,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return await _adoptGraphQlProvider.QueryAdoptInfoAsync(adoptId);
     }
 
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionNull))]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default)]
     private async Task<WatermarkResponse> GetWatermarkImageAsync(WatermarkInput input)
     {
  

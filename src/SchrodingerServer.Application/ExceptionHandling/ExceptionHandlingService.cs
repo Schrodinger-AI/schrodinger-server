@@ -23,33 +23,4 @@ public class ExceptionHandlingService
         };
     }
     
-    public static async Task<FlowBehavior> HandleExceptionString(Exception ex)
-    {
-        return new FlowBehavior
-        {
-            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
-            ReturnValue = ""
-        };
-    }
-    
-    public static async Task<FlowBehavior> HandleExceptionNull(Exception ex)
-    {
-        return new FlowBehavior
-        {
-            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
-            ReturnValue = null
-        };
-    }
-    
-    public static async Task<FlowBehavior> HandleExceptionFalse(Exception ex)
-    {
-        return new FlowBehavior
-        {
-            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
-            ReturnValue = false
-        };
-    }
-    
-    
-    
 }

@@ -66,13 +66,13 @@ public class ZealyScoreService : IZealyScoreService, ISingletonDependency
 
     public async Task UpdateScoreAsync()
     {
-        await CheckAndHandl(); 
+        await CheckAndHandle(); 
         await _distributedCache.RemoveAsync(GetCacheKey());
         
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
-    private async Task CheckAndHandl()
+    [ExceptionHandler(typeof(Exception), Message = "update zealy score error", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
+    private async Task CheckAndHandle()
     {
         var jobIsStart = await CheckJobAsync();
         if (!jobIsStart)
@@ -161,7 +161,7 @@ public class ZealyScoreService : IZealyScoreService, ISingletonDependency
         }
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
+    [ExceptionHandler(typeof(Exception), Message = "handle user score error", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task ProcessUser(ZealyUserIndex user)
     {
         if (!ValidAddress(user.Address))
@@ -260,7 +260,7 @@ public class ZealyScoreService : IZealyScoreService, ISingletonDependency
         throw new UserFriendlyException(result.Message);
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionNull))]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New)]
     private async Task<ZealyUserDto> GetZealyUserAsync(string userId)
     {
         var uri = CommonConstant.GetUserUri + $"/{userId}";
@@ -268,7 +268,7 @@ public class ZealyScoreService : IZealyScoreService, ISingletonDependency
         return await _zealyClientProxyProvider.GetAsync<ZealyUserDto>(uri);
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionFalse))]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default)]
     private bool ValidAddress(string address)
     {
         var isValid = AddressHelper.VerifyFormattedAddress(address);
