@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using GraphQL;
 using Microsoft.Extensions.Logging;
 using SchrodingerServer.Awaken.Provider;
@@ -28,7 +29,7 @@ public class PortkeyProvider : IPortkeyProvider, ISingletonDependency
         _logger = logger;
     }
     
-    
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default)]
     public async Task<IsEOAAddressDto> IsEOAAddress(string address)
     {
         var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.PortkeyClient).SendQueryAsync<CaHolderInfoDto>(new GraphQLRequest
@@ -64,7 +65,7 @@ public class PortkeyProvider : IPortkeyProvider, ISingletonDependency
         };
     }
     
-    
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default)]
     public async Task<List<CaHolderInfo>> BatchGetAddressInfo(List<string> addressList)
     {
         var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.PortkeyClient).SendQueryAsync<CaHolderInfoDto>(new GraphQLRequest

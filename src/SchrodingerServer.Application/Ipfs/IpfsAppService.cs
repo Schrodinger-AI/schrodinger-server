@@ -28,7 +28,7 @@ public class IpfsAppService : ISingletonDependency, IIpfsAppService
         _options = ipfsOption;
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionString))]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New)]
     public async Task<string> Upload(string content, string name)
     {
         var url = _options.CurrentValue.Url;
@@ -71,7 +71,7 @@ public class IpfsAppService : ISingletonDependency, IIpfsAppService
         return "";
     }
 
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionString))]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New)]
     public async Task<string> UploadFile(string base64String, string name)
     {
         var content = new MultipartFormDataContent();

@@ -28,7 +28,7 @@ public class XpRecordHandler : IDistributedEventHandler<XpRecordEto>, IDistribut
         _logger = logger;
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionNull))]
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task HandleEventAsync(XpRecordEto eventData)
     {
         var contact = _objectMapper.Map<XpRecordEto, ZealyUserXpRecordIndex>(eventData);

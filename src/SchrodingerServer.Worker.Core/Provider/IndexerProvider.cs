@@ -1,5 +1,7 @@
+using AElf.ExceptionHandler;
 using GraphQL;
 using Microsoft.Extensions.Logging;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Worker.Core.Common;
 using SchrodingerServer.Worker.Core.Dtos;
 using Volo.Abp.DependencyInjection;
@@ -22,7 +24,8 @@ public class IndexerProvider : IIndexerProvider, ISingletonDependency
         _graphQlHelper = graphQlHelper;
         _logger = logger;
     }
-
+    
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New)]
     public async Task<List<string>> SubscribeConfirmedAsync(string chainId, long to, long from)
     {
         var indexerResult = await _graphQlHelper.QueryAsync<IndexerConfirmedListDto>(new GraphQLRequest
@@ -55,6 +58,7 @@ public class IndexerProvider : IIndexerProvider, ISingletonDependency
         // };
     }
     
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default)]
     public async Task<long> GetIndexBlockHeightAsync(string chainId)
     {
         var res = await _graphQlHelper.QueryAsync<ConfirmedBlockHeightRecord>(new GraphQLRequest

@@ -68,7 +68,7 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
                 await CheckPointsDomainWithCacheAsync(domain));
     }
 
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionFalse))]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default)]
     private async Task<bool> CheckPointsDomainWithCacheAsync(string domain)
     {
         var cacheKey = "DomainCheck:" + domain;

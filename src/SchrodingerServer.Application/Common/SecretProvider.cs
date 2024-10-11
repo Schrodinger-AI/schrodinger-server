@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using AElf.Types;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -63,6 +64,7 @@ public class SecretProvider : ISecretProvider, ITransientDependency
         return resp.Data!.Signature;
     }
     
+    [ExceptionHandler(typeof(Exception), Message = "CallSignatureServiceFailed error", ReturnDefault = ReturnDefault.Default)]
     public async Task<string> GetSignatureFromHashAsync(string publicKey, Hash hash)
     {
         var signatureSend = new SendSignatureDto

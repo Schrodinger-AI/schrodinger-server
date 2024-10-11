@@ -91,18 +91,22 @@ public class SyncGrain : Grain<SyncState>, ISyncGrain
         // }
 
         var res = await ProcessJob();
-        if (!res)
+        if (res == 1)
         {
             _logger.LogError( "Sync job {tx} Failed, Synchronization will restart", input.Id);
             await Resync(input.Id);
+        } 
+        else if (res == 0)
+        {
+            result.Data = _objectMapper.Map<SyncState, SyncGrainDto>(State);
         }
         
         return result;
     }
     
-    
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(GrainExceptionHandlingService), MethodName = nameof(GrainExceptionHandlingService.HandleExceptionFalse))]
-    private async Task<bool> ProcessJob()
+    [ExceptionHandler(typeof(AElf.Client.AElfClientException), Message = "When sync task, the call to sdk failed. Will try again later", TargetType = typeof(GrainExceptionHandlingService), MethodName = nameof(GrainExceptionHandlingService.HandleAElfClientException))]
+    [ExceptionHandler(typeof(Exception), Message = "Sync job Failed, Synchronization will restart", TargetType = typeof(GrainExceptionHandlingService), MethodName = nameof(GrainExceptionHandlingService.HandleException))]
+    private async Task<int> ProcessJob()
     {
         switch (State.Status)
         {
@@ -127,7 +131,7 @@ public class SyncGrain : Grain<SyncState>, ISyncGrain
                 throw new InvalidOperationException("Invalid status");
         }
 
-        return true;
+        return 0;
     }
 
     # region Token crossChain

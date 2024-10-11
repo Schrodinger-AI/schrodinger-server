@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Orleans;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Http;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Grains.Grain.Synchronize;
 using SchrodingerServer.Worker.Core.Dtos;
 using SchrodingerServer.Worker.Core.Options;
@@ -76,7 +77,6 @@ public class SyncWorker : AsyncPeriodicBackgroundWorkerBase
         await UpdateSubscribeHeightAsync(blockLatestHeight);
     }
 
-    [ExceptionHandler(typeof(Exception), LogOnly = true)]
     private async Task ExecuteSyncAsync()
     {
         var grainClient = _clusterClient.GetGrain<ISyncPendingGrain>(GenerateSyncPendingListGrainId());
@@ -94,6 +94,7 @@ public class SyncWorker : AsyncPeriodicBackgroundWorkerBase
         }
     }
 
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task HandlerJobExecuteAsync(string transactionId)
     {
         _logger.LogDebug("[Execute] Start sync transaction {tx}", transactionId);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using GraphQL;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -104,7 +105,7 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
         }
     }
     
-    
+    [ExceptionHandler(typeof(Exception), Message = "GetPriceAsync error", ReturnDefault = ReturnDefault.New)]
     public async Task<GetAwakenPriceDto> GetPriceAsync(string token0Symbol, string token1Symbol, string chainId, string feeRate)
     {
         try
@@ -129,6 +130,7 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
         }
     }
 
+    [ExceptionHandler(typeof(Exception), Message = "GetAwakenTradeRecordsAsync error", ReturnDefault = ReturnDefault.New)]
     public async Task<GetAwakenTradeRecordDto> GetAwakenTradeRecordsAsync(long beginTime, long endTime, long skipCount, long maxResultCount)
     {
         try

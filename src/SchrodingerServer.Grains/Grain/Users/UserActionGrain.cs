@@ -18,15 +18,6 @@ public interface IUserActionGrain : IGrainWithGuidKey
 
 public class GrainExceptionHandlingService
 {
-    public static async Task<FlowBehavior> HandleException(Exception ex)
-    {
-        return new FlowBehavior
-        {
-            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
-            ReturnValue = true
-        };
-    }
-    
     public static async Task<FlowBehavior> HandleExceptionDefault(Exception ex)
     {
         return new FlowBehavior
@@ -35,21 +26,21 @@ public class GrainExceptionHandlingService
         };
     }
     
-    public static async Task<FlowBehavior> HandleExceptionString(Exception ex)
+    public static async Task<FlowBehavior> HandleException(Exception ex)
     {
         return new FlowBehavior
         {
             ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
-            ReturnValue = ""
+            ReturnValue = 1
         };
     }
     
-    public static async Task<FlowBehavior> HandleExceptionNull(Exception ex)
+    public static async Task<FlowBehavior> HandleAElfClientException(Exception ex)
     {
         return new FlowBehavior
         {
             ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
-            ReturnValue = null
+            ReturnValue = 2
         };
     }
     
@@ -89,7 +80,8 @@ public class UserActionGrain : Grain<UserActionState>, IUserActionGrain
         var dto = _objectMapper.Map<UserActionState, UserActionGrainDto>(State);
         return Task.FromResult(new GrainResultDto<UserActionGrainDto>(dto));
     }
-
+    
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New)]
     public async Task<GrainResultDto<UserActionGrainDto>> AddActionAsync(ActionType actionType)
     {
         if (!State.ActionData.ContainsKey(actionType.ToString()))

@@ -88,14 +88,14 @@ public class ContractInvokeGrain : Grain<ContractInvokeState>, IContractInvokeGr
 
         if (!res)
         {
-            _logger.LogError( "An error occurred during job execution and will be retried bizId:{bizId} txHash: {TxHash} err: {err}",
+            _logger.LogError( "An error occurred during job execution and will be retried bizId:{bizId} txHash: {TxHash}",
                 State.BizId, State.TransactionId);
         }
         
         return OfContractInvokeGrainResultDto(res);
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(GrainExceptionHandlingService), MethodName = nameof(GrainExceptionHandlingService.HandleExceptionFalse))]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default)]
     private async Task<bool> ProcessJob(ContractInvokeStatus status)
     {
         switch (status)
