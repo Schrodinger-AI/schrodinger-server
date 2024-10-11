@@ -218,48 +218,6 @@ public class UniswapLiquidityService : IUniswapLiquidityService, ISingletonDepen
         long timeStamp = ((DateTimeOffset)yesterdayMidnight).ToUnixTimeSeconds();
         return timeStamp;
     }
-
-    private bool IsPositionValid(PoolDayData poolDayData, Position position)
-    {
-        Console.WriteLine($"low: {_optionsMonitor.CurrentValue.LowerShift}");
-        Console.WriteLine($"upp: {_optionsMonitor.CurrentValue.UpperShift}");
-        var positionLow = decimal.Parse(position.TickLower.Price0)*(decimal)Math.Pow(10, UniswapConstants.SGRDecimal-UniswapConstants.USDTDecimal);
-        
-        // the high price of full range positionHigh may be super huge
-        decimal positionHigh;
-        try
-        {
-            positionHigh = decimal.Parse(position.TickUpper.Price0)*(decimal)Math.Pow(10, UniswapConstants.SGRDecimal-UniswapConstants.USDTDecimal);
-        }
-        catch (OverflowException ex)
-        {
-            positionHigh = decimal.MaxValue;
-        }
-
-        decimal poolLow;
-        decimal poolHigh;
-        
-        if (poolDayData.TxCount > 0)
-        {
-            poolHigh = 1/decimal.Parse(poolDayData.Low);
-            poolLow = 1/decimal.Parse(poolDayData.High);
-        }
-        else
-        {
-            var currentPrice = decimal.Parse(poolDayData.Token1Price);
-            var currentValue = _optionsMonitor.CurrentValue;
-            poolHigh = currentPrice * (decimal)(1+currentValue.UpperShift);
-            poolLow = currentPrice * (decimal)(1-currentValue.LowerShift);
-        }
-        
-        if ((poolLow < positionHigh && poolHigh > positionHigh) || (poolLow < positionLow && poolHigh > positionLow) || 
-            (poolLow > positionLow && poolHigh < positionHigh))
-        {
-            return true;
-        }
-
-        return false;
-    }
     
     private List<double> GetIntersectionPrices(Pool pool, Position position)
     {

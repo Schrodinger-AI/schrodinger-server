@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace SchrodingerServer.Middleware;
 
@@ -42,7 +43,7 @@ public class DeviceInfoMiddleware
         var clientTypeExists = headers.TryGetValue("Client-Type", out var clientType);
         var clientVersionExists = headers.TryGetValue("Version", out var clientVersion);
         var hostHeader = _ipWhiteListOptions.CurrentValue.HostHeader ?? "Host";
-
+    
         return new DeviceInfo
         {
             ClientType = clientTypeExists ? clientType.ToString() : null,
@@ -51,7 +52,7 @@ public class DeviceInfoMiddleware
             Host = headers[hostHeader].FirstOrDefault() ?? CommonConstant.EmptyString
         };
     }
-
+    
     private string GetClientIp(HttpContext context)
     {
         // Check the X-Forwarded-For header (set by some agents)
@@ -64,16 +65,16 @@ public class DeviceInfoMiddleware
                 return ip.Split(',')[0].Trim(); // Take the first IP (if there are more than one)
             }
         }
-
+    
         // Check the X-Real-IP header (set by some agents)
         var realIpHeader = context.Request.Headers["X-Real-IP"];
         if (!string.IsNullOrEmpty(realIpHeader))
         {
             return realIpHeader;
         }
-
+    
         var ipAddress = context.Connection.RemoteIpAddress;
-
+    
         // Use remote IP address as fallback
         return ipAddress?.IsIPv4MappedToIPv6 ?? false ? ipAddress.MapToIPv4().ToString() : ipAddress?.ToString();
     }

@@ -1,3 +1,4 @@
+using AElf.ExceptionHandler;
 using Orleans;
 using SchrodingerServer.Common;
 using SchrodingerServer.Grains.State.Users;
@@ -14,6 +15,57 @@ public interface IUserActionGrain : IGrainWithGuidKey
     
     Task<GrainResultDto<UserActionGrainDto>> AddActionAsync(ActionType actionType);
 }
+
+public class GrainExceptionHandlingService
+{
+    public static async Task<FlowBehavior> HandleException(Exception ex)
+    {
+        return new FlowBehavior
+        {
+            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
+            ReturnValue = true
+        };
+    }
+    
+    public static async Task<FlowBehavior> HandleExceptionDefault(Exception ex)
+    {
+        return new FlowBehavior
+        {
+            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return
+        };
+    }
+    
+    public static async Task<FlowBehavior> HandleExceptionString(Exception ex)
+    {
+        return new FlowBehavior
+        {
+            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
+            ReturnValue = ""
+        };
+    }
+    
+    public static async Task<FlowBehavior> HandleExceptionNull(Exception ex)
+    {
+        return new FlowBehavior
+        {
+            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
+            ReturnValue = null
+        };
+    }
+    
+    public static async Task<FlowBehavior> HandleExceptionFalse(Exception ex)
+    {
+        return new FlowBehavior
+        {
+            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
+            ReturnValue = false
+        };
+    }
+    
+    
+    
+}
+
 
 public class UserActionGrain : Grain<UserActionState>, IUserActionGrain
 {
