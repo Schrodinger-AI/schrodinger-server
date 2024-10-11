@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nest;
 using Newtonsoft.Json;
-using NUglify.Helpers;
 using Orleans;
 using SchrodingerServer.Awaken.Provider;
 using SchrodingerServer.Common;

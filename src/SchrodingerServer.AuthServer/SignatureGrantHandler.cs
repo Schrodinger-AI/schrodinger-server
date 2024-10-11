@@ -185,8 +185,8 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
             claimsPrincipal.SetScopes("SchrodingerServer");
             claimsPrincipal.SetResources(await GetResourcesAsync(context, principal.GetScopes()));
             claimsPrincipal.SetAudiences("SchrodingerServer");
-            await context.HttpContext.RequestServices.GetRequiredService<AbpOpenIddictClaimDestinationsManager>()
-                .SetAsync(principal);
+            // await context.HttpContext.RequestServices.GetRequiredService<AbpOpenIddictClaimDestinationsManager>()
+            //     .SetAsync(principal);
             return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
     }
 
