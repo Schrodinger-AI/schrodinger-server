@@ -104,7 +104,7 @@ public class XpScoreResultService : IXpScoreResultService, ISingletonDependency
         await HandleXpResultAsync(newSkipCount, maxResultCount);
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
+    [ExceptionHandler(typeof(Exception), Message = "handle pending record erro", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task HandleRecordAsync(ZealyUserXpRecordIndex record, List<ContractInvokeIndex> contractInfos)
     {
         var contractInfo = contractInfos.FirstOrDefault(t => t.BizId == record.BizId);

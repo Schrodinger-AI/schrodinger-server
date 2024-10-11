@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -95,38 +96,19 @@ public class LevelProvider : ApplicationService, ILevelProvider
         }
         
         //get rank
-        List<RankData> rankDataList;
-        var respRank = await _httpProvider.InvokeAsync<CatsRankRespDto>(
-            _levelOptions.CurrentValue.SchrodingerUrl, PointServerProvider.Api.CatsRank,
-            body: JsonConvert.SerializeObject(input, JsonSerializerSettings));
-        if (respRank is not { Code: "20000" })
+        List<RankData> rankDataList = await GetRankDataList(input);
+        if (rankDataList.IsNullOrEmpty())
         {
-            _logger.LogError("CatsRank get failed,response:{response}",(respRank == null ? "non result" : respRank.Code));
-            return new List<RankData>();
+            return rankDataList;
         }
-
-        rankDataList = respRank.Data; 
         
         //check is in white list
         var address = !string.IsNullOrEmpty(input.Address) ? input.Address : input.SearchAddress;
         var isInWhiteList = await CheckAddressIsInWhiteListAsync(address);
+        
         //get awaken price
-        var price = 0.0;
-        var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
-            PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
-            {
-                ["token0Symbol"] = "SGR-1",
-                ["token1Symbol"] = "ELF",
-                ["feeRate"] = "0.03",
-                ["chainId"] = _levelOptions.CurrentValue.ChainId
-            });
-        if (resp is not { Code: "20000" })
-        {
-            _logger.LogError("AwakenPrice get failed,response:{response}",(resp == null ? "non result" : resp.Code));
-            return null;
-        }
-
-        price = (double)(resp.Data.Items?.First().ValueLocked1 / resp.Data.Items?.First().ValueLocked0);
+        var price = await GetAwakenPrice(input);
+        
         //get LevelInfo config 
         foreach (var rankData in rankDataList)
         {
@@ -175,6 +157,44 @@ public class LevelProvider : ApplicationService, ILevelProvider
             rankData.Rank.Rank = 0;
         }
         return rankDataList;
+    }
+    
+    [ExceptionHandler(typeof(Exception), Message = "Call CatsRank Failed", ReturnDefault = ReturnDefault.New)]
+    private async Task<List<RankData>> GetRankDataList(GetLevelInfoInputDto input)
+    {
+        var respRank = await _httpProvider.InvokeAsync<CatsRankRespDto>(
+            _levelOptions.CurrentValue.SchrodingerUrl, PointServerProvider.Api.CatsRank,
+            body: JsonConvert.SerializeObject(input, JsonSerializerSettings));
+        if (respRank is not { Code: "20000" })
+        {
+            _logger.LogError("CatsRank get failed,response:{response}",(respRank == null ? "non result" : respRank.Code));
+            return new List<RankData>();
+        }
+        
+        return respRank.Data; 
+    }
+    
+    [ExceptionHandler(typeof(Exception), Message = "Get AwakenPrice Failed", ReturnDefault = ReturnDefault.Default)]
+    private async Task<double> GetAwakenPrice(GetLevelInfoInputDto input)
+    {
+        //get awaken price
+        var price = 0.0;
+        var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
+            PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
+            {
+                ["token0Symbol"] = "SGR-1",
+                ["token1Symbol"] = "ELF",
+                ["feeRate"] = "0.03",
+                ["chainId"] = _levelOptions.CurrentValue.ChainId
+            });
+        if (resp is not { Code: "20000" })
+        {
+            _logger.LogError("AwakenPrice get failed,response:{response}",(resp == null ? "non result" : resp.Code));
+            return 0;
+        }
+
+        price = (double)(resp.Data.Items?.First().ValueLocked1 / resp.Data.Items?.First().ValueLocked0);
+        return price;
     }
 
     public async Task<double> GetAwakenSGRPrice()

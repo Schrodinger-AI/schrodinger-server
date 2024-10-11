@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using AElf.Types;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
@@ -10,6 +11,8 @@ using Schrodinger;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.ContractInvoke.Eto;
+using SchrodingerServer.ExceptionHandling;
+using SchrodingerServer.Grains.Grain;
 using SchrodingerServer.Grains.Grain.ContractInvoke;
 using SchrodingerServer.Users.Dto;
 using Volo.Abp;
@@ -83,7 +86,13 @@ public class PointSettleService : IPointSettleService, ISingletonDependency
             throw new UserFriendlyException($"Create Contract Invoke fail, bizId: {dto.BizId}.");
         }
 
-        await _distributedEventBus.PublishAsync(
+        await PublishData(
             _objectMapper.Map<ContractInvokeGrainDto, ContractInvokeEto>(result.Data));
+    }
+    
+    [ExceptionHandler(typeof(Exception), Message = "BatchSettle PublishAsync error", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
+    private async Task PublishData(ContractInvokeEto data)
+    {
+        await _distributedEventBus.PublishAsync(data);
     }
 }

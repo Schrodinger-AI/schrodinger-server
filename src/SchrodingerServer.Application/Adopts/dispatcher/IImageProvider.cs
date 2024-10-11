@@ -198,7 +198,7 @@ public class DefaultImageProvider : ImageProvider, ISingletonDependency
         _traitsOptions = traitsOptions;
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionString))]
+    [ExceptionHandler(typeof(Exception), Message = "RequestImageGenerationsAsync error", ReturnDefault = ReturnDefault.New)]
     public async Task<string> RequestImageGenerationsAsync(string adoptId, GenerateOpenAIImage imageInfo)
     {
         using var httpClient = new HttpClient();
@@ -234,7 +234,7 @@ public class DefaultImageProvider : ImageProvider, ISingletonDependency
         return "";
     }
 
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionString))]
+    [ExceptionHandler(typeof(Exception), Message="RequestGenerateImage error", ReturnDefault = ReturnDefault.New)]
     public async Task<string> RequestGenerateImage(string adoptId, GenerateOpenAIImage imageInfo)
     {
         var jsonString = ImageProviderHelper.ConvertObjectToJsonString(imageInfo);

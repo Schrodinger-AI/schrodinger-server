@@ -1,6 +1,7 @@
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using CoinGecko.Clients;
 using CoinGecko.Interfaces;
 using Microsoft.Extensions.Caching.Distributed;
@@ -75,6 +76,7 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
         return priceItem.Price;
     }
     
+    [ExceptionHandler(typeof(Exception), Message = "GetEcoEarnTotalRewardsAsync error", ReturnDefault = ReturnDefault.Default)]
     public async Task<decimal> GetPriceAsync(string symbol)
     {
         if (string.IsNullOrEmpty(symbol))
@@ -99,32 +101,6 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
         }
 
         return value[UsdSymbol].Value;
-    }
-
-    public async Task<decimal> GetHistoryPriceAsync(string symbol, DateTime dateTime)
-    {
-        if (string.IsNullOrEmpty(symbol))
-        {
-            return 0;
-        }
-
-        var coinId = GetCoinIdAsync(symbol);
-        if (coinId == null)
-        {
-            Logger.LogWarning($"can not get the token {symbol}");
-            return 0;
-        }
-
-        var coinData =
-            await RequestAsync(async () => await _coinGeckoClient.CoinsClient.GetHistoryByCoinId(coinId,
-                dateTime.ToString("dd-MM-yyyy"), "false"));
-
-        if (coinData.MarketData == null)
-        {
-            return 0;
-        }
-
-        return (decimal)coinData.MarketData.CurrentPrice[UsdSymbol].Value;
     }
 
     private string GetCoinIdAsync(string symbol)

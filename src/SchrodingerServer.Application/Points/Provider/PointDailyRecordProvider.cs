@@ -124,23 +124,21 @@ public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDep
         _logger.LogInformation("UpdatePointDailyRecord bizId:{bizId} status:{status}, infos:{infos}", bizId, status, JsonConvert.SerializeObject(userPointInfos));
         foreach (var userPoints in userPointInfos)
         {
-            ProcessRecordAsync(userPoints.Id, bizId, status);
+            await ProcessRecordAsync(userPoints.Id, bizId, status);
         }
     }
 
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleException))]
-    private async Task<bool> ProcessRecordAsync(string id, string bizId, string status)
+    [ExceptionHandler(typeof(Exception), Message = "PointDailyRecordGrain UpdateAsync fail", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
+    private async Task ProcessRecordAsync(string id, string bizId, string status)
     {
         var pointDailyRecordGrain = _clusterClient.GetGrain<IPointDailyRecordGrain>(id);
         var result = await pointDailyRecordGrain.UpdateAsync(bizId, status);
         if (!result.Success)
         {
             _logger.LogError("PointDailyRecordGrain UpdateAsync fail, id: {id}.", id);
-            return false;
         }
         await _distributedEventBus.PublishAsync(
             _objectMapper.Map<PointDailyRecordGrainDto, PointDailyRecordEto>(result.Data));
-        return true;
     }
     
     public async Task<List<PointDailyRecordIndex>> GetAllDailyRecordIndex(string chainId, string bizDate, string pointName)

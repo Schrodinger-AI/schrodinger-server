@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using AElf.Indexing.Elasticsearch;
 using GraphQL;
 using Microsoft.Extensions.Logging;
@@ -111,7 +112,7 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
         return !tuple.Item2.IsNullOrEmpty() ? tuple.Item2 : new List<HolderBalanceIndex>();
     }
     
-    
+    [ExceptionHandler(typeof(Exception), Message = "GetLastHoldingRecordAsync error", ReturnDefault = ReturnDefault.Default)]
     public async Task<HolderDailyChangeDto> GetLastHoldingRecordAsync(string chainId, string address, string symbol, List<string>  excludeDate)
     {
         var graphQlResponse = await _graphQlHelper.QueryAsync<IndexerHolderDailyChangeDto>(new GraphQLRequest
