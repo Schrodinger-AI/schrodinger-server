@@ -57,6 +57,9 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         _logger.LogDebug("GetTaskListAsync for address, address:{address}", currentAddress);
         
         var tasksOptions = _tasksOptions.CurrentValue;
+        
+        _logger.LogDebug("tasksOptions, :{tasksOptions}", JsonConvert.SerializeObject(tasksOptions));
+        
         var taskList = tasksOptions.TaskList;
         var dailyTasks = taskList.Where(i => i.Type == TaskType.Daily).ToList();
         var socialTasks = taskList.Where(i => i.Type == TaskType.Social).ToList();
