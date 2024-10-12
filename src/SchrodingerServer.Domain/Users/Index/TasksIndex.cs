@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using AElf.Indexing.Elasticsearch;
 using Nest;
 using SchrodingerServer.Entities;
@@ -14,6 +15,7 @@ public class TasksIndex : SchrodingerEntity<string>, IIndexBuild
     [Keyword] public string Date { get; set; }
     [Keyword] public string Name { get; set; }
     public decimal Score { get; set; }
+    public Dictionary<string, string> ExtraData { get; set; } = new();
     public DateTime CreatedTime { get; set; }
     public DateTime UpdatedTime { get; set; }
 }

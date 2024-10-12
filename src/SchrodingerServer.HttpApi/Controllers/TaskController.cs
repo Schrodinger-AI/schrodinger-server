@@ -47,7 +47,6 @@ public class TaskController
         return await _tasksApplicationService.GetScoreAsync(input);
     }
     
-    [Authorize]
     [HttpPost("task-status")]
     public async Task<GetTaskListOutput> GetTaskStatusAsync(GetTaskListInput input)
     {
