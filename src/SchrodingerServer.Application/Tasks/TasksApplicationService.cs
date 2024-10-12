@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Tasks.Dtos;
@@ -53,7 +54,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             _logger.LogError("Get current address failed");
             throw new UserFriendlyException("Invalid user");
         }
-        _logger.LogDebug("GetTaskListAsync, address:{address}", currentAddress);
+        _logger.LogDebug("GetTaskListAsync for address, address:{address}", currentAddress);
         
         var tasksOptions = _tasksOptions.CurrentValue;
         var taskList = tasksOptions.TaskList;
@@ -63,12 +64,15 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         
         var dailyTaskList = await GetDailyTasksAsync(dailyTasks, currentAddress);
         dailyTaskList = dailyTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
+        _logger.LogDebug("GetDailyTaskList, list:{dailyTaskList}", JsonConvert.SerializeObject(dailyTaskList));
         
         var socialTaskList = await GetOtherTasksAsync(socialTasks, currentAddress);
         socialTaskList = socialTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
+        _logger.LogDebug("GetSocialTaskList, list:{socialTaskList}", JsonConvert.SerializeObject(socialTaskList));
         
         var accomplishmentTaskList = await GetOtherTasksAsync(accomplishmentTasks, currentAddress);
         accomplishmentTaskList = accomplishmentTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
+        _logger.LogDebug("GetAccomplishmentTaskList, list:{accomplishmentTaskList}", JsonConvert.SerializeObject(accomplishmentTaskList));
         
         // var res = await _tasksProvider.GetScoreAsync(input.Address);
         return new GetTaskListOutput
