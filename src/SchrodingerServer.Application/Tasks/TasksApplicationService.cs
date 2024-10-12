@@ -46,12 +46,14 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
     public async Task<GetTaskListOutput> GetTaskListAsync(GetTaskListInput input)
     {
+        _logger.LogDebug("GetTaskListAsync");
         var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
         if (currentAddress.IsNullOrEmpty())
         {
             _logger.LogError("Get current address failed");
             throw new UserFriendlyException("Invalid user");
         }
+        _logger.LogDebug("GetTaskListAsync, address:{address}", currentAddress);
         
         var tasksOptions = _tasksOptions.CurrentValue;
         var taskList = tasksOptions.TaskList;
