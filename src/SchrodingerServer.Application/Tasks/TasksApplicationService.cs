@@ -66,16 +66,19 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var accomplishmentTasks = taskList.Where(i => i.Type == TaskType.Accomplishment).ToList();
         
         var dailyTaskList = await GetDailyTasksAsync(dailyTasks, currentAddress);
-        dailyTaskList = dailyTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
         _logger.LogDebug("GetDailyTaskList, list:{dailyTaskList}", JsonConvert.SerializeObject(dailyTaskList));
+        dailyTaskList = dailyTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
+        
         
         var socialTaskList = await GetOtherTasksAsync(socialTasks, currentAddress);
-        socialTaskList = socialTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
         _logger.LogDebug("GetSocialTaskList, list:{socialTaskList}", JsonConvert.SerializeObject(socialTaskList));
+        socialTaskList = socialTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
+       
         
         var accomplishmentTaskList = await GetOtherTasksAsync(accomplishmentTasks, currentAddress);
-        accomplishmentTaskList = accomplishmentTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
         _logger.LogDebug("GetAccomplishmentTaskList, list:{accomplishmentTaskList}", JsonConvert.SerializeObject(accomplishmentTaskList));
+        accomplishmentTaskList = accomplishmentTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
+       
         
         // var res = await _tasksProvider.GetScoreAsync(input.Address);
         return new GetTaskListOutput
@@ -112,10 +115,12 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             _logger.LogDebug("add task for address:{address}, tasks:{tasks}", address, dailyTaskList);
         }
         
+        _logger.LogDebug("GetDailyTaskList, task:{task}", JsonConvert.SerializeObject(dailyTaskList));
         foreach (var tasksDto in dailyTaskList)
         {
             if (tasksDto.TaskId == InviteTaskId && tasksDto.Status == UserTaskStatus.Created)
             {
+                _logger.LogDebug("check invite for address:{address}", tasksDto.Address);
                 var inviterRecordsToday = await _tasksProvider.GetInviteRecordsToday(new List<string> { tasksDto.Address });
                 if (!inviterRecordsToday.IsNullOrEmpty())
                 {
