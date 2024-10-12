@@ -17,4 +17,5 @@ public class TaskData
     public string TaskId { get; set; }
     public string Name { get; set; }
     public UserTaskStatus Status { get; set; }
+    public decimal Score { get; set; }
 }

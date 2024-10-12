@@ -20,6 +20,7 @@ public class TaskController
         _tasksApplicationService = tasksApplicationService;
     }
     
+    [Authorize]
     [HttpPost("list")]
     public async Task<GetTaskListOutput> GetTaskListAsync(GetTaskListInput input)
     {
@@ -45,6 +46,12 @@ public class TaskController
     {
         return await _tasksApplicationService.GetScoreAsync(input);
     }
-
+    
+    [Authorize]
+    [HttpPost("task-status")]
+    public async Task<GetTaskListOutput> GetTaskStatusAsync(GetTaskListInput input)
+    {
+        return await _tasksApplicationService.GetTaskStatusAsync(input);
+    }
     
 }

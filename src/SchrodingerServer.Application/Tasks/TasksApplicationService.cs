@@ -46,28 +46,34 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
     public async Task<GetTaskListOutput> GetTaskListAsync(GetTaskListInput input)
     {
+        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        if (currentAddress.IsNullOrEmpty())
+        {
+            _logger.LogError("Get current address failed");
+            throw new UserFriendlyException("Invalid user");
+        }
+        
         var tasksOptions = _tasksOptions.CurrentValue;
         var taskList = tasksOptions.TaskList;
         var dailyTasks = taskList.Where(i => i.Type == TaskType.Daily).ToList();
         var socialTasks = taskList.Where(i => i.Type == TaskType.Social).ToList();
         var accomplishmentTasks = taskList.Where(i => i.Type == TaskType.Accomplishment).ToList();
         
-        var dailyTaskList = await GetDailyTasksAsync(dailyTasks, input.Address);
+        var dailyTaskList = await GetDailyTasksAsync(dailyTasks, currentAddress);
         dailyTaskList = dailyTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
         
-        var socialTaskList = await GetOtherTasksAsync(socialTasks, input.Address);
+        var socialTaskList = await GetOtherTasksAsync(socialTasks, currentAddress);
         socialTaskList = socialTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
         
-        var accomplishmentTaskList = await GetOtherTasksAsync(accomplishmentTasks, input.Address);
+        var accomplishmentTaskList = await GetOtherTasksAsync(accomplishmentTasks, currentAddress);
         accomplishmentTaskList = accomplishmentTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
         
-        var res = await _tasksProvider.GetScoreAsync(input.Address);
+        // var res = await _tasksProvider.GetScoreAsync(input.Address);
         return new GetTaskListOutput
         {
             DailyTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(dailyTaskList),
             SocialTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(socialTaskList),
             AccomplishmentTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(accomplishmentTaskList),
-            FishScore = res
         };
     }
 
@@ -91,7 +97,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 tasksDto.Date = bizDate;
                 tasksDto.Status = tasksDto.TaskId == LoginTaskId ? UserTaskStatus.Finished : UserTaskStatus.Created;
                 tasksDto.Address = address;
-                tasksDto.Id = bizDate + address + tasksDto.TaskId;
+                tasksDto.Id = tasksDto.TaskId + "_" + address + "_"  + bizDate;
             }
             await _tasksProvider.AddTasksAsync(dailyTaskList);
             _logger.LogDebug("add task for address:{address}, tasks:{tasks}", address, dailyTaskList);
@@ -115,6 +121,11 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     
     private async Task<List<TasksDto>> GetOtherTasksAsync(List<TaskConfig> taskInfoList, string address)
     {
+        if (taskInfoList.IsNullOrEmpty())
+        {
+            return new List<TasksDto>();
+        }
+        
         var taskList = await _tasksProvider.GetTasksAsync(new GetTasksInput
         {
             Address = address,
@@ -133,12 +144,14 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             {
                 var taskDto = new TasksDto
                 {
-                    Id = address + taskId,
+                    Id = taskId + "_" + address,
                     CreatedTime = DateTime.UtcNow,
                     UpdatedTime = DateTime.UtcNow,
                     Status = UserTaskStatus.Created,
                     Address = address,
-                    Name = taskInfoList.First(i => i.TaskId == taskId).Name
+                    TaskId = taskId,
+                    Name = taskInfoList.First(i => i.TaskId == taskId).Name,
+                    Score = taskInfoList.First(i => i.TaskId == taskId).Score
                 };
                 
                 newTasks.Add(taskDto);
@@ -180,13 +193,15 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     public async Task<TaskData> FinishAsync(FinishInput input)
     {
         var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        // var currentAddress = input.Address;
         if (currentAddress.IsNullOrEmpty())
         {
             _logger.LogError("Get current address failed");
             throw new UserFriendlyException("Invalid user");
         }
         
-        var key = currentAddress + input.TaskId;
+        var key = input.TaskId + "_" + currentAddress;
+        var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
         
         var taskOption = _tasksOptions.CurrentValue;
         var taskList =  taskOption.TaskList;
@@ -194,7 +209,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var dailyTaskId = dailyTasks.Select(i => i.TaskId).ToList();
         if (dailyTaskId.Contains(input.TaskId))
         {
-            key += DateTime.UtcNow.ToString(TimeHelper.Pattern);;
+            key += ("_" + today);
         }
         
         await using var handle =
@@ -231,6 +246,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     public async Task<ClaimOutput> ClaimAsync(ClaimInput input)
     {
         var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        // var currentAddress = input.Address;
         if (currentAddress.IsNullOrEmpty())
         {
             _logger.LogError("Get current address failed");
@@ -240,7 +256,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
         
         var date = "";
-        var key = currentAddress + input.TaskId;
+        var key = input.TaskId + "_" + currentAddress;
 
         var taskOption = _tasksOptions.CurrentValue;
         var taskList =  taskOption.TaskList;
@@ -249,7 +265,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         if (dailyTaskId.Contains(input.TaskId))
         {
             date = today;
-            key += date;
+            key += ("_" + date);
         }
         
         await using var handle =
@@ -275,10 +291,16 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             throw new UserFriendlyException("user task not exist");
         }
         
+        if (taskInfo.Status == UserTaskStatus.Claimed)
+        {
+            _logger.LogError("already claimed, address:{address}, status:{status}, task:{task}", currentAddress, taskInfo.Status, input.TaskId);
+            throw new UserFriendlyException("already claimed");
+        }
+        
         if (taskInfo.Status != UserTaskStatus.Finished)
         {
             _logger.LogError("invalid status, address:{address}, status:{status}, task:{task}", currentAddress, taskInfo.Status, input.TaskId);
-            throw new UserFriendlyException("invalid status");
+            throw new UserFriendlyException("task not finished");
         }
 
         var res = await _tasksProvider.ChangeTaskStatusAsync(new ChangeTaskStatusInput
@@ -300,7 +322,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             throw new UserFriendlyException("claim failed");
         }
         
-        var score = taskList.Where(i => i.TaskId == input.TaskId).Select(i => i.Score).FirstOrDefault();
+        var score = res.Score;
         if (score == 0)
         {
             _logger.LogError("invalid taskId, address: {address}, task:{task}", currentAddress, input.TaskId);
@@ -339,6 +361,45 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             UserTaskStatus.Created => 1,
             UserTaskStatus.Claimed => 2, 
             _ => 3 
+        };
+    }
+    
+    public async Task<GetTaskListOutput> GetTaskStatusAsync(GetTaskListInput input)
+    {
+        var tasksOptions = _tasksOptions.CurrentValue;
+        var taskList = tasksOptions.TaskList;
+        var dailyTasks = taskList.Where(i => i.Type == TaskType.Daily).ToList();
+        var socialTasks = taskList.Where(i => i.Type == TaskType.Social).ToList();
+        var accomplishmentTasks = taskList.Where(i => i.Type == TaskType.Accomplishment).ToList();
+        
+        var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
+        var dailyTaskList = await _tasksProvider.GetTasksAsync(new GetTasksInput
+        {
+            Address = input.Address,
+            Date = bizDate,
+            TaskIdList = dailyTasks.Select(i => i.TaskId).ToList()
+        });
+        dailyTaskList = dailyTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
+
+        var socialTaskList = await _tasksProvider.GetTasksAsync(new GetTasksInput
+        {
+            Address = input.Address,
+            TaskIdList = socialTasks.Select(i => i.TaskId).ToList()
+        });
+        socialTaskList = socialTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
+        
+        var accomplishmentTaskList = await _tasksProvider.GetTasksAsync(new GetTasksInput
+        {
+            Address = input.Address,
+            TaskIdList = accomplishmentTasks.Select(i => i.TaskId).ToList()
+        });
+        accomplishmentTaskList = accomplishmentTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
+        
+        return new GetTaskListOutput
+        {
+            DailyTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(dailyTaskList),
+            SocialTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(socialTaskList),
+            AccomplishmentTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(accomplishmentTaskList),
         };
     }
     

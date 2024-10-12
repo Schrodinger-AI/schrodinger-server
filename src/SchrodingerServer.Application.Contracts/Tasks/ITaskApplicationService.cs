@@ -9,4 +9,5 @@ public interface ITasksApplicationService
     Task<TaskData> FinishAsync(FinishInput input);
     Task<ClaimOutput> ClaimAsync(ClaimInput input);
     Task<GetScoreOutput> GetScoreAsync(GetScoreInput input);
+    Task<GetTaskListOutput> GetTaskStatusAsync(GetTaskListInput input);
 }

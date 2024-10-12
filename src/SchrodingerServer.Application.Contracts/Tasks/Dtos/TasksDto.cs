@@ -11,6 +11,7 @@ public class TasksDto
     public string Address { get; set; }
     public string Name { get; set; }
     public UserTaskStatus Status { get; set; }
+    public decimal Score { get; set; }
     public string Date { get; set; }
     public DateTime CreatedTime { get; set; }
     public DateTime UpdatedTime { get; set; }

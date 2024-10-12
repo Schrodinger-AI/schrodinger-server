@@ -12,6 +12,8 @@ public class TasksIndex : SchrodingerEntity<string>, IIndexBuild
     [Keyword] public string Address { get; set; }
     [Keyword] public UserTaskStatus Status { get; set; }
     [Keyword] public string Date { get; set; }
+    [Keyword] public string Name { get; set; }
+    public decimal Score { get; set; }
     public DateTime CreatedTime { get; set; }
     public DateTime UpdatedTime { get; set; }
 }
