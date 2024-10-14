@@ -10,6 +10,7 @@ public class GetTaskListOutput
     public  List<TaskData> AccomplishmentTasks { get; set; } = new();
     
     public decimal FishScore { get; set; }
+    public int Countdown { get; set; }
 }
 
 public class TaskData
