@@ -208,6 +208,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             throw new UserFriendlyException("empty taskId");
         }
         
+        _logger.LogInformation("finish task, {taskId}, {address}", input.TaskId, currentAddress);
+        
         var key = input.TaskId + "_" + currentAddress;
         var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
         
@@ -227,6 +229,17 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         {
             _logger.LogError("get lock failed");
             throw new UserFriendlyException("please try later");
+        }
+        
+        if (input.TaskId == InviteTaskId)
+        {
+            _logger.LogDebug("check invite for address:{address}", currentAddress);
+            var inviterRecordsToday = await _tasksProvider.GetInviteRecordsToday(new List<string> { currentAddress });
+            if (inviterRecordsToday.IsNullOrEmpty())
+            {
+                _logger.LogError("finish task, but not invite, address: {address}", currentAddress);
+                throw new UserFriendlyException("not invite yet");
+            }
         }
 
         var res = await _tasksProvider.ChangeTaskStatusAsync(new ChangeTaskStatusInput
@@ -266,6 +279,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             _logger.LogError("empty taskId");
             throw new UserFriendlyException("empty taskId");
         }
+        
+        _logger.LogInformation("claim task, {taskId}, {address}", input.TaskId, currentAddress);
         
         var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
         
