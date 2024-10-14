@@ -18,4 +18,5 @@ public class TaskData
     public string Name { get; set; }
     public UserTaskStatus Status { get; set; }
     public decimal Score { get; set; }
+    public string Link { get; set; }
 }

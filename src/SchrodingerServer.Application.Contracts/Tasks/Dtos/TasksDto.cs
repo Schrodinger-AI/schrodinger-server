@@ -15,6 +15,7 @@ public class TasksDto
     public string Date { get; set; }
     public DateTime CreatedTime { get; set; }
     public DateTime UpdatedTime { get; set; }
+    public string Link { get; set; }
 }
 
 public class TaskListDto

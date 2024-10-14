@@ -49,6 +49,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     {
         _logger.LogDebug("GetTaskListAsync");
         var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        // var currentAddress = input.Address;
         if (currentAddress.IsNullOrEmpty())
         {
             _logger.LogError("Get current address failed");
@@ -128,6 +129,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                     await _tasksProvider.AddTasksAsync(new List<TasksDto> { tasksDto });
                 }
             }
+
+            tasksDto.Link = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Link;
         }
         
         return dailyTaskList;
@@ -175,34 +178,14 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             taskList.AddRange(newTasks);
         }
         
+        
+        foreach (var tasksDto in taskList)
+        {
+            tasksDto.Link = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Link;
+        }
+        
         return taskList;
     }
-    
-    // private async Task<List<TasksDto>> GetAccomplishmentTasksAsync(List<TaskConfig> taskInfoList, string address)
-    // {
-    //     var taskList = await _tasksProvider.GetTasksAsync(new GetTasksInput
-    //     {
-    //         Address = address,
-    //         TaskIdList = taskInfoList.Select(i => i.TaskId).ToList()
-    //     });
-    //
-    //     if (taskList.IsNullOrEmpty())
-    //     {
-    //         var newTasks = _objectMapper.Map<List<TaskConfig>, List<TasksDto>>(taskInfoList);
-    //         foreach (var tasksDto in newTasks)
-    //         { 
-    //             tasksDto.CreatedTime = DateTime.UtcNow;
-    //             tasksDto.UpdatedTime = DateTime.UtcNow;
-    //             tasksDto.Status = UserTaskStatus.Created;
-    //             tasksDto.Address = address;
-    //             tasksDto.Id = address + tasksDto.TaskId;
-    //         }
-    //         await _tasksProvider.AddTasksAsync(newTasks);
-    //         return newTasks;
-    //     }
-    //     
-    //     return taskList;
-    // }
 
     public async Task<TaskData> FinishAsync(FinishInput input)
     {
