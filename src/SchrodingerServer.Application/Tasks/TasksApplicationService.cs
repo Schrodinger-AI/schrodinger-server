@@ -202,6 +202,12 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             throw new UserFriendlyException("Invalid user");
         }
         
+        if (input.TaskId.IsNullOrEmpty())
+        {
+            _logger.LogError("empty taskId");
+            throw new UserFriendlyException("empty taskId");
+        }
+        
         var key = input.TaskId + "_" + currentAddress;
         var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
         
@@ -253,6 +259,12 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         {
             _logger.LogError("Get current address failed");
             throw new UserFriendlyException("Invalid user");
+        }
+        
+        if (input.TaskId.IsNullOrEmpty())
+        {
+            _logger.LogError("empty taskId");
+            throw new UserFriendlyException("empty taskId");
         }
         
         var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
@@ -348,6 +360,12 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
     public async Task<GetScoreOutput> GetScoreAsync(GetScoreInput input)
     {
+        if (input.Address.IsNullOrEmpty())
+        {
+            _logger.LogError("empty address");
+            throw new UserFriendlyException("empty address");
+        }
+        
         var res = await _tasksProvider.GetScoreAsync(input.Address);
         return new GetScoreOutput
         {
