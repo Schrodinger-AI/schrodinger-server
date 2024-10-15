@@ -83,7 +83,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
        
         
         DateTime nowUtc = DateTime.UtcNow;
-        DateTime tomorrowUtcZero = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc).AddDays(1);
+        // DateTime tomorrowUtcZero = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc).AddDays(1);
+        DateTime tomorrowUtcZero = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 5, 0, 0, DateTimeKind.Utc);
         TimeSpan timeDifference = tomorrowUtcZero - nowUtc;
         
         // var res = await _tasksProvider.GetScoreAsync(input.Address);
@@ -99,6 +100,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     private async Task<List<TasksDto>> GetDailyTasksAsync(List<TaskConfig> taskInfoList, string address)
     {
         var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
+        // var bizDate = "20241016";
         var dailyTaskList = await _tasksProvider.GetTasksAsync(new GetTasksInput
         {
             Address = address,
@@ -215,6 +217,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         
         var key = input.TaskId + "_" + currentAddress;
         var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
+        // var today = "20241016";
         
         var taskOption = _tasksOptions.CurrentValue;
         var taskList =  taskOption.TaskList;
@@ -286,6 +289,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         _logger.LogInformation("claim task, {taskId}, {address}", input.TaskId, currentAddress);
         
         var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
+        // var today = "20241016";
         
         var date = "";
         var key = input.TaskId + "_" + currentAddress;
@@ -413,6 +417,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var accomplishmentTasks = taskList.Where(i => i.Type == TaskType.Accomplishment).ToList();
         
         var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
+        // var bizDate = "20241016";
+        
         var dailyTaskList = await _tasksProvider.GetTasksAsync(new GetTasksInput
         {
             Address = input.Address,
