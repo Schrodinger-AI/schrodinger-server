@@ -361,6 +361,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             throw new UserFriendlyException("invalid taskId");
         }
         
+        await Task.Delay(500);
+        
         await _tasksProvider.AddTaskScoreDetailAsync(new AddTaskScoreDetailInput
         {
             Address = currentAddress,
