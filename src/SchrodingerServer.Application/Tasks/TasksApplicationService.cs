@@ -218,12 +218,14 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         // var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
         var today = "20241016";
         
+        var date = "";
         var taskOption = _tasksOptions.CurrentValue;
         var taskList =  taskOption.TaskList;
         var dailyTasks = taskList.Where(i => i.Type == TaskType.Daily).ToList();
         var dailyTaskId = dailyTasks.Select(i => i.TaskId).ToList();
         if (dailyTaskId.Contains(input.TaskId))
         {
+            date = today;
             key += ("_" + today);
         }
         
@@ -251,7 +253,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         {
             Address = currentAddress,
             TaskId = input.TaskId,
-            Status = UserTaskStatus.Finished
+            Status = UserTaskStatus.Finished,
+            Date = date
         });
 
         if (res == null)
