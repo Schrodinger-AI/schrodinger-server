@@ -84,7 +84,6 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         
         DateTime nowUtc = DateTime.UtcNow;
         DateTime tomorrowUtcZero = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc).AddDays(1);
-        // DateTime tomorrowUtcZero = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 5, 0, 0, DateTimeKind.Utc);
         TimeSpan timeDifference = tomorrowUtcZero - nowUtc;
         
         // var res = await _tasksProvider.GetScoreAsync(input.Address);
@@ -343,7 +342,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         {
             Address = currentAddress,
             TaskId = input.TaskId,
-            Status = UserTaskStatus.Claimed
+            Status = UserTaskStatus.Claimed,
+            Date = date
         });
 
         if (res == null)
