@@ -136,6 +136,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             }
 
             tasksDto.Link = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Link;
+            tasksDto.Name = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Name;
         }
         
         return dailyTaskList;
@@ -187,6 +188,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         foreach (var tasksDto in taskList)
         {
             tasksDto.Link = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Link;
+            tasksDto.Name = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Name;
         }
         
         return taskList;
