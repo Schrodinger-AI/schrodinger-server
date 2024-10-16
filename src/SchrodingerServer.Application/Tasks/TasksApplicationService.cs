@@ -78,7 +78,6 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var accomplishmentTaskList = await GetOtherTasksAsync(accomplishmentTasks, currentAddress);
         _logger.LogDebug("GetAccomplishmentTaskList, list:{accomplishmentTaskList}", JsonConvert.SerializeObject(accomplishmentTaskList));
         accomplishmentTaskList = accomplishmentTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
-       
         
         DateTime nowUtc = DateTime.UtcNow;
         DateTime tomorrowUtcZero = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc).AddDays(1);
@@ -90,14 +89,14 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             DailyTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(dailyTaskList),
             SocialTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(socialTaskList),
             AccomplishmentTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(accomplishmentTaskList),
-            Countdown = (int)timeDifference.TotalSeconds
+            Countdown = (int)Math.Ceiling(timeDifference.TotalSeconds)
         };
     }
 
     private async Task<List<TasksDto>> GetDailyTasksAsync(List<TaskConfig> taskInfoList, string address)
     {
-        // var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
-        var bizDate = "20241017";
+        var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
+        // var bizDate = "20241017";
         var dailyTaskList = await _tasksProvider.GetTasksAsync(new GetTasksInput
         {
             Address = address,
@@ -213,8 +212,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         _logger.LogInformation("finish task, {taskId}, {address}", input.TaskId, currentAddress);
         
         var key = input.TaskId + "_" + currentAddress;
-        // var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
-        var today = "20241017";
+        var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
+        // var today = "20241017";
         
         var date = "";
         var taskOption = _tasksOptions.CurrentValue;
@@ -288,8 +287,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         
         _logger.LogInformation("claim task, {taskId}, {address}", input.TaskId, currentAddress);
         
-        // var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
-        var today = "20241017";
+        var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
+        // var today = "20241017";
         
         var date = "";
         var key = input.TaskId + "_" + currentAddress;
@@ -417,8 +416,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var socialTasks = taskList.Where(i => i.Type == TaskType.Social).ToList();
         var accomplishmentTasks = taskList.Where(i => i.Type == TaskType.Accomplishment).ToList();
         
-        // var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
-        var bizDate = "20241017";
+        var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
+        // var bizDate = "20241017";
         
         var dailyTaskList = await _tasksProvider.GetTasksAsync(new GetTasksInput
         {
