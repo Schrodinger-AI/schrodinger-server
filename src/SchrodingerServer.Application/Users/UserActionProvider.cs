@@ -54,7 +54,7 @@ public class UserActionProvider : ApplicationService, IUserActionProvider
 
     public async Task<bool> CheckDomainAsync(string domain)
     {
-        _logger.LogDebug("CheckDomain :{domain}", domain);
+        _logger.LogDebug("CheckDomain: {domain}", domain);
         if (_domainDict.TryGetValue(domain, out var value))
         {
             domain = value;
