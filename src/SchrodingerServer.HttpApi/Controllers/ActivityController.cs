@@ -30,6 +30,7 @@ public class ActivityController : AbpController
         return  _activityApplicationService.GetActivityListAsync(input);
     }
     
+    
     [HttpGet("info")]
     public Task<ActivityInfoDto> GetActivityInfoAsync()
     {
