@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using Volo.Abp.Application.Dtos;
 
 namespace SchrodingerServer.Message.Dtos;
@@ -16,6 +17,6 @@ public class GetSchrodingerSoldListInput
     
     public string ChainId { get; set; }
     public long TimestampMin { get; set; }
-    public string Buyer { get; set; }
+    public string Buyer { get; set; } = "";
 }
 
