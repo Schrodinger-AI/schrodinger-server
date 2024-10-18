@@ -54,4 +54,10 @@ public class AdoptController : AbpController
     {
         return await _adoptApplicationService.ConfirmAdoptionAsync(input);
     }
+    
+    [HttpGet("votes")]
+    public async Task<GetVotesOutput> GetVoteAsync()
+    {
+        return await _adoptApplicationService.GetVoteAsync();
+    }
 }

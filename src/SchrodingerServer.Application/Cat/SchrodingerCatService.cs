@@ -103,7 +103,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
         foreach (var item in result.Data)
         {
-            var specialTag = TraitHelper.GetSpecialTrait(_traitsOptions.CurrentValue, item.Traits);
+            var specialTag = TraitHelper.GetSpecialTraitOfElection(_traitsOptions.CurrentValue, item.Traits);
             item.SpecialTrait = specialTag;
         }
 
@@ -251,7 +251,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 item.Describe = "Common,,";
             }
             
-            var specialTag = TraitHelper.GetSpecialTrait(_traitsOptions.CurrentValue, item.Traits);
+            var specialTag = TraitHelper.GetSpecialTraitOfElection(_traitsOptions.CurrentValue, item.Traits);
             item.SpecialTrait = specialTag;
         });
         
@@ -491,7 +491,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 item.ForestPrice = value.ListingPrice;
             }
             
-            var specialTag = TraitHelper.GetSpecialTrait(_traitsOptions.CurrentValue, item.Traits);
+            var specialTag = TraitHelper.GetSpecialTraitOfElection(_traitsOptions.CurrentValue, item.Traits);
             item.SpecialTrait = specialTag;
             
         });
@@ -525,7 +525,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 item.ForestPrice = value.ListingPrice;
             }
             
-            var specialTag = TraitHelper.GetSpecialTrait(_traitsOptions.CurrentValue, item.Traits);
+            var specialTag = TraitHelper.GetSpecialTraitOfElection(_traitsOptions.CurrentValue, item.Traits);
             item.SpecialTrait = specialTag;
             
         });
@@ -623,7 +623,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet : BoxImageConst.NonGen9Box;
             }
             
-            var specialTag = TraitHelper.GetSpecialTrait(_traitsOptions.CurrentValue, _objectMapper.Map<List<TraitDto>, List<TraitsInfo>>(x.Traits));
+            var specialTag = TraitHelper.GetSpecialTraitOfElection(_traitsOptions.CurrentValue, _objectMapper.Map<List<TraitDto>, List<TraitsInfo>>(x.Traits));
             x.SpecialTrait = specialTag;
             
         });
@@ -659,7 +659,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet :  BoxImageConst.NonGen9Box;
         }
         
-        var specialTag = TraitHelper.GetSpecialTrait(_traitsOptions.CurrentValue, _objectMapper.Map<List<TraitDto>, List<TraitsInfo>>(resp.Traits));
+        var specialTag = TraitHelper.GetSpecialTraitOfElection(_traitsOptions.CurrentValue, _objectMapper.Map<List<TraitDto>, List<TraitsInfo>>(resp.Traits));
         resp.SpecialTrait = specialTag;
 
         return resp;

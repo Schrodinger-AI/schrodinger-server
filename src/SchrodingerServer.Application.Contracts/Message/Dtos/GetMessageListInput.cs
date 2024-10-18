@@ -15,5 +15,7 @@ public class GetSchrodingerSoldListInput
     public string FilterSymbol { get; set; }
     
     public string ChainId { get; set; }
+    public long TimestampMin { get; set; }
+    public string Buyer { get; set; }
 }
 

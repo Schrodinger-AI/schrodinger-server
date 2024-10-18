@@ -69,4 +69,38 @@ public static class TraitHelper
         
         return newValues;
     }
+    
+    
+    public static string GetSpecialTraitOfElection(ActivityTraitOptions activityTraitOptions, List<TraitsInfo> Traits)
+    {
+        var defaultTag = "";
+
+        var idList = new List<string> { "Trump", "Harris" };
+        foreach (var currentId in idList)
+        {
+            var currentTrait = activityTraitOptions.SpecialTraits.Where(x => x.Id == currentId).ToList().FirstOrDefault();
+            if (currentTrait == null)
+            {
+                continue;
+            }
+        
+            var activityTypes = currentTrait.ReplaceTraits.Keys.ToList();
+            foreach (var trait in Traits)
+            {
+                if (!activityTypes.Contains(trait.TraitType))
+                {
+                    continue;
+                }
+
+                var activityValues = currentTrait.ReplaceTraits[trait.TraitType];
+                if (activityValues.ContainsKey(trait.Value))
+                {
+                    return currentTrait.Tag;
+                }
+            }
+        }
+        
+        return defaultTag;
+    }
+    
 }

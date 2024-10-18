@@ -1,5 +1,6 @@
+using System;
 using System.Collections.Generic;
-using SchrodingerServer.Dtos.Adopts;
+using Attribute = SchrodingerServer.Dtos.Adopts.Attribute;
 
 namespace SchrodingerServer.Adopts.provider;
 
@@ -12,4 +13,5 @@ public class AdoptInfo
     public int ImageCount { get; set; }
     public int Generation { get; set; }
     public string Rarity { get; set; }
+    public DateTime AdoptTime { get; set; }
 }
