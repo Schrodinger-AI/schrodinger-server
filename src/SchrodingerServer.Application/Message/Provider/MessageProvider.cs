@@ -122,7 +122,7 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
                     address = input.Address,
                     timestampMin = input.TimestampMin,
                     chainId = input.ChainId,
-                    buyer = input.Buyer
+                    buyer = input.Buyer ?? ""
                 }
             });
             return res.Data?.GetSchrodingerSoldRecord;
