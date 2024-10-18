@@ -164,6 +164,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                             FilterSymbol = "SGR",
                             MaxResultCount = 10,
                             SkipCount = 0,
+                            Address =  "",
                             TimestampMin = todayBegin.ToUtcMilliSeconds()
                         });
 
@@ -325,6 +326,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                     FilterSymbol = "SGR",
                     MaxResultCount = 10,
                     SkipCount = 0,
+                    Address = "",
                     TimestampMin = todayBegin.ToUtcMilliSeconds()
                 });
             if (tradeRecordsToday.TotalRecordCount == 0)
