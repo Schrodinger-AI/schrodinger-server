@@ -36,6 +36,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     private const string InviteTaskId = "invite";
     private const string TradeTaskId = "trade";
     private const string AdoptTaskId = "adopt";
+    private const string AdoptOnceTaskId = "adoptOnce";
     
     public TasksApplicationService(
         ITasksProvider tasksProvider, 
@@ -203,6 +204,30 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                     }
                 }
             }
+            
+            if (tasksDto.TaskId == AdoptOnceTaskId)
+            {
+                tasksDto.Name = "Adopt Gen9 Cats (1/1)";
+                if (tasksDto.Status == UserTaskStatus.Created)
+                {
+                    _logger.LogDebug("check adopt for address:{address}", tasksDto.Address);
+                    var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(todayBegin.ToUtcSeconds(), todayEnd.ToUtcSeconds());
+                    var gen9AdoptByCurrentAddress = res.Where(i => i.Adopter == tasksDto.Address && i.Gen == 9).ToList();
+                    var cnt = gen9AdoptByCurrentAddress.Count;
+                    _logger.LogDebug("check adopt for address:{address}, adopt times: {cnt}", tasksDto.Address, cnt);
+                    
+                    if (cnt >= 1)
+                    {
+                        tasksDto.Status = UserTaskStatus.Finished;
+                        await _tasksProvider.AddTasksAsync(new List<TasksDto> { tasksDto });
+                    }
+                    else
+                    {
+                        tasksDto.Name = "Adopt Gen9 Cats (" + cnt + "/3)";
+                    }
+                }
+            }
+            
         }
         
         return dailyTaskList;
@@ -342,6 +367,19 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             var gen9AdoptByCurrentAddress = resOfAdoption.Where(i => i.Adopter == currentAddress && i.Gen == 9).ToList();
             _logger.LogDebug("check adopt for address:{address}, adopt times: {cnt}", currentAddress, gen9AdoptByCurrentAddress.Count);
             if (gen9AdoptByCurrentAddress.Count < 3)
+            {
+                _logger.LogError("try finish task, but adoption not enough, address: {address}, adopt times: {cnt}", 
+                    currentAddress, gen9AdoptByCurrentAddress.Count);
+                throw new UserFriendlyException("adoption not enough");
+            }
+        }
+        
+        if (input.TaskId == AdoptOnceTaskId)
+        {
+            var resOfAdoption = await _adoptGraphQlProvider.GetAdoptInfoByTime(todayBegin.ToUtcSeconds(), todayEnd.ToUtcSeconds());
+            var gen9AdoptByCurrentAddress = resOfAdoption.Where(i => i.Adopter == currentAddress && i.Gen == 9).ToList();
+            _logger.LogDebug("check adopt for address:{address}, adopt times: {cnt}", currentAddress, gen9AdoptByCurrentAddress.Count);
+            if (gen9AdoptByCurrentAddress.Count < 1)
             {
                 _logger.LogError("try finish task, but adoption not enough, address: {address}, adopt times: {cnt}", 
                     currentAddress, gen9AdoptByCurrentAddress.Count);
