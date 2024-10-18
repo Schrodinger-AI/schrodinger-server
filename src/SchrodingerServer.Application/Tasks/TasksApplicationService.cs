@@ -151,41 +151,56 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 }
             }
 
-            if (tasksDto.TaskId == TradeTaskId && tasksDto.Status == UserTaskStatus.Created)
+            if (tasksDto.TaskId == TradeTaskId)
             {
-                _logger.LogDebug("check trade for address:{address}", tasksDto.Address);
-                var tradeRecordsToday = await _messageProvider.GetSchrodingerSoldListAsync(
-                    new GetSchrodingerSoldListInput
-                    {
-                        Buyer = tasksDto.Address,
-                        FilterSymbol = "SGR",
-                        MaxResultCount = 10,
-                        SkipCount = 0,
-                        TimestampMin = todayBegin.ToUtcMilliSeconds()
-                    });
-
-                var cnt = tradeRecordsToday.TotalRecordCount;
-                if (cnt > 0)
+                tasksDto.Name = "Trade a Cat (1/1)";
+                if (tasksDto.Status == UserTaskStatus.Created)
                 {
-                    tasksDto.Status = UserTaskStatus.Finished;
-                    await _tasksProvider.AddTasksAsync(new List<TasksDto> { tasksDto });
+                    _logger.LogDebug("check trade for address:{address}", tasksDto.Address);
+                    var tradeRecordsToday = await _messageProvider.GetSchrodingerSoldListAsync(
+                        new GetSchrodingerSoldListInput
+                        {
+                            Buyer = tasksDto.Address,
+                            FilterSymbol = "SGR",
+                            MaxResultCount = 10,
+                            SkipCount = 0,
+                            TimestampMin = todayBegin.ToUtcMilliSeconds()
+                        });
+
+                    var cnt = tradeRecordsToday.TotalRecordCount;
+                    if (cnt > 0)
+                    {
+                        tasksDto.Status = UserTaskStatus.Finished;
+                        await _tasksProvider.AddTasksAsync(new List<TasksDto> { tasksDto });
+                    }
+                    else
+                    {
+                        tasksDto.Name = "Trade a Cat (0/1)";
+                    }
                 }
-                tasksDto.Name = "Trade a Cat (" + cnt + "/1)";
             }
 
-            if (tasksDto.TaskId == AdoptTaskId && tasksDto.Status == UserTaskStatus.Created)
+            if (tasksDto.TaskId == AdoptTaskId)
             {
-                _logger.LogDebug("check adopt for address:{address}", tasksDto.Address);
-                var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(todayBegin.ToUtcSeconds(), todayEnd.ToUtcSeconds());
-                var gen9AdoptByCurrentAddress = res.Where(i => i.Adopter == tasksDto.Address && i.Gen == 9).ToList();
-                var cnt = gen9AdoptByCurrentAddress.Count;
-                _logger.LogDebug("check adopt for address:{address}, adopt times: {cnt}", tasksDto.Address, cnt);
-                if (cnt >= 3)
+                tasksDto.Name = "Adopt Gen9 Cats (3/3)";
+                if (tasksDto.Status == UserTaskStatus.Created)
                 {
-                    tasksDto.Status = UserTaskStatus.Finished;
-                    await _tasksProvider.AddTasksAsync(new List<TasksDto> { tasksDto });
-                } 
-                tasksDto.Name = "Adopt Gen9 Cats (" + cnt + "/3)";
+                    _logger.LogDebug("check adopt for address:{address}", tasksDto.Address);
+                    var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(todayBegin.ToUtcSeconds(), todayEnd.ToUtcSeconds());
+                    var gen9AdoptByCurrentAddress = res.Where(i => i.Adopter == tasksDto.Address && i.Gen == 9).ToList();
+                    var cnt = gen9AdoptByCurrentAddress.Count;
+                    _logger.LogDebug("check adopt for address:{address}, adopt times: {cnt}", tasksDto.Address, cnt);
+                    
+                    if (cnt >= 3)
+                    {
+                        tasksDto.Status = UserTaskStatus.Finished;
+                        await _tasksProvider.AddTasksAsync(new List<TasksDto> { tasksDto });
+                    }
+                    else
+                    {
+                        tasksDto.Name = "Adopt Gen9 Cats (" + cnt + "/3)";
+                    }
+                }
             }
         }
         
