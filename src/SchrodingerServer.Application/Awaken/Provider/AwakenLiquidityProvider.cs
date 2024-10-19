@@ -99,7 +99,7 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "GetNFTListingsAsync query GraphQL error");
+            _logger.LogError(e, "GetLiquidityRecordsAsync query GraphQL error");
             throw;
         }
     }
