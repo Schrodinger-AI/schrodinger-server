@@ -34,6 +34,7 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
     private readonly ILogger<MessageApplicationService> _logger;
     private readonly IObjectMapper _objectMapper;
     private const char NFTSymbolSeparator = '-';
+    private readonly long StartTimestamp = 1715414400000;
     
     public MessageApplicationService(
         IMessageProvider messageProvider,
@@ -72,7 +73,8 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
             MaxResultCount = 1000,
             SkipCount = 0,
             FilterSymbol = "SGR",
-            ChainId = chainId
+            ChainId = chainId,
+            TimestampMin = StartTimestamp
         };
         
         var soldIdList = await  _messageProvider.GetAllSchrodingerSoldIdAsync(getSoldListInput);
@@ -208,7 +210,8 @@ public class MessageApplicationService :  ApplicationService, IMessageApplicatio
             FilterSymbol = input.FilterSymbol,
             ChainId = input.ChainId,
             MaxResultCount = 100,
-            SkipCount = 0
+            SkipCount = 0,
+            TimestampMin = StartTimestamp
         };
         
         do

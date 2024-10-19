@@ -75,7 +75,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
                 Value = b
             }).ToList();
             
-            input.SpecialTag = TraitHelper.GetSpecialTrait(_traitOptions.CurrentValue, traitInfo);
+            input.SpecialTag = TraitHelper.GetSpecialTraitOfElection(_traitOptions.CurrentValue, traitInfo);
             input.IsGen9 = traitValues.Count >= 11;
             
             var newGen1Values = TraitHelper.ReplaceTraitValues(_traitOptions.CurrentValue, gen1Traits.FirstOrDefault(), gen1Traits.LastOrDefault());

@@ -5,8 +5,12 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using SchrodingerServer.Adopts.provider;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.Message.Dtos;
+using SchrodingerServer.Message.Provider;
+using SchrodingerServer.Options;
 using SchrodingerServer.Tasks.Dtos;
 using SchrodingerServer.Tasks.Provider;
 using SchrodingerServer.Users;
@@ -26,8 +30,15 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     private readonly IObjectMapper _objectMapper;
     private readonly IUserActionProvider _userActionProvider;
     private readonly IAbpDistributedLock _distributedLock;
+    private readonly IMessageProvider _messageProvider;
+    private readonly IAdoptGraphQLProvider _adoptGraphQlProvider;
+    private readonly IOptionsMonitor<LevelOptions> _levelOptions;
+    
     private const string LoginTaskId = "login";
     private const string InviteTaskId = "invite";
+    private const string TradeTaskId = "trade";
+    private const string AdoptTaskId = "adopt";
+    private const string AdoptOnceTaskId = "adoptOnce";
     
     public TasksApplicationService(
         ITasksProvider tasksProvider, 
@@ -35,7 +46,10 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         IOptionsMonitor<TasksOptions> tasksOptions,
         IObjectMapper objectMapper, 
         IUserActionProvider userActionProvider, 
-        IAbpDistributedLock distributedLock)
+        IAbpDistributedLock distributedLock, 
+        IMessageProvider messageProvider, 
+        IAdoptGraphQLProvider adoptGraphQlProvider, 
+        IOptionsMonitor<LevelOptions> levelOptions)
     {
         _tasksProvider = tasksProvider;
         _logger = logger;
@@ -43,6 +57,9 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         _objectMapper = objectMapper;
         _userActionProvider = userActionProvider;
         _distributedLock = distributedLock;
+        _messageProvider = messageProvider;
+        _adoptGraphQlProvider = adoptGraphQlProvider;
+        _levelOptions = levelOptions;
     }
 
     public async Task<GetTaskListOutput> GetTaskListAsync(GetTaskListInput input)
@@ -120,8 +137,15 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         }
         
         _logger.LogDebug("GetDailyTaskList, task:{task}", JsonConvert.SerializeObject(dailyTaskList));
+        DateTime nowUtc = DateTime.UtcNow;
+        DateTime todayBegin = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc);
+        DateTime todayEnd = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 23, 59, 59, DateTimeKind.Utc);
         foreach (var tasksDto in dailyTaskList)
         {
+            tasksDto.Link = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Link;
+            tasksDto.Name = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Name;
+            tasksDto.LinkType = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).LinkType;
+            
             if (tasksDto.TaskId == InviteTaskId && tasksDto.Status == UserTaskStatus.Created)
             {
                 _logger.LogDebug("check invite for address:{address}", tasksDto.Address);
@@ -133,8 +157,86 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 }
             }
 
-            tasksDto.Link = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Link;
-            tasksDto.Name = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Name;
+            if (tasksDto.TaskId == TradeTaskId)
+            {
+                tasksDto.Name = "Trade a Cat (1/1)";
+                if (tasksDto.Status == UserTaskStatus.Created)
+                {
+                    _logger.LogDebug("check trade for address:{address}", tasksDto.Address);
+                    
+                    var chainId = _levelOptions.CurrentValue.ChainIdForReal;
+                    var fullAddress = FullAddressHelper.ToFullAddress(tasksDto.Address, chainId);
+                    
+                    var tradeRecordsToday = await _messageProvider.GetSchrodingerSoldListAsync(
+                        new GetSchrodingerSoldListInput
+                        {
+                            Buyer = fullAddress,
+                            FilterSymbol = "SGR",
+                            MaxResultCount = 10,
+                            SkipCount = 0,
+                            Address =  "",
+                            TimestampMin = todayBegin.ToUtcMilliSeconds()
+                        });
+
+                    var cnt = tradeRecordsToday.TotalRecordCount;
+                    if (cnt > 0)
+                    {
+                        tasksDto.Status = UserTaskStatus.Finished;
+                        await _tasksProvider.AddTasksAsync(new List<TasksDto> { tasksDto });
+                    }
+                    else
+                    {
+                        tasksDto.Name = "Trade a Cat (0/1)";
+                    }
+                }
+            }
+
+            if (tasksDto.TaskId == AdoptTaskId)
+            {
+                tasksDto.Name = "Adopt Gen9 Cats (3/3)";
+                if (tasksDto.Status == UserTaskStatus.Created)
+                {
+                    _logger.LogDebug("check adopt for address:{address}", tasksDto.Address);
+                    var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(todayBegin.ToUtcSeconds(), todayEnd.ToUtcSeconds());
+                    var gen9AdoptByCurrentAddress = res.Where(i => i.Adopter == tasksDto.Address && i.Gen == 9).ToList();
+                    var cnt = gen9AdoptByCurrentAddress.Count;
+                    _logger.LogDebug("check adopt for address:{address}, adopt times: {cnt}", tasksDto.Address, cnt);
+                    
+                    if (cnt >= 3)
+                    {
+                        tasksDto.Status = UserTaskStatus.Finished;
+                        await _tasksProvider.AddTasksAsync(new List<TasksDto> { tasksDto });
+                    }
+                    else
+                    {
+                        tasksDto.Name = "Adopt Gen9 Cats (" + cnt + "/3)";
+                    }
+                }
+            }
+            
+            if (tasksDto.TaskId == AdoptOnceTaskId)
+            {
+                tasksDto.Name = "Adopt Gen9 Cats (1/1)";
+                if (tasksDto.Status == UserTaskStatus.Created)
+                {
+                    _logger.LogDebug("check adopt for address:{address}", tasksDto.Address);
+                    var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(todayBegin.ToUtcSeconds(), todayEnd.ToUtcSeconds());
+                    var gen9AdoptByCurrentAddress = res.Where(i => i.Adopter == tasksDto.Address && i.Gen == 9).ToList();
+                    var cnt = gen9AdoptByCurrentAddress.Count;
+                    _logger.LogDebug("check adopt for address:{address}, adopt times: {cnt}", tasksDto.Address, cnt);
+                    
+                    if (cnt >= 1)
+                    {
+                        tasksDto.Status = UserTaskStatus.Finished;
+                        await _tasksProvider.AddTasksAsync(new List<TasksDto> { tasksDto });
+                    }
+                    else
+                    {
+                        tasksDto.Name = "Adopt Gen9 Cats (" + cnt + "/1)";
+                    }
+                }
+            }
+            
         }
         
         return dailyTaskList;
@@ -187,6 +289,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         {
             tasksDto.Link = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Link;
             tasksDto.Name = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Name;
+            tasksDto.LinkType = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).LinkType;
         }
         
         return taskList;
@@ -240,10 +343,79 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             var inviterRecordsToday = await _tasksProvider.GetInviteRecordsToday(new List<string> { currentAddress });
             if (inviterRecordsToday.IsNullOrEmpty())
             {
-                _logger.LogError("finish task, but not invite, address: {address}", currentAddress);
-                throw new UserFriendlyException("not invite yet");
+                _logger.LogError("try finish task, but not invite, address: {address}", currentAddress);
+                return new TaskData
+                {
+                    TaskId = input.TaskId,
+                    Status = UserTaskStatus.Created
+                };
             }
         }
+        
+        DateTime nowUtc = DateTime.UtcNow;
+        DateTime todayBegin = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc);
+        DateTime todayEnd = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 23, 59, 59, DateTimeKind.Utc);
+        
+        if (input.TaskId == TradeTaskId)
+        {
+            var chainId = _levelOptions.CurrentValue.ChainIdForReal;
+            var fullAddress = FullAddressHelper.ToFullAddress(currentAddress, chainId);
+            var tradeRecordsToday = await _messageProvider.GetSchrodingerSoldListAsync(
+                new GetSchrodingerSoldListInput
+                {
+                    Buyer = fullAddress,
+                    FilterSymbol = "SGR",
+                    MaxResultCount = 10,
+                    SkipCount = 0,
+                    Address = "",
+                    TimestampMin = todayBegin.ToUtcMilliSeconds()
+                });
+            if (tradeRecordsToday.TotalRecordCount == 0)
+            {
+                _logger.LogError("try finish task, but not trade, address: {address}", currentAddress);
+                return new TaskData
+                {
+                    TaskId = input.TaskId,
+                    Status = UserTaskStatus.Created
+                };
+            }
+        }
+
+        if (input.TaskId == AdoptTaskId)
+        {
+            var resOfAdoption = await _adoptGraphQlProvider.GetAdoptInfoByTime(todayBegin.ToUtcSeconds(), todayEnd.ToUtcSeconds());
+            var gen9AdoptByCurrentAddress = resOfAdoption.Where(i => i.Adopter == currentAddress && i.Gen == 9).ToList();
+            _logger.LogDebug("check adopt for address:{address}, adopt times: {cnt}", currentAddress, gen9AdoptByCurrentAddress.Count);
+            if (gen9AdoptByCurrentAddress.Count < 3)
+            {
+                _logger.LogError("try finish task, but adoption not enough, address: {address}, adopt times: {cnt}", 
+                    currentAddress, gen9AdoptByCurrentAddress.Count);
+                // throw new UserFriendlyException("adoption not enough");
+                return new TaskData
+                {
+                    TaskId = input.TaskId,
+                    Status = UserTaskStatus.Created
+                };
+            }
+        }
+        
+        if (input.TaskId == AdoptOnceTaskId)
+        {
+            var resOfAdoption = await _adoptGraphQlProvider.GetAdoptInfoByTime(todayBegin.ToUtcSeconds(), todayEnd.ToUtcSeconds());
+            var gen9AdoptByCurrentAddress = resOfAdoption.Where(i => i.Adopter == currentAddress && i.Gen == 9).ToList();
+            _logger.LogDebug("check adopt for address:{address}, adopt times: {cnt}", currentAddress, gen9AdoptByCurrentAddress.Count);
+            if (gen9AdoptByCurrentAddress.Count < 1)
+            {
+                _logger.LogError("try finish task, but adoption not enough, address: {address}, adopt times: {cnt}", 
+                    currentAddress, gen9AdoptByCurrentAddress.Count);
+                return new TaskData
+                {
+                    TaskId = input.TaskId,
+                    Status = UserTaskStatus.Created
+                };
+            }
+        }
+        
 
         var res = await _tasksProvider.ChangeTaskStatusAsync(new ChangeTaskStatusInput
         {

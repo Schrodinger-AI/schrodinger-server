@@ -12,6 +12,7 @@ public class TaskConfig
     public decimal Score { get; set; }
     public TaskType Type { get; set; }
     public string Link { get; set; }
+    public string LinkType { get; set; }
 }
 
 public enum TaskType

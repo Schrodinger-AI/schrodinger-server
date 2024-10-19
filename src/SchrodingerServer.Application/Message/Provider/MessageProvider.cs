@@ -30,8 +30,6 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
     private readonly INESTRepository<ReadMessageIndex, string> _readMessageIndexRepository;
     private readonly IGraphQLClientFactory _graphQlClientFactory;
     private readonly ILogger<MessageProvider> _logger;
-    private readonly long StartTimestamp = 1715414400000;
-    
     
     public MessageProvider(
         INESTRepository<ReadMessageIndex, string> readMessageIndexRepository, 
@@ -88,7 +86,8 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
                     $filterSymbol:String!,
                     $address:String!,
                     $timestampMin:Long!,
-                    $chainId:String!
+                    $chainId:String!,
+                    $buyer:String!
                 ){
                   getSchrodingerSoldRecord(
                     input:{
@@ -97,7 +96,8 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
                       filterSymbol:$filterSymbol,
                       address:$address,
                       timestampMin:$timestampMin,
-                      chainId:$chainId
+                      chainId:$chainId,
+                      buyer:$buyer
                     }
                   ){
                     totalRecordCount,
@@ -120,8 +120,9 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
                     maxResultCount = input.MaxResultCount,
                     filterSymbol = input.FilterSymbol,
                     address = input.Address,
-                    timestampMin = StartTimestamp,
-                    chainId = input.ChainId
+                    timestampMin = input.TimestampMin,
+                    chainId = input.ChainId,
+                    buyer = input.Buyer ?? ""
                 }
             });
             return res.Data?.GetSchrodingerSoldRecord;

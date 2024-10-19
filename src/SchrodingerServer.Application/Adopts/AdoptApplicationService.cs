@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using AElf;
 using AElf.Cryptography;
 using AElf.Types;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -26,6 +27,7 @@ using SchrodingerServer.Users;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Auditing;
+using Volo.Abp.Caching;
 using Volo.Abp.Users;
 using ConfirmInput = Schrodinger.ConfirmInput;
 using Trait = SchrodingerServer.Dtos.TraitsDto.Trait;
@@ -48,6 +50,8 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
     private readonly AwsS3Client _awsS3Client;
     private readonly IImageDispatcher _imageDispatcher;
     private readonly IOptionsMonitor<LevelOptions> _levelOptions;
+    private readonly IDistributedCache<string> _distributedCache;
+    private readonly IVotesProvider _votesProvider;
 
 
     public AdoptApplicationService(ILogger<AdoptApplicationService> logger, IOptionsMonitor<TraitsOptions> traitsOption,
@@ -55,7 +59,8 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         IOptionsMonitor<ChainOptions> chainOptions, IAdoptGraphQLProvider adoptGraphQlProvider,
         IOptionsMonitor<CmsConfigOptions> cmsConfigOptions, IUserActionProvider userActionProvider,
         ISecretProvider secretProvider, IIpfsAppService ipfsAppService, AwsS3Client awsS3Client, 
-        IImageDispatcher imageDispatcher, IOptionsMonitor<LevelOptions> levelOptions)
+        IImageDispatcher imageDispatcher, IOptionsMonitor<LevelOptions> levelOptions, 
+        IDistributedCache<string> distributedCache, IVotesProvider votesProvider)
     {
         _logger = logger;
         _traitsOptions = traitsOption;
@@ -69,6 +74,8 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         _awsS3Client = awsS3Client;
         _imageDispatcher = imageDispatcher;
         _levelOptions = levelOptions;
+        _distributedCache = distributedCache;
+        _votesProvider = votesProvider;
     }
 
     private string GetCurChain()
@@ -306,6 +313,54 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             
             _logger.LogInformation("GetCurrentUserAddress address for adoption:{adoptId}, addres:{address}", adoptId, address);
         }
+
+        do
+        {
+            DateTime activityDeadline = new DateTime(2024, 11, 6, 0, 0, 0, DateTimeKind.Utc);
+            DateTime activityBeginTime = new DateTime(2024, 10, 23, 0, 0, 0, DateTimeKind.Utc);
+            
+            if (input.Faction.IsNullOrEmpty() || DateTime.UtcNow > activityDeadline)
+            {
+                _logger.LogInformation("vote activity expired {adoptId}", adoptId);
+                break;
+            }
+
+            if (adoptInfo.AdoptTime < activityBeginTime || adoptInfo.AdoptTime > activityDeadline)
+            {
+                _logger.LogInformation("adoption not in expire time {adoptId}", adoptId);
+                break;
+            }
+            
+            var key = "vote_" + adoptId;
+            var cache = await _distributedCache.GetAsync(key);
+            if (cache != null)
+            {
+                _logger.LogInformation("vote already found in cache, {adoptId}", adoptId);
+                break;
+            }
+            
+            var voteRecord = await _votesProvider.GetVoteAsync(adoptId);
+            if (voteRecord != null && !voteRecord.AdoptId.IsNullOrEmpty())
+            {
+                _logger.LogInformation("vote already found in db, {adoptId}", adoptId);
+                break;
+            }
+
+            if (input.Faction != "Trump" && input.Faction != "Harris")
+            {
+                _logger.LogInformation("vote for invalid faction: {faction}, {adoptId}}", input.Faction, adoptId);
+                break;
+            }
+            
+            _logger.LogInformation("vote for faction: {faction}, adoptId: {adoptId}, address: {address}", input.Faction, adoptId, address);
+            await _distributedCache.SetAsync(key, input.Faction.ToString(),  new DistributedCacheEntryOptions()
+            {
+                SlidingExpiration = TimeSpan.FromHours(1)
+            });
+
+            var side = input.Faction == "Trump" ? 1 : 2;
+            await _votesProvider.VoteAsync(adoptId, side, address);
+        } while (false);
             
         output.AdoptImageInfo = new AdoptImageInfo
         {
@@ -582,5 +637,22 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         _logger.LogInformation("ConfirmAdoptionAsync Finish, adoptId:{adoptId}", adoptId);
 
         return resp;
+    }
+
+    public async Task<GetVotesOutput> GetVoteAsync()
+    {
+        long voteCount1 = await _votesProvider.VoteCountAsync(1);
+        long voteCount2 = await _votesProvider.VoteCountAsync(2);
+
+        DateTime nowUtc = DateTime.UtcNow;
+        DateTime activityDeadline = new DateTime(2024, 11, 5, 0, 0, 0, DateTimeKind.Utc);
+        
+        TimeSpan timeDifference = activityDeadline - nowUtc;
+
+        return new GetVotesOutput
+        {
+            Countdown = (int)timeDifference.TotalSeconds,
+            Votes = new List<long> { voteCount2, voteCount1 }
+        };
     }
 }

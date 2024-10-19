@@ -9,4 +9,5 @@ public class GetAdoptImageInfoInput
     public string TransactionHash { get; set; }
     public bool AdoptOnly { get; set; } = false;
     [CanBeNull] public string Address { get; set; }
+    public string Faction { get; set; }
 }

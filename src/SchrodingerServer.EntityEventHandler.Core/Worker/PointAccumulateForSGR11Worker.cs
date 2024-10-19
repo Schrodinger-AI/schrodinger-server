@@ -445,7 +445,8 @@ public class PointAccumulateForSGR11Worker :  AsyncPeriodicBackgroundWorkerBase
                 MaxResultCount = MaxResultCount,
                 ChainId = chainId,
                 Pair = pooId,
-                TimestampMax = ts
+                TimestampMax = ts,
+                TimestampMin = 0
             };
             
             var res = await _awakenLiquidityProvider.GetLiquidityRecordsAsync(request);
