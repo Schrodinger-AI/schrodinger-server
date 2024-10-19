@@ -318,6 +318,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         {
             DateTime activityDeadline = new DateTime(2024, 11, 6, 0, 0, 0, DateTimeKind.Utc);
             DateTime activityBeginTime = new DateTime(2024, 10, 23, 0, 0, 0, DateTimeKind.Utc);
+            
             if (input.Faction.IsNullOrEmpty() || DateTime.UtcNow > activityDeadline)
             {
                 _logger.LogInformation("vote activity expired {adoptId}", adoptId);
