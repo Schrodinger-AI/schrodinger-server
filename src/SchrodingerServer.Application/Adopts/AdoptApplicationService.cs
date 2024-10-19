@@ -651,7 +651,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return new GetVotesOutput
         {
             Countdown = (int)timeDifference.TotalSeconds,
-            Votes = new List<long> { voteCount1, voteCount2 }
+            Votes = new List<long> { voteCount2, voteCount1 }
         };
     }
 }

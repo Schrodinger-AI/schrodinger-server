@@ -10,6 +10,7 @@ using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Message.Dtos;
 using SchrodingerServer.Message.Provider;
+using SchrodingerServer.Options;
 using SchrodingerServer.Tasks.Dtos;
 using SchrodingerServer.Tasks.Provider;
 using SchrodingerServer.Users;
@@ -31,6 +32,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     private readonly IAbpDistributedLock _distributedLock;
     private readonly IMessageProvider _messageProvider;
     private readonly IAdoptGraphQLProvider _adoptGraphQlProvider;
+    private readonly IOptionsMonitor<LevelOptions> _levelOptions;
     
     private const string LoginTaskId = "login";
     private const string InviteTaskId = "invite";
@@ -46,7 +48,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         IUserActionProvider userActionProvider, 
         IAbpDistributedLock distributedLock, 
         IMessageProvider messageProvider, 
-        IAdoptGraphQLProvider adoptGraphQlProvider)
+        IAdoptGraphQLProvider adoptGraphQlProvider, 
+        IOptionsMonitor<LevelOptions> levelOptions)
     {
         _tasksProvider = tasksProvider;
         _logger = logger;
@@ -56,6 +59,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         _distributedLock = distributedLock;
         _messageProvider = messageProvider;
         _adoptGraphQlProvider = adoptGraphQlProvider;
+        _levelOptions = levelOptions;
     }
 
     public async Task<GetTaskListOutput> GetTaskListAsync(GetTaskListInput input)
@@ -159,10 +163,14 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 if (tasksDto.Status == UserTaskStatus.Created)
                 {
                     _logger.LogDebug("check trade for address:{address}", tasksDto.Address);
+                    
+                    var chainId = _levelOptions.CurrentValue.ChainIdForReal;
+                    var fullAddress = FullAddressHelper.ToFullAddress(tasksDto.Address, chainId);
+                    
                     var tradeRecordsToday = await _messageProvider.GetSchrodingerSoldListAsync(
                         new GetSchrodingerSoldListInput
                         {
-                            Buyer = tasksDto.Address,
+                            Buyer = fullAddress,
                             FilterSymbol = "SGR",
                             MaxResultCount = 10,
                             SkipCount = 0,
@@ -346,10 +354,12 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         
         if (input.TaskId == TradeTaskId)
         {
+            var chainId = _levelOptions.CurrentValue.ChainIdForReal;
+            var fullAddress = FullAddressHelper.ToFullAddress(currentAddress, chainId);
             var tradeRecordsToday = await _messageProvider.GetSchrodingerSoldListAsync(
                 new GetSchrodingerSoldListInput
                 {
-                    Buyer = currentAddress,
+                    Buyer = fullAddress,
                     FilterSymbol = "SGR",
                     MaxResultCount = 10,
                     SkipCount = 0,
