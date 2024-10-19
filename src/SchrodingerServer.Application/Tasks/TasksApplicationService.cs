@@ -232,7 +232,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                     }
                     else
                     {
-                        tasksDto.Name = "Adopt Gen9 Cats (" + cnt + "/3)";
+                        tasksDto.Name = "Adopt Gen9 Cats (" + cnt + "/1)";
                     }
                 }
             }
