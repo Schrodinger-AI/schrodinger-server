@@ -344,7 +344,11 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             if (inviterRecordsToday.IsNullOrEmpty())
             {
                 _logger.LogError("try finish task, but not invite, address: {address}", currentAddress);
-                throw new UserFriendlyException("not invite yet");
+                return new TaskData
+                {
+                    TaskId = input.TaskId,
+                    Status = UserTaskStatus.Created
+                };
             }
         }
         
