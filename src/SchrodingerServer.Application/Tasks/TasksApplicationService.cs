@@ -369,7 +369,11 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             if (tradeRecordsToday.TotalRecordCount == 0)
             {
                 _logger.LogError("try finish task, but not trade, address: {address}", currentAddress);
-                throw new UserFriendlyException("not trade yet");
+                return new TaskData
+                {
+                    TaskId = input.TaskId,
+                    Status = UserTaskStatus.Created
+                };
             }
         }
 
@@ -382,7 +386,12 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             {
                 _logger.LogError("try finish task, but adoption not enough, address: {address}, adopt times: {cnt}", 
                     currentAddress, gen9AdoptByCurrentAddress.Count);
-                throw new UserFriendlyException("adoption not enough");
+                // throw new UserFriendlyException("adoption not enough");
+                return new TaskData
+                {
+                    TaskId = input.TaskId,
+                    Status = UserTaskStatus.Created
+                };
             }
         }
         
@@ -395,7 +404,11 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             {
                 _logger.LogError("try finish task, but adoption not enough, address: {address}, adopt times: {cnt}", 
                     currentAddress, gen9AdoptByCurrentAddress.Count);
-                throw new UserFriendlyException("adoption not enough");
+                return new TaskData
+                {
+                    TaskId = input.TaskId,
+                    Status = UserTaskStatus.Created
+                };
             }
         }
         
