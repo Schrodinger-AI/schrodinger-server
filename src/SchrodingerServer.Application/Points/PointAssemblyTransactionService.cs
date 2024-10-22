@@ -175,7 +175,7 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "HandleSendPointRecords error, bizId: {bizId}.", bizId);
+            _logger.LogError( "HandleSendPointRecords error, bizId: {bizId}, err: {}", bizId, e.Message);
         }
     }
     
