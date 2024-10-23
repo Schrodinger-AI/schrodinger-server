@@ -645,7 +645,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         long voteCount2 = await _votesProvider.VoteCountAsync(2);
 
         DateTime nowUtc = DateTime.UtcNow;
-        DateTime activityDeadline = new DateTime(2024, 11, 5, 0, 0, 0, DateTimeKind.Utc);
+        DateTime activityDeadline = new DateTime(2024, 11, 6, 0, 0, 0, DateTimeKind.Utc);
         
         TimeSpan timeDifference = activityDeadline - nowUtc;
 
