@@ -10,5 +10,5 @@ public interface ITasksApplicationService
     Task<ClaimOutput> ClaimAsync(ClaimInput input);
     Task<GetScoreOutput> GetScoreAsync(GetScoreInput input);
     Task<GetTaskListOutput> GetTaskStatusAsync(GetTaskListInput input);
-    
+    Task<SpinOutput> SpinAsync();
 }

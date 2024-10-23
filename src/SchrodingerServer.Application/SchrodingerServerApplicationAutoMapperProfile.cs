@@ -65,9 +65,11 @@ public class SchrodingerServerApplicationAutoMapperProfile : Profile
             .ForMember(t => t.HolderAmount, m => m.MapFrom(f => f.Amount));
         CreateMap<SchrodingerIndexerStrayCatsDto, StrayCatsListDto>();
         CreateMap<TraitDto, TraitsInfo>();
-        CreateMap<TasksIndex, TasksDto>().ReverseMap();;
+        CreateMap<TasksIndex, TasksDto>().ReverseMap();
         CreateMap<TaskConfig, TasksDto>();
         CreateMap<TasksDto, TaskData>();
         CreateMap<TasksDto, ClaimOutput>();
+        CreateMap<TasksScoreDetailIndex, TaskScoreDetailDto>().ReverseMap();
+        CreateMap<SpinIndex, SpinDto>().ReverseMap();
     }
 }

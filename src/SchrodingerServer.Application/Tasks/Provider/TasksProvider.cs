@@ -25,6 +25,11 @@ public interface ITasksProvider
     Task AddTaskScoreDetailAsync(AddTaskScoreDetailInput input);
     Task<decimal> GetScoreAsync(string address);
     Task<List<UserReferralDto>> GetInviteRecordsToday(List<string> addressList);
+    Task<List<TaskScoreDetailDto>> GetScoreDetailByAddressAsync(string address);
+    Task<SpinDto> GetUnfinishedSpinAsync(string address);
+    Task<decimal> GetTotalScoreFromTask(string address);
+    Task<decimal> GetConsumeScoreFromSpin(string address);
+    Task<decimal> GetScoreFromSpinReward(string address);
 }
 
 public class TasksProvider : ITasksProvider, ISingletonDependency
@@ -32,6 +37,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
     private readonly INESTRepository<TasksIndex, string> _tasksIndexRepository;
     private readonly INESTRepository<TasksScoreIndex, string> _tasksScoreIndexRepository;
     private readonly INESTRepository<TasksScoreDetailIndex, string> _tasksScoreDetailIndexRepository;
+    private readonly INESTRepository<SpinIndex, string> _spinIndexRepository;
     private readonly IGraphQLClientFactory _graphQlClientFactory;
     private readonly ILogger<TasksProvider> _logger;
     private readonly IObjectMapper _objectMapper;
@@ -236,4 +242,111 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         return res.Data?.GetUserReferralRecords.Data;
         
     }
+
+
+    public async Task<List<TaskScoreDetailDto>> GetScoreDetailByAddressAsync(string address)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<TasksScoreDetailIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.Id).Value(address))
+        };
+        
+        QueryContainer Filter(QueryContainerDescriptor<TasksScoreDetailIndex> f) => f.Bool(b => b.Must(mustQuery));
+        
+        var res = await _tasksScoreDetailIndexRepository.GetListAsync(Filter, skip: 0, limit: 10000,
+            sortType: SortOrder.Ascending, sortExp: o => o.CreatedTime);
+
+        return _objectMapper.Map<List<TasksScoreDetailIndex>, List<TaskScoreDetailDto>>(res.Item2);
+    }
+    
+    
+    public async Task<SpinDto> GetUnfinishedSpinAsync(string address)
+    {
+        var now = TimeHelper.GetTimeStampInSeconds();
+        var mustQuery = new List<Func<QueryContainerDescriptor<SpinIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.Address).Value(address)),
+            q => q.Term(i => i.Field(f => f.Status).Value(SpinStatus.Created)),
+            q => q.Range(i => i.Field(f => f.ExpiredTime).LessThan(now))
+        };
+        
+        QueryContainer Filter(QueryContainerDescriptor<SpinIndex> f) => f.Bool(b => b.Must(mustQuery));
+
+        var res = await _spinIndexRepository.GetListAsync(Filter);
+        if (res.Item2.IsNullOrEmpty())
+        {
+            return null;
+        }
+        
+        return  _objectMapper.Map<SpinIndex, SpinDto>(res.Item2.First());
+    }
+    
+    
+    public async Task<decimal> GetTotalScoreFromTask(string address)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<TasksScoreDetailIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.Id).Value(address))
+        };
+        
+        QueryContainer Filter(QueryContainerDescriptor<TasksScoreDetailIndex> f) => f.Bool(b => b.Must(mustQuery));
+        
+        var res = await _tasksScoreDetailIndexRepository.GetListAsync(Filter, skip: 0, limit: 10000);
+        if (res != null)
+        {
+            return res.Item2.Sum(i => i.Score);
+        }
+
+        return 0;
+    }
+    
+    public async Task<decimal> GetConsumeScoreFromSpin(string address)
+    {
+        // var mustQuery = new List<Func<QueryContainerDescriptor<SpinIndex>, QueryContainer>>
+        // {
+        //     q => q.Term(i => i.Field(f => f.Id).Value(address)),
+        //     q => q.Term(i => i.Field(f => f.Status).Value(SpinStatus.Finished))
+        // };
+        //
+        // QueryContainer Filter(QueryContainerDescriptor<SpinIndex> f) => f.Bool(b => b.Must(mustQuery));
+        //
+        // var res = await _spinIndexRepository.CountAsync(Filter);
+        // return res.Count * 100;
+        
+        // todo : query from aefinder
+        return 0;
+    }
+    
+    public async Task<decimal> GetScoreFromSpinReward(string address)
+    {
+        try
+        {
+            var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient).SendQueryAsync<ScoreFromSpinDtoQueryDto>(new GraphQLRequest
+            {
+                Query = @"query (
+                    $address:String!
+                ){
+                  getScoreFromSpin(
+                    input:{
+                      address:$address
+                    }
+                  ){
+                     score
+                    }
+                  }
+                }",
+                Variables = new
+                {
+                    address = address
+                }
+            });
+            return res.Data.GetScoreFromSpin.Score;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getScoreFromSpin query GraphQL error");
+            return 0;
+        }
+    }
+    
 }

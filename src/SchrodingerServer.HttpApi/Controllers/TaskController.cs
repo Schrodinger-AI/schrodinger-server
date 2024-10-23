@@ -53,4 +53,12 @@ public class TaskController
         return await _tasksApplicationService.GetTaskStatusAsync(input);
     }
     
+    [Authorize]
+    [HttpPost("spin")]
+    public async Task<SpinOutput> ClaimAsync()
+    {
+        return await _tasksApplicationService.SpinAsync();
+    }
+    
+    
 }
