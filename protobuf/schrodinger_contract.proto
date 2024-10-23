@@ -505,3 +505,15 @@ message ImageUriMaxSizeSet {
   option (aelf.is_event) = true;
   int64 image_uri_max_size = 1;
 }
+
+message SpinInput {
+  string tick = 1;
+  aelf.Hash seed = 2;         
+  int64 expiration_time = 3;  
+  bytes signature = 10000;    
+}
+
+message ConfirmVoucherInput {
+  aelf.Hash voucher_id = 1;
+  bytes signature = 10000;    
+}

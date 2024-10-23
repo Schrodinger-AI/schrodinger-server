@@ -29,7 +29,11 @@ public interface ITasksProvider
     Task<SpinDto> GetUnfinishedSpinAsync(string address);
     Task<decimal> GetTotalScoreFromTask(string address);
     Task<decimal> GetConsumeScoreFromSpin(string address);
-    Task<decimal> GetScoreFromSpinReward(string address);
+    Task<decimal> GetScoreFromSpinRewardAsync(string address);
+    Task<bool> IsSpinFinished(string seed);
+    Task FinishSpinAsync(string seed);
+    Task AddSpinAsync(AddSpinInput input);
+    Task<VoucherAdoptionDto> GetVoucherAdoptionAsync(string voucherId);
 }
 
 public class TasksProvider : ITasksProvider, ISingletonDependency
@@ -48,7 +52,8 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         INESTRepository<TasksScoreDetailIndex, string> tasksScoreDetailIndexRepository, 
         IGraphQLClientFactory graphQlClientFactory, 
         ILogger<TasksProvider> logger,
-        IObjectMapper objectMapper)
+        IObjectMapper objectMapper, 
+        INESTRepository<SpinIndex, string> spinIndexRepository)
     {
         _tasksIndexRepository = tasksIndexRepository;
         _tasksScoreIndexRepository = tasksScoreIndexRepository;
@@ -56,6 +61,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         _graphQlClientFactory = graphQlClientFactory;
         _logger = logger;
         _objectMapper = objectMapper;
+        _spinIndexRepository = spinIndexRepository;
     }
 
     public async Task<List<TasksDto>> GetTasksAsync(GetTasksInput input)
@@ -267,7 +273,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         {
             q => q.Term(i => i.Field(f => f.Address).Value(address)),
             q => q.Term(i => i.Field(f => f.Status).Value(SpinStatus.Created)),
-            q => q.Range(i => i.Field(f => f.ExpiredTime).LessThan(now))
+            q => q.Range(i => i.Field(f => f.ExpirationTime).LessThan(now))
         };
         
         QueryContainer Filter(QueryContainerDescriptor<SpinIndex> f) => f.Bool(b => b.Must(mustQuery));
@@ -302,37 +308,52 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
     
     public async Task<decimal> GetConsumeScoreFromSpin(string address)
     {
-        // var mustQuery = new List<Func<QueryContainerDescriptor<SpinIndex>, QueryContainer>>
-        // {
-        //     q => q.Term(i => i.Field(f => f.Id).Value(address)),
-        //     q => q.Term(i => i.Field(f => f.Status).Value(SpinStatus.Finished))
-        // };
-        //
-        // QueryContainer Filter(QueryContainerDescriptor<SpinIndex> f) => f.Bool(b => b.Must(mustQuery));
-        //
-        // var res = await _spinIndexRepository.CountAsync(Filter);
-        // return res.Count * 100;
-        
-        // todo : query from aefinder
-        return 0;
-    }
-    
-    public async Task<decimal> GetScoreFromSpinReward(string address)
-    {
         try
         {
-            var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient).SendQueryAsync<ScoreFromSpinDtoQueryDto>(new GraphQLRequest
+            var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient).SendQueryAsync<ConsumeScoreFromSpinDtoQueryDto>(new GraphQLRequest
             {
                 Query = @"query (
                     $address:String!
                 ){
-                  getScoreFromSpin(
+                  getConsumeScoreFromSpin(
+                    input:{
+                      address:$address
+                    }
+                  ){
+                     score 
+                   }
+                }",
+                Variables = new
+                {
+                    address = address
+                }
+            });
+
+            return res.Data.GetConsumeScoreFromSpin.Score;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getConsumeScoreFromSpin query GraphQL error");
+            return 0;
+        }
+        
+    }
+    
+    public async Task<decimal> GetScoreFromSpinRewardAsync(string address)
+    {
+        try
+        {
+            var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient).SendQueryAsync<ScoreFromSpinDtoRewardQueryDto>(new GraphQLRequest
+            {
+                Query = @"query (
+                    $address:String!
+                ){
+                  getScoreFromSpinReward(
                     input:{
                       address:$address
                     }
                   ){
                      score
-                    }
                   }
                 }",
                 Variables = new
@@ -340,12 +361,114 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
                     address = address
                 }
             });
-            return res.Data.GetScoreFromSpin.Score;
+            return res.Data.GetScoreFromSpinReward.Score;
         }
         catch (Exception e)
         {
             _logger.LogError(e, "getScoreFromSpin query GraphQL error");
             return 0;
+        }
+    }
+    
+    public async Task<bool> IsSpinFinished(string seed)
+    {
+        try
+        {
+            var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient).SendQueryAsync<GetSpinResultQueryDto>(new GraphQLRequest
+            {
+                Query = @"query (
+                    $seed:String!
+                ){
+                  getSpinResult(
+                    input:{
+                      seed:$seed
+                    }
+                  ){
+                     address,
+                     spinId,
+                     name
+                  }
+                }",
+                Variables = new
+                {
+                    seed = seed
+                }
+            });
+            return !res.Data.GetSpinResult.SpinId.IsNullOrEmpty();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getSpinResult query GraphQL error");
+            return false;
+        }
+    }
+    
+    public async Task FinishSpinAsync(string seed)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<SpinIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.Seed).Value(seed))
+        };
+        
+        QueryContainer Filter(QueryContainerDescriptor<SpinIndex> f) => f.Bool(b => b.Must(mustQuery));
+        
+        var res = await _spinIndexRepository.GetAsync(Filter);
+
+        if (res != null)
+        {
+            res.Status = SpinStatus.Finished;
+            await _spinIndexRepository.AddOrUpdateAsync(res);
+        }
+    }
+    
+    public async Task AddSpinAsync(AddSpinInput input)
+    {
+        var index = new SpinIndex
+        {
+            Id = input.Address + "_" + input.Seed,
+            Address = input.Address,
+            Seed = input.Seed,
+            ConsumeScore = 100,
+            Status = SpinStatus.Created,
+            Signature = input.Signature,
+            ExpirationTime = input.ExpirationTime,
+            CreatedTime = DateTime.UtcNow.ToUtcSeconds()
+        };
+            
+        await _spinIndexRepository.AddAsync(index);
+    }
+
+
+    public async Task<VoucherAdoptionDto> GetVoucherAdoptionAsync(string voucherId)
+    {
+        try
+        {
+            var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient).SendQueryAsync<GetVoucherAdoptionQueryDto>(new GraphQLRequest
+            {
+                Query = @"query (
+                    $voucherId:String!
+                ){
+                  getVoucherAdoption(
+                    input:{
+                      voucherId:$voucherId
+                    }
+                  ){
+                     voucherId,
+                     rarity,
+                     rank
+                  }
+                }",
+                Variables = new
+                {
+                    voucherId = voucherId
+                }
+            });
+            return res.Data.GetVoucherAdoption;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getScoreFromSpin query GraphQL error");
+            return null;
         }
     }
     

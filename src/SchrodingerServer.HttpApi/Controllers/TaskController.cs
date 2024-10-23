@@ -55,10 +55,21 @@ public class TaskController
     
     [Authorize]
     [HttpPost("spin")]
-    public async Task<SpinOutput> ClaimAsync()
+    public async Task<SpinOutput> SpinAsync()
     {
         return await _tasksApplicationService.SpinAsync();
     }
     
+    [Authorize]
+    [HttpPost("voucher-adoption")]
+    public async Task<VoucherAdoptionOutput> VoucherAdoptionAsync(VoucherAdoptionInput input)
+    {
+        return await _tasksApplicationService.VoucherAdoptionAsync(input);
+    }
     
+    [HttpGet("reward")]
+    public async Task<SpinRewardOutput> RewardAsync()
+    {
+        return await _tasksApplicationService.SpinRewardAsync();
+    }
 }

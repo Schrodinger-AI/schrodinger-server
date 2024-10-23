@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AElf;
+using AElf.Types;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using Schrodinger;
 using SchrodingerServer.Adopts.provider;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
@@ -18,6 +21,7 @@ using SchrodingerServer.Users;
 using SchrodingerServer.Users.Index;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using Volo.Abp.Caching;
 using Volo.Abp.DistributedLocking;
 using Volo.Abp.ObjectMapping;
 
@@ -34,12 +38,17 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     private readonly IMessageProvider _messageProvider;
     private readonly IAdoptGraphQLProvider _adoptGraphQlProvider;
     private readonly IOptionsMonitor<LevelOptions> _levelOptions;
+    private readonly IDistributedCache<SpinOutputCache> _distributedCache;
+    private readonly ISecretProvider _secretProvider;
+    private readonly ChainOptions _chainOptions;
+    private IOptionsMonitor<SpinRewardOptions> _spinRewardOptions;
 
     private const string LoginTaskId = "login";
     private const string InviteTaskId = "invite";
     private const string TradeTaskId = "trade";
     private const string AdoptTaskId = "adopt";
     private const string AdoptOnceTaskId = "adoptOnce";
+    private const string DefaultTick = "SGR";
 
     public TasksApplicationService(
         ITasksProvider tasksProvider,
@@ -50,7 +59,11 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         IAbpDistributedLock distributedLock,
         IMessageProvider messageProvider,
         IAdoptGraphQLProvider adoptGraphQlProvider,
-        IOptionsMonitor<LevelOptions> levelOptions)
+        IOptionsMonitor<LevelOptions> levelOptions, 
+        IDistributedCache<SpinOutputCache> distributedCache, 
+        ISecretProvider secretProvider, 
+        IOptionsMonitor<ChainOptions> chainOptions, 
+        IOptionsMonitor<SpinRewardOptions> spinRewardOptions)
     {
         _tasksProvider = tasksProvider;
         _logger = logger;
@@ -61,6 +74,10 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         _messageProvider = messageProvider;
         _adoptGraphQlProvider = adoptGraphQlProvider;
         _levelOptions = levelOptions;
+        _distributedCache = distributedCache;
+        _secretProvider = secretProvider;
+        _chainOptions = chainOptions.CurrentValue;
+        _spinRewardOptions = spinRewardOptions;
     }
 
     public async Task<GetTaskListOutput> GetTaskListAsync(GetTaskListInput input)
@@ -646,45 +663,126 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     public async Task<SpinOutput> SpinAsync()
     {
         _logger.LogDebug("SpinAsync");
-
+        
         var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
-        // var currentAddress = input.Address;
         if (currentAddress.IsNullOrEmpty())
         {
             _logger.LogError("Get current address failed");
             throw new UserFriendlyException("Invalid user");
         }
+        
+        var key = "spin" + "_" + currentAddress;
+        await using var handle =
+            await _distributedLock.TryAcquireAsync(key);
 
         _logger.LogDebug("SpinAsync for address, address:{address}", currentAddress);
         
-        // todo : 1.check for unfinished spin
+        // check if score is enough
+        var currentScore = await GetCurrentFishScoreAsync(currentAddress);
+        if (currentScore < 100)
+        {
+            _logger.LogError("not enough fish score, address:{address}, score:{score}", currentAddress, currentScore);
+            throw new UserFriendlyException("not enough score");
+        }
         
+        // query last spin seed from cache
+        var cache = await _distributedCache.GetAsync(key);
+        if (cache != null)
+        {
+            _logger.LogWarning(
+                "found cache, seed: {id}", cache.Seed);
+            bool isSpinFinished = await _tasksProvider.IsSpinFinished(cache.Seed);
+            var nowTs = TimeHelper.GetTimeStampInSeconds();
+            if (!isSpinFinished && nowTs < cache.ExpirationTime)
+            {
+                _logger.LogWarning(
+                    "found unfinished seed in cache, seed: {id}", cache.Seed);
+                
+                return new SpinOutput
+                {
+                    Seed = HashHelper.ComputeFrom(cache.Seed).ToHex(),
+                    Tick = DefaultTick,
+                    Signature = ByteStringHelper.FromHexString(cache.Signature),
+                    ExpirationTime = cache.ExpirationTime
+                };
+            }
+        }
+        
+        // query unfinished spin seed from es
         var unfinishedSpin = await  _tasksProvider.GetUnfinishedSpinAsync(currentAddress);
         if (unfinishedSpin != null)
         {
             _logger.LogWarning(
-                "already generated signature. id: {id}", unfinishedSpin.Seed);
-
-            var now = TimeHelper.GetTimeStampInSeconds();
-
-            if (now < unfinishedSpin.ExpiredTime)
-            {
-                _logger.LogWarning(
-                    ". id: {id}", unfinishedSpin.Seed);
-            }
+                "already generated signature, seed: {id}", unfinishedSpin.Seed);
             
-            return new SpinOutput
+            bool isSpinFinished = await _tasksProvider.IsSpinFinished(unfinishedSpin.Seed);
+            if (isSpinFinished)
             {
-                Seed = HashHelper.ComputeFrom(unfinishedSpin.Seed).ToHex(),
-                Signature = ByteStringHelper.FromHexString(unfinishedSpin.Signature),
-                ExpirationTime = unfinishedSpin.ExpiredTime
-            };
+                await _tasksProvider.FinishSpinAsync(unfinishedSpin.Seed);
+                _logger.LogWarning(
+                    "finish spin, seed: {id}", unfinishedSpin.Seed);
+            }
+            else
+            {
+                return new SpinOutput
+                {
+                    Seed = HashHelper.ComputeFrom(unfinishedSpin.Seed).ToHex(),
+                    Tick = DefaultTick,
+                    Signature = ByteStringHelper.FromHexString(unfinishedSpin.Signature),
+                    ExpirationTime = unfinishedSpin.ExpirationTime
+                };
+            }
         }
         
+        // generate new spin seed and signature
+        var now = DateTime.UtcNow;
+        var expirationTime = new DateTime(now.Year, now.Month, now.Day)
+            .AddYears(1)
+            .ToUtcSeconds();
+        var seed = Guid.NewGuid().ToString();
         
-        // todo : 2.check total fish score >= 100
+        var data = new SpinInput
+        {
+            Tick = DefaultTick,
+            Seed = HashHelper.ComputeFrom(seed),
+            ExpirationTime = expirationTime
+        };
+        var dataHash = HashHelper.ComputeFrom(data);
+        var signature = await _secretProvider.GetSignatureFromHashAsync(_chainOptions.PublicKey, dataHash);
+
+        // write new cache
+        var cacheData = new SpinOutputCache
+        {
+            Seed = seed,
+            Tick = DefaultTick,
+            ExpirationTime = expirationTime,
+            Signature = signature
+        };
+        await _distributedCache.SetAsync(key, cacheData, new DistributedCacheEntryOptions
+        {
+            SlidingExpiration = TimeSpan.FromDays(1)
+        });
         
-        return  new SpinOutput();
+        // write es
+        await _tasksProvider.AddSpinAsync(new AddSpinInput
+        {
+            Address = currentAddress,
+            Seed = seed,
+            ExpirationTime = expirationTime,
+            Tick =  DefaultTick,
+            Signature = signature
+        });
+        
+        // wait for es to be read
+        await Task.Delay(200);
+        
+        return new SpinOutput
+        {
+            Seed = HashHelper.ComputeFrom(seed).ToHex(),
+            Tick = DefaultTick,
+            ExpirationTime = expirationTime,
+            Signature = ByteStringHelper.FromHexString(signature)
+        };
     }
     
     private async Task<decimal> GetCurrentFishScoreAsync(string address)
@@ -693,16 +791,63 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
         var scoreConsumeFromSpin = await _tasksProvider.GetConsumeScoreFromSpin(address);
 
-        var scoreFromSpinReward = await _tasksProvider.GetScoreFromSpinReward(address);
+        var scoreFromSpinReward = await _tasksProvider.GetScoreFromSpinRewardAsync(address);
         
         return scoreFromTask + scoreFromSpinReward - scoreConsumeFromSpin;
     }
+    
 
-
-    private async Task<decimal> GetTotalScoreFromTaskAsync(string address)
+    public async Task<VoucherAdoptionOutput> VoucherAdoptionAsync(VoucherAdoptionInput input)
     {
-        var scoreDetailList = await  _tasksProvider.GetScoreDetailByAddressAsync(address);
-        var totalScore = scoreDetailList.Sum(i => i.Score);
-        return totalScore;
+        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        _logger.LogDebug("VoucherAdoptionAsync, id: {id}, address: {address}", input.VoucherId, currentAddress);
+        
+        var voucherAdoptionResult = await _tasksProvider.GetVoucherAdoptionAsync(input.VoucherId);
+        if (voucherAdoptionResult == null || voucherAdoptionResult.VoucherId.IsNullOrEmpty())
+        {
+            _logger.LogError("Get voucher adoption failed, id: {id}", input.VoucherId);
+            throw new UserFriendlyException("Invalid voucher id");
+        }
+
+        var isRare = !voucherAdoptionResult.Rarity.IsNullOrEmpty();
+        if (!isRare)
+        {
+            _logger.LogInformation("Voucher is not rare, id: {id}", input.VoucherId);
+            return new VoucherAdoptionOutput
+            {
+                VoucherId = input.VoucherId,
+                IsRare = false
+            };
+        }
+        
+        var data = new ConfirmVoucherInput
+        {
+            VoucherId = Hash.LoadFromHex(input.VoucherId)
+        };
+        var dataHash = HashHelper.ComputeFrom(data);
+        var signature = await _secretProvider.GetSignatureFromHashAsync(_chainOptions.PublicKey, dataHash);
+        return new VoucherAdoptionOutput
+        {
+            VoucherId = input.VoucherId,
+            Signature = ByteStringHelper.FromHexString(signature),
+            IsRare = true
+        };
     }
+
+
+    public async Task<SpinRewardOutput> SpinRewardAsync()
+    {
+        var rewardOptions = _spinRewardOptions.CurrentValue;
+        return new SpinRewardOutput
+        {
+            RewardList = rewardOptions.RewardList
+        };
+    }
+    
+    // private async Task<decimal> GetTotalScoreFromTaskAsync(string address)
+    // {
+    //     var scoreDetailList = await  _tasksProvider.GetScoreDetailByAddressAsync(address);
+    //     var totalScore = scoreDetailList.Sum(i => i.Score);
+    //     return totalScore;
+    // }
 }

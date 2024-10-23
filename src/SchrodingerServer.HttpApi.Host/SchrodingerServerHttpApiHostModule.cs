@@ -80,6 +80,7 @@ namespace SchrodingerServer
             Configure<ActivityRankOptions>(configuration.GetSection("ActivityRankOptions"));
             Configure<ActivityTraitOptions>(configuration.GetSection("ActivityTraitOptions"));
             Configure<TasksOptions>(configuration.GetSection("TasksOptions"));
+            Configure<SpinRewardOptions>(configuration.GetSection("SpinRewardOptions"));
 
             ConfigureConventionalControllers();
             ConfigureAuthentication(context, configuration);

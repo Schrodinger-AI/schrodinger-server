@@ -13,7 +13,7 @@ public class SpinIndex : SchrodingerEntity<string>, IIndexBuild
     [Keyword] public string Signature { get; set; }
     public SpinStatus Status { get; set; }
     public decimal ConsumeScore { get; set; }
-    public long ExpiredTime { get; set; }
+    public long ExpirationTime { get; set; }
     public long CreatedTime { get; set; }
 }
 
