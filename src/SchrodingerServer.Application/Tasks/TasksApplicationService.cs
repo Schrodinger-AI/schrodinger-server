@@ -809,7 +809,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         if (voucherAdoptionResult == null || voucherAdoptionResult.VoucherId.IsNullOrEmpty())
         {
             _logger.LogError("Get voucher adoption failed, id: {id}", input.VoucherId);
-            throw new UserFriendlyException("Invalid voucher id");
+            return new VoucherAdoptionOutput();
         }
 
         var isRare = !voucherAdoptionResult.Rarity.IsNullOrEmpty();
