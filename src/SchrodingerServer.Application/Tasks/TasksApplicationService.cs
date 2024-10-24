@@ -600,7 +600,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             throw new UserFriendlyException("empty address");
         }
 
-        var res = await _tasksProvider.GetScoreAsync(input.Address);
+        var res = await GetCurrentFishScoreAsync(input.Address);
         return new GetScoreOutput
         {
             FishScore = res
@@ -788,10 +788,13 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     private async Task<decimal> GetCurrentFishScoreAsync(string address)
     {
         var scoreFromTask = await _tasksProvider.GetTotalScoreFromTask(address);
+        _logger.LogDebug("Get fish score from task, address:{address}, score:{score}", address, scoreFromTask);
 
         var scoreConsumeFromSpin = await _tasksProvider.GetConsumeScoreFromSpin(address);
+        _logger.LogDebug("Get consume fish score from spin, address:{address}, score:{score}", address, scoreConsumeFromSpin);
 
         var scoreFromSpinReward = await _tasksProvider.GetScoreFromSpinRewardAsync(address);
+        _logger.LogDebug("Get spin reward fish score, address:{address}, score:{score}", address, scoreFromSpinReward);
         
         return scoreFromTask + scoreFromSpinReward - scoreConsumeFromSpin;
     }

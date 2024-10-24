@@ -292,7 +292,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
     {
         var mustQuery = new List<Func<QueryContainerDescriptor<TasksScoreDetailIndex>, QueryContainer>>
         {
-            q => q.Term(i => i.Field(f => f.Id).Value(address))
+            q => q.Term(i => i.Field(f => f.Address).Value(address))
         };
         
         QueryContainer Filter(QueryContainerDescriptor<TasksScoreDetailIndex> f) => f.Bool(b => b.Must(mustQuery));
