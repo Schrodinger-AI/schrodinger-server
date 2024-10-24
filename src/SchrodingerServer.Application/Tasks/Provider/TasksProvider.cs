@@ -34,6 +34,7 @@ public interface ITasksProvider
     Task FinishSpinAsync(string seed);
     Task AddSpinAsync(AddSpinInput input);
     Task<VoucherAdoptionDto> GetVoucherAdoptionAsync(string voucherId);
+    Task<SpinRewardConfigDto> GetSpinRewardConfigAsync();
 }
 
 public class TasksProvider : ITasksProvider, ISingletonDependency
@@ -471,5 +472,30 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
             return null;
         }
     }
-    
+
+    public async Task<SpinRewardConfigDto> GetSpinRewardConfigAsync()
+    {
+        try
+        {
+            var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient).SendQueryAsync<SpinRewardConfigQueryDto>(new GraphQLRequest
+            {
+                Query = @"query 
+                  {
+                  getLatestSpinRewardConfig 
+                  {
+                     rewardList {
+                        name
+                        amount
+                      }
+                  }
+                }"
+            });
+            return res.Data.GetLatestSpinRewardConfig;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "getLatestSpinRewardConfig query GraphQL error");
+            return null;
+        }
+    }
 }

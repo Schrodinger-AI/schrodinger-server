@@ -840,17 +840,35 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
     public async Task<SpinRewardOutput> SpinRewardAsync()
     {
+        _logger.LogError("Get rewardConfig");
         var rewardOptions = _spinRewardOptions.CurrentValue;
+        if (rewardOptions == null || rewardOptions.RewardList.IsNullOrEmpty())
+        {
+            _logger.LogError("Get rewardOption failed");
+            throw new UserFriendlyException("Get rewardOption failed");
+        }
+        
+        var rewardConfig = await _tasksProvider.GetSpinRewardConfigAsync();
+        if (rewardConfig == null || rewardConfig.RewardList.IsNullOrEmpty())
+        {
+            _logger.LogError("Get rewardConfig failed");
+            throw new UserFriendlyException("Get rewardConfig failed");
+        }
+        
+        var list = new List<RewardItem>();
+
+        foreach (var reward in rewardConfig.RewardList)
+        {
+            list.Add(new RewardItem
+            {
+                Name = reward.Name,
+                Content = rewardOptions.RewardList.FirstOrDefault(i => i.Name == reward.Name)?.Content ?? ""
+            });
+        }
+        
         return new SpinRewardOutput
         {
-            RewardList = rewardOptions.RewardList
+            RewardList = list
         };
     }
-    
-    // private async Task<decimal> GetTotalScoreFromTaskAsync(string address)
-    // {
-    //     var scoreDetailList = await  _tasksProvider.GetScoreDetailByAddressAsync(address);
-    //     var totalScore = scoreDetailList.Sum(i => i.Score);
-    //     return totalScore;
-    // }
 }
