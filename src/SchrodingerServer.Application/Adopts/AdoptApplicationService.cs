@@ -366,6 +366,8 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         {
             Attributes = adoptInfo.Attributes,
             Generation = adoptInfo.Generation,
+            Symbol =  adoptInfo.Symbol,
+            TokenName = adoptInfo.Symbol + "GEN" + adoptInfo.Generation.ToString()
         };
 
         var chainId = _levelOptions.CurrentValue.ChainIdForReal;

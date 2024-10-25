@@ -8,6 +8,8 @@ public class AdoptImageInfo
     public List<Attribute> Attributes { get; set; }
     public List<string> Images { get; set; }
     public  string BoxImage { get; set; }
+    public string Symbol { get; set; }
+    public string TokenName { get; set; }
 }
 
 public class Attribute

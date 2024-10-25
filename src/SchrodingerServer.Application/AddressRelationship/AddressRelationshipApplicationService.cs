@@ -161,9 +161,17 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
         
         decimal totalPoints = pointDailyRecordList.Sum(item => item.PointAmount);
 
+        var data = new List<UnboundEvmAddressPoints>
+        {
+            new UnboundEvmAddressPoints
+            {
+                Address = address,
+                Points = totalPoints.ToString(CultureInfo.CurrentCulture)
+            }
+        };
         return new RemainPointDto
         {
-            Amount = totalPoints.ToString(CultureInfo.CurrentCulture)
+            RemainPointList = data
         };
     }
 }
