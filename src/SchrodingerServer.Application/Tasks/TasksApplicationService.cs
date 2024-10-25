@@ -696,7 +696,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             if (!isSpinFinished && nowTs < cache.ExpirationTime)
             {
                 _logger.LogWarning(
-                    "found unfinished seed in cache, seed: {id}", cache.Seed);
+                    "found unfinished seed in cache, seed: {id}, sig: {sig} ", cache.Seed, cache.Signature);
                 
                 return new SpinOutput
                 {
@@ -776,6 +776,9 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         
         // wait for es to be read
         await Task.Delay(200);
+        
+        _logger.LogWarning(
+            "generate new seed: {id}, sig: {sig} ", seed.ToHex(), signature);
         
         return new SpinOutput
         {
