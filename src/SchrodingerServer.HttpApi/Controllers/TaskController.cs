@@ -72,4 +72,5 @@ public class TaskController
     {
         return await _tasksApplicationService.SpinRewardAsync();
     }
+    
 }
