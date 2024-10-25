@@ -700,7 +700,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 
                 return new SpinOutput
                 {
-                    Seed = HashHelper.ComputeFrom(cache.Seed).ToHex(),
+                    Seed = cache.Seed,
                     Tick = DefaultTick,
                     Signature = ByteStringHelper.FromHexString(cache.Signature),
                     ExpirationTime = cache.ExpirationTime
@@ -726,7 +726,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             {
                 return new SpinOutput
                 {
-                    Seed = HashHelper.ComputeFrom(unfinishedSpin.Seed).ToHex(),
+                    Seed = unfinishedSpin.Seed,
                     Tick = DefaultTick,
                     Signature = ByteStringHelper.FromHexString(unfinishedSpin.Signature),
                     ExpirationTime = unfinishedSpin.ExpirationTime
@@ -739,12 +739,13 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var expirationTime = new DateTime(now.Year, now.Month, now.Day)
             .AddYears(1)
             .ToUtcSeconds();
-        var seed = Guid.NewGuid().ToString();
+        var uid = Guid.NewGuid().ToString();
+        var seed = HashHelper.ComputeFrom(uid);
         
         var data = new SpinInput
         {
             Tick = DefaultTick,
-            Seed = HashHelper.ComputeFrom(seed),
+            Seed = seed,
             ExpirationTime = expirationTime
         };
         var dataHash = HashHelper.ComputeFrom(data);
@@ -753,7 +754,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         // write new cache
         var cacheData = new SpinOutputCache
         {
-            Seed = seed,
+            Seed = seed.ToHex(),
             Tick = DefaultTick,
             ExpirationTime = expirationTime,
             Signature = signature
@@ -767,7 +768,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         await _tasksProvider.AddSpinAsync(new AddSpinInput
         {
             Address = currentAddress,
-            Seed = seed,
+            Seed = seed.ToHex(),
             ExpirationTime = expirationTime,
             Tick =  DefaultTick,
             Signature = signature
@@ -778,7 +779,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         
         return new SpinOutput
         {
-            Seed = HashHelper.ComputeFrom(seed).ToHex(),
+            Seed = seed.ToHex(),
             Tick = DefaultTick,
             ExpirationTime = expirationTime,
             Signature = ByteStringHelper.FromHexString(signature)
