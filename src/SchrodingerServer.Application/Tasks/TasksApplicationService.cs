@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AElf;
 using AElf.Types;
+using Google.Protobuf;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -687,12 +688,13 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         
         // query last spin seed from cache
         var cache = await _distributedCache.GetAsync(key);
+        var nowTs = TimeHelper.GetTimeStampInSeconds();
         if (cache != null)
         {
             _logger.LogWarning(
                 "found cache, seed: {id}", cache.Seed);
             bool isSpinFinished = await _tasksProvider.IsSpinFinished(cache.Seed);
-            var nowTs = TimeHelper.GetTimeStampInSeconds();
+            
             if (!isSpinFinished && nowTs < cache.ExpirationTime)
             {
                 _logger.LogWarning(
@@ -710,26 +712,28 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         
         // query unfinished spin seed from es
         var unfinishedSpin = await  _tasksProvider.GetUnfinishedSpinAsync(currentAddress);
-        if (unfinishedSpin != null)
+        var validSpins = unfinishedSpin.Where(i => i.ExpirationTime > nowTs).ToList();
+        if (!validSpins.IsNullOrEmpty())
         {
+            var validSpin = validSpins.FirstOrDefault();
             _logger.LogWarning(
-                "already generated signature, seed: {id}", unfinishedSpin.Seed);
+                "already generated signature, seed: {id}", validSpin.Seed);
             
-            bool isSpinFinished = await _tasksProvider.IsSpinFinished(unfinishedSpin.Seed);
+            bool isSpinFinished = await _tasksProvider.IsSpinFinished(validSpin.Seed);
             if (isSpinFinished)
             {
-                await _tasksProvider.FinishSpinAsync(unfinishedSpin.Seed);
+                await _tasksProvider.FinishSpinAsync(validSpin.Seed);
                 _logger.LogWarning(
-                    "finish spin, seed: {id}", unfinishedSpin.Seed);
+                    "finish spin, seed: {id}", validSpin.Seed);
             }
             else
             {
                 return new SpinOutput
                 {
-                    Seed = unfinishedSpin.Seed,
+                    Seed = validSpin.Seed,
                     Tick = DefaultTick,
-                    Signature = ByteStringHelper.FromHexString(unfinishedSpin.Signature),
-                    ExpirationTime = unfinishedSpin.ExpirationTime
+                    Signature = ByteStringHelper.FromHexString(validSpin.Signature),
+                    ExpirationTime = validSpin.ExpirationTime
                 };
             }
         }
@@ -794,7 +798,19 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var scoreFromTask = await _tasksProvider.GetTotalScoreFromTask(address);
         _logger.LogDebug("Get fish score from task, address:{address}, score:{score}", address, scoreFromTask);
 
-        var scoreConsumeFromSpin = await _tasksProvider.GetConsumeScoreFromSpin(address);
+        // var scoreConsumeFromSpin = await _tasksProvider.GetConsumeScoreFromSpin(address);
+        var scoreConsumeFromSpin = 0;
+        var unfinishedSpin = await  _tasksProvider.GetUnfinishedSpinAsync(address);
+        foreach (var spin in unfinishedSpin)
+        {
+            bool isSpinFinished = await _tasksProvider.IsSpinFinished(spin.Seed);
+            if (isSpinFinished)
+            {
+                scoreConsumeFromSpin += 100;
+            }
+        }
+        var finsihedSpinCount = await _tasksProvider.GetFinishedSpinCountAsync(address);
+        scoreConsumeFromSpin += finsihedSpinCount * 100;
         _logger.LogDebug("Get consume fish score from spin, address:{address}, score:{score}", address, scoreConsumeFromSpin);
 
         var scoreFromSpinReward = await _tasksProvider.GetScoreFromSpinRewardAsync(address);

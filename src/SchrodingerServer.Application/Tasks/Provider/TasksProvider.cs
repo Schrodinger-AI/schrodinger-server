@@ -26,7 +26,7 @@ public interface ITasksProvider
     Task<decimal> GetScoreAsync(string address);
     Task<List<UserReferralDto>> GetInviteRecordsToday(List<string> addressList);
     Task<List<TaskScoreDetailDto>> GetScoreDetailByAddressAsync(string address);
-    Task<SpinDto> GetUnfinishedSpinAsync(string address);
+    Task<List<SpinDto>> GetUnfinishedSpinAsync(string address);
     Task<decimal> GetTotalScoreFromTask(string address);
     Task<decimal> GetConsumeScoreFromSpin(string address);
     Task<decimal> GetScoreFromSpinRewardAsync(string address);
@@ -35,6 +35,7 @@ public interface ITasksProvider
     Task AddSpinAsync(AddSpinInput input);
     Task<VoucherAdoptionDto> GetVoucherAdoptionAsync(string voucherId);
     Task<SpinRewardConfigDto> GetSpinRewardConfigAsync();
+    Task<int> GetFinishedSpinCountAsync(string address);
 }
 
 public class TasksProvider : ITasksProvider, ISingletonDependency
@@ -267,14 +268,12 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
     }
     
     
-    public async Task<SpinDto> GetUnfinishedSpinAsync(string address)
+    public async Task<List<SpinDto>> GetUnfinishedSpinAsync(string address)
     {
-        var now = TimeHelper.GetTimeStampInSeconds();
         var mustQuery = new List<Func<QueryContainerDescriptor<SpinIndex>, QueryContainer>>
         {
             q => q.Term(i => i.Field(f => f.Address).Value(address)),
-            q => q.Term(i => i.Field(f => f.Status).Value(SpinStatus.Created)),
-            q => q.Range(i => i.Field(f => f.ExpirationTime).GreaterThan(now))
+            q => q.Term(i => i.Field(f => f.Status).Value(SpinStatus.Created))
         };
         
         QueryContainer Filter(QueryContainerDescriptor<SpinIndex> f) => f.Bool(b => b.Must(mustQuery));
@@ -282,10 +281,25 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         var res = await _spinIndexRepository.GetListAsync(Filter);
         if (res.Item2.IsNullOrEmpty())
         {
-            return null;
+            return new List<SpinDto>();
         }
         
-        return  _objectMapper.Map<SpinIndex, SpinDto>(res.Item2.First());
+        return  _objectMapper.Map<List<SpinIndex>, List<SpinDto>>(res.Item2);
+    }
+    
+    public async Task<int> GetFinishedSpinCountAsync(string address)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<SpinIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.Address).Value(address)),
+            q => q.Term(i => i.Field(f => f.Status).Value(SpinStatus.Finished))
+            // q => q.Range(i => i.Field(f => f.ExpirationTime).GreaterThan(now))
+        };
+        
+        QueryContainer Filter(QueryContainerDescriptor<SpinIndex> f) => f.Bool(b => b.Must(mustQuery));
+
+        var res = await _spinIndexRepository.CountAsync(Filter);
+        return (int)res.Count;
     }
     
     
