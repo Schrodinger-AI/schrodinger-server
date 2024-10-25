@@ -575,7 +575,9 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             _logger.LogError("invalid taskId, address: {address}, task:{task}", currentAddress, input.TaskId);
             throw new UserFriendlyException("invalid taskId");
         }
-
+        
+        var totalScoreBefore = await GetCurrentFishScoreAsync(currentAddress);
+        
         await _tasksProvider.AddTaskScoreDetailAsync(new AddTaskScoreDetailInput
         {
             Address = currentAddress,
@@ -583,13 +585,11 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             Score = score,
             Id = key
         });
-
-        var newScore = await _tasksProvider.UpdateUserTaskScoreAsync(currentAddress, score);
         
         await Task.Delay(500);
-
+        
         var output = _objectMapper.Map<TasksDto, ClaimOutput>(res);
-        output.FishScore = newScore;
+        output.FishScore = totalScoreBefore + score;
         return output;
     }
 
