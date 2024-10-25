@@ -274,7 +274,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         {
             q => q.Term(i => i.Field(f => f.Address).Value(address)),
             q => q.Term(i => i.Field(f => f.Status).Value(SpinStatus.Created)),
-            q => q.Range(i => i.Field(f => f.ExpirationTime).LessThan(now))
+            q => q.Range(i => i.Field(f => f.ExpirationTime).GreaterThan(now))
         };
         
         QueryContainer Filter(QueryContainerDescriptor<SpinIndex> f) => f.Bool(b => b.Must(mustQuery));
