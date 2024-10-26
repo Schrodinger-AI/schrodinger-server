@@ -61,7 +61,6 @@ public class ActivityController : AbpController
         return  _activityApplicationService.GetStageAsync(input.ActivityId);
     }
     
-    
     [HttpPost("bot-rank")]
     public Task<BotRankDto> GetBotRankAsync(GetBotRankInput input)
     {
