@@ -13,6 +13,7 @@ using Schrodinger;
 using SchrodingerServer.Adopts.provider;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.AElfSdk;
+using SchrodingerServer.Common.Dtos;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Message.Dtos;
 using SchrodingerServer.Message.Provider;
@@ -345,17 +346,16 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             if (taskInfo.TaskId == AdoptMilestoneTaskId)
             {
                 var tasksDto = new TasksDto();
-
-                _logger.LogDebug("check adopt milestone for address:{address}", address);
+                
                 var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(MilestoneStartFrom,
                     TimeHelper.GetTimeStampInSeconds());
                 var gen9AdoptByCurrentAddress =
                     res.Where(i => i.Adopter == address && i.Gen == 9).ToList();
                 var cnt = gen9AdoptByCurrentAddress.Count;
-                _logger.LogDebug("check adopt milestone for address:{address}, adopt times: {cnt}", address, cnt);
 
                 var lastClaimLevel = await GetMilestoneTaskLevelAsync(address, taskInfo.TaskId);
                 var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
+                _logger.LogDebug("check adopt milestone for address:{address}, cnt: {cnt}, next: {nxt}", address, cnt, nextLevel);
 
                 if (cnt >= nextLevel)
                 {
@@ -366,7 +366,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                     tasksDto.Status = UserTaskStatus.Created;
                 }
 
-                tasksDto.Name = "Adopt Gen9 Cats (" + cnt + "/" + nextLevel + ")";
+                tasksDto.Name = "Adopt GEN9 Cats(" + cnt + "/" + nextLevel + ")";
 
                 taskList.Add(tasksDto);
             }
@@ -374,13 +374,14 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             if (taskInfo.TaskId == InviteMilestoneTaskId)
             {
                 var tasksDto = new TasksDto();
-
-                _logger.LogDebug("check invite milestone for address:{address}", address);
+                
                 var cnt =
                     await _tasksProvider.GetInviteCountAsync(new List<string> { address }, MilestoneStartFrom);
 
                 var lastClaimLevel = await GetMilestoneTaskLevelAsync(address, taskInfo.TaskId);
                 var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
+                
+                _logger.LogDebug("check invite milestone for address:{address}, cnt: {cnt}, next: {nxt}", address, cnt, nextLevel);
 
                 if (cnt >= nextLevel)
                 {
@@ -391,7 +392,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                     tasksDto.Status = UserTaskStatus.Created;
                 }
 
-                tasksDto.Name = "invite friends (" + cnt + "/" + nextLevel + ")";
+                tasksDto.Name = "Invite friends(" + cnt + "/" + nextLevel + ")";
 
                 taskList.Add(tasksDto);
             }
@@ -756,11 +757,25 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
             var lastClaimLevel = await GetMilestoneTaskLevelAsync(currentAddress, input.TaskId);
             var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
+            
+            _logger.LogDebug("check invite milestone for address:{address}, current: {cnt}, next level: {nxt}", currentAddress, cnt, nextLevel);
 
             if (cnt >= nextLevel)
             {
-                // todo: call contract method to add voucher
                 await SetMilestoneTaskLevelAsync(currentAddress, input.TaskId, nextLevel);
+                
+                var chainId = _levelOptions.CurrentValue.ChainIdForReal;
+                var transactionRes = await SendAirdropVoucherTransactionAsync(currentAddress, chainId);
+                if (!transactionRes.Result)
+                {
+                    _logger.LogError("send transaction failed, err:{err}", transactionRes.Error);
+                    
+                    // compensate if send transaction failed
+                    await SetMilestoneTaskLevelAsync(currentAddress, input.TaskId, lastClaimLevel);
+                    throw new UserFriendlyException("send transaction failed, err:{err}", transactionRes.Error);
+                }
+                
+                output.Name = "Invite friends(" + cnt + "/" + nextLevel + ")";
                 output.Status = UserTaskStatus.Claimed;
             }
             else
@@ -780,11 +795,25 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
             var lastClaimLevel = await GetMilestoneTaskLevelAsync(currentAddress, input.TaskId);
             var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
+            
+            _logger.LogDebug("check adopt milestone for address:{address}, current: {cnt}, next level: {nxt}", currentAddress, cnt, nextLevel);
 
             if (cnt >= nextLevel)
             {
-                // todo: call contract method to add voucher
                 await SetMilestoneTaskLevelAsync(currentAddress, input.TaskId, nextLevel);
+                
+                var chainId = _levelOptions.CurrentValue.ChainIdForReal;
+                var transactionRes = await SendAirdropVoucherTransactionAsync(currentAddress, chainId);
+                if (!transactionRes.Result)
+                {
+                    _logger.LogError("send transaction failed, err:{err}", transactionRes.Error);
+                    
+                    // compensate if send transaction failed
+                    await SetMilestoneTaskLevelAsync(currentAddress, input.TaskId, lastClaimLevel);
+                    throw new UserFriendlyException("send transaction failed, err:{err}", transactionRes.Error);
+                }
+                
+                output.Name = "Adopt GEN9 Cats(" + cnt + "/" + nextLevel + ")";
                 output.Status = UserTaskStatus.Claimed;
             }
             else
@@ -1153,31 +1182,36 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         await _tasksProvider.AddMilestoneVoucherClaimedAsync(index);
     }
 
-    public async Task SendAirdropVoucherTransactionAsync(string chainId, string address)
+    public async Task<CheckTransactionDto> SendAirdropVoucherTransactionAsync(string chainId, string address)
     {
-        var aelfAddress = Address.FromBase58(address);
-        var param = new AirdropVoucherInput
+        try
         {
-            Tick = DefaultTick,
-            Amount = 1,
-            List = { aelfAddress }
-        };
+            var aelfAddress = Address.FromBase58(address);
+            var param = new AirdropVoucherInput
+            {
+                Tick = DefaultTick,
+                Amount = 1,
+                List = { aelfAddress }
+            };
 
-        var rawTxResult = await _contractProvider.CreateTransactionAsync(chainId,
-            _chainOptions.ChainInfos[chainId].PointTxPublicKey,
-            _chainOptions.ChainInfos[chainId].SchrodingerContractAddress, "AirdropVoucher", param.ToByteString().ToBase64());
-        _logger.LogInformation("SendAirdropVoucherTransactionAsync rawTxResult: {result}", JsonConvert.SerializeObject(rawTxResult));
+            var rawTxResult = await _contractProvider.CreateTransactionAsync(chainId,
+                _chainOptions.ChainInfos[chainId].PointTxPublicKey,
+                _chainOptions.ChainInfos[chainId].SchrodingerContractAddress, "AirdropVoucher", param.ToByteString().ToBase64());
+            _logger.LogInformation("SendAirdropVoucherTransactionAsync rawTxResult: {result}", JsonConvert.SerializeObject(rawTxResult));
 
-        var signedTransaction = rawTxResult.transaction;
+            var signedTransaction = rawTxResult.transaction;
 
-        var transactionOutput = await _contractProvider.SendTransactionWithRetAsync(chainId, signedTransaction);
-        _logger.LogInformation("SendAirdropVoucherTransactionAsync transactionId: {id}", transactionOutput.TransactionId);
-        var transactionResult =
-            await _contractProvider.CheckTransactionStatusAsync(transactionOutput.TransactionId, chainId);
+            var transactionOutput = await _contractProvider.SendTransactionWithRetAsync(chainId, signedTransaction);
+            _logger.LogInformation("SendAirdropVoucherTransactionAsync transactionId: {id}", transactionOutput.TransactionId);
+            var transactionResult =
+                await _contractProvider.CheckTransactionStatusAsync(transactionOutput.TransactionId, chainId);
         
-        if (!transactionResult.Result)
+            return transactionResult;
+        }
+        catch (Exception e)
         {
-            throw new UserFriendlyException(transactionResult.Error);
+            _logger.LogError("AirdropVoucher error: {error}", e.Message);
+            return new CheckTransactionDto();
         }
     }
 }

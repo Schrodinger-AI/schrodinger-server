@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using SchrodingerServer.Common.Dtos;
 using SchrodingerServer.Tasks.Dtos;
 
 namespace SchrodingerServer.Tasks;
@@ -14,5 +15,5 @@ public interface ITasksApplicationService
     Task<VoucherAdoptionOutput> VoucherAdoptionAsync(VoucherAdoptionInput input);
     Task<SpinRewardOutput> SpinRewardAsync();
     Task LogTgBotAsync(LogTgBotInput input);
-    Task SendAirdropVoucherTransactionAsync(string address, string chainId);
+    Task<CheckTransactionDto> SendAirdropVoucherTransactionAsync(string address, string chainId);
 }
