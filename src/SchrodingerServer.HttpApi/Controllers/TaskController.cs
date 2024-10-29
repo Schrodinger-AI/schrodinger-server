@@ -73,4 +73,16 @@ public class TaskController
         return await _tasksApplicationService.SpinRewardAsync();
     }
     
+    [Authorize]
+    [HttpPost("log")]
+    public async Task LogTgBotAsync(LogTgBotInput input)
+    {
+        await _tasksApplicationService.LogTgBotAsync(input);
+    }
+    
+    [HttpPost("test-voucher")]
+    public async Task AddVoucherAsync(AddVoucherInput input)
+    {
+        await _tasksApplicationService.SendAirdropVoucherTransactionAsync(input.ChainId, input.Address);
+    }
 }

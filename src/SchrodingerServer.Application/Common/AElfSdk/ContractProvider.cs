@@ -11,7 +11,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using SchrodingerServer.Common.AElfSdk.Dtos;
+using SchrodingerServer.Common.Dtos;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.Grains.Grain.ApplicationHandler;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Threading;
 
@@ -28,14 +30,15 @@ public class ContractProvider : IContractProvider, ISingletonDependency
 
     private readonly IOptionsMonitor<ChainOptions> _chainOptions;
     private readonly ILogger<ContractProvider> _logger;
-    
+
     public static readonly JsonSerializerSettings DefaultJsonSettings = JsonSettingsBuilder.New()
         .WithCamelCasePropertyNamesResolver()
         .WithAElfTypesConverters()
         .IgnoreNullValue()
         .Build();
 
-    public ContractProvider(IOptionsMonitor<ChainOptions> chainOption, ILogger<ContractProvider> logger, ISecretProvider secretProvider)
+    public ContractProvider(IOptionsMonitor<ChainOptions> chainOption, ILogger<ContractProvider> logger,
+        ISecretProvider secretProvider)
     {
         _logger = logger;
         _secretProvider = secretProvider;
@@ -93,12 +96,12 @@ public class ContractProvider : IContractProvider, ISingletonDependency
             RawTransaction = signedTransaction.ToByteArray().ToHex()
         });
     }
-    
+
     public Task<TransactionResultDto> QueryTransactionResultAsync(string chainId, string transactionId)
     {
         return Client(chainId).GetTransactionResultAsync(transactionId);
     }
-    
+
     public async Task<(Hash transactionId, Transaction transaction)> CreateCallTransactionAsync(string chainId,
         string contractName, string methodName, IMessage param)
     {
@@ -115,14 +118,17 @@ public class ContractProvider : IContractProvider, ISingletonDependency
         var address = ContractAddress(chainId, contractName);
         return await CreateTransactionAsync(chainId, senderPublicKey, address, methodName, param.ToByteString());
     }
-    
-    public async Task<(Hash transactionId, Transaction transaction)> CreateTransactionAsync(string chainId, string senderPublicKey, 
+
+    public async Task<(Hash transactionId, Transaction transaction)> CreateTransactionAsync(string chainId,
+        string senderPublicKey,
         string toAddress, string methodName, string paramBase64)
     {
-        return await CreateTransactionAsync(chainId, senderPublicKey, toAddress, methodName, ByteString.FromBase64(paramBase64));
+        return await CreateTransactionAsync(chainId, senderPublicKey, toAddress, methodName,
+            ByteString.FromBase64(paramBase64));
     }
-    
-    private async Task<(Hash transactionId, Transaction transaction)> CreateTransactionAsync(string chainId, string senderPublicKey, 
+
+    private async Task<(Hash transactionId, Transaction transaction)> CreateTransactionAsync(string chainId,
+        string senderPublicKey,
         string toAddress, string methodName, ByteString param)
     {
         var client = Client(chainId);
@@ -132,7 +138,8 @@ public class ContractProvider : IContractProvider, ISingletonDependency
         var blockHash = status.BestChainHash;
 
         // create raw transaction
-        _logger.LogInformation("CreateTransactionAsync, status: {status}, publickey:{pk}, toaddress:{address}, methodName:{methodName}", 
+        _logger.LogInformation(
+            "CreateTransactionAsync, status: {status}, publickey:{pk}, toaddress:{address}, methodName:{methodName}",
             JsonConvert.SerializeObject(status), senderPublicKey, toAddress, methodName);
         var transaction = new Transaction
         {
@@ -143,19 +150,22 @@ public class ContractProvider : IContractProvider, ISingletonDependency
             RefBlockNumber = height,
             RefBlockPrefix = ByteString.CopyFrom(Hash.LoadFromHex(blockHash).Value.Take(4).ToArray())
         };
-        
-        _logger.LogInformation("CreateTransactionFinish, transaction: {transaction}", JsonConvert.SerializeObject(transaction));
 
-        
-        transaction.Signature = senderPublicKey == _callTxSender.PublicKey.ToHex() 
-            ? _callTxSender.GetSignatureWith(transaction.GetHash().ToByteArray()) 
-            : ByteString.CopyFrom(ByteArrayHelper.HexStringToByteArray(await _secretProvider.GetSignatureAsync(senderPublicKey, transaction)));
+        _logger.LogInformation("CreateTransactionFinish, transaction: {transaction}",
+            JsonConvert.SerializeObject(transaction));
+
+
+        transaction.Signature = senderPublicKey == _callTxSender.PublicKey.ToHex()
+            ? _callTxSender.GetSignatureWith(transaction.GetHash().ToByteArray())
+            : ByteString.CopyFrom(
+                ByteArrayHelper.HexStringToByteArray(
+                    await _secretProvider.GetSignatureAsync(senderPublicKey, transaction)));
         _logger.LogInformation("CreateSignature, signature: {signature}", transaction.Signature.ToString());
 
 
         return (transaction.GetHash(), transaction);
     }
-    
+
     public async Task<T> CallTransactionAsync<T>(string chainId, Transaction transaction) where T : class
     {
         var client = Client(chainId);
@@ -172,5 +182,75 @@ public class ContractProvider : IContractProvider, ISingletonDependency
 
         return (T)JsonConvert.DeserializeObject(rawTransactionResult, typeof(T), DefaultJsonSettings);
     }
-    
+
+    public async Task<CheckTransactionDto> CheckTransactionStatusAsync(string transactionId, string chainId)
+    {
+        var retryTimes = 0;
+        var delayMilliseconds = 1000;
+        while (true)
+        {
+            if (retryTimes > 10)
+            {
+                delayMilliseconds += 4000;
+            }
+
+            if (retryTimes > 20)
+            {
+                return new CheckTransactionDto()
+                {
+                    Result = false,
+                    Error = "transaction timeout"
+                };
+            }
+
+            var txResult = await QueryTransactionResult(transactionId, chainId);
+            if (txResult.Status is TransactionState.Pending or TransactionState.Notexisted)
+            {
+                _logger.LogWarning("transactionId {transactionId} is Pending or NotExisted", transactionId);
+                await Task.Delay(delayMilliseconds);
+                retryTimes++;
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(txResult.Error))
+            {
+                _logger.LogWarning("transactionId {transactionId} is fail.", transactionId);
+                return new CheckTransactionDto()
+                {
+                    Result = false,
+                    Error = txResult.Error
+                };
+            }
+
+            if (txResult.Status != TransactionState.Mined)
+            {
+                _logger.LogWarning("transactionId {transactionId} is not Mined", transactionId);
+                return new CheckTransactionDto()
+                {
+                    Result = false,
+                    Error = txResult.Error
+                };
+            }
+
+            return new CheckTransactionDto()
+            {
+                Result = true,
+                Error = ""
+            };
+        }
+    }
+
+    public Task<TransactionResultDto> QueryTransactionResult(string transactionId, string chainId)
+    {
+        return Client(chainId).GetTransactionResultAsync(transactionId);
+    }
+
+    public async Task<SendTransactionOutput> SendTransactionWithRetAsync(string chainId, Transaction signedTransaction)
+    {
+        var client = Client(chainId);
+        return await client.SendTransactionAsync(new SendTransactionInput
+        {
+            RawTransaction = signedTransaction.ToByteArray().ToHex()
+        });
+    }
 }

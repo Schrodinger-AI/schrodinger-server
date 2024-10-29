@@ -13,4 +13,6 @@ public interface ITasksApplicationService
     Task<SpinOutput> SpinAsync();
     Task<VoucherAdoptionOutput> VoucherAdoptionAsync(VoucherAdoptionInput input);
     Task<SpinRewardOutput> SpinRewardAsync();
+    Task LogTgBotAsync(LogTgBotInput input);
+    Task SendAirdropVoucherTransactionAsync(string address, string chainId);
 }

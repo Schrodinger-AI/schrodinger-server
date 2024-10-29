@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using Schrodinger;
 using SchrodingerServer.Adopts.provider;
 using SchrodingerServer.Common;
+using SchrodingerServer.Common.AElfSdk;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Message.Dtos;
 using SchrodingerServer.Message.Provider;
@@ -39,16 +40,22 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     private readonly IMessageProvider _messageProvider;
     private readonly IAdoptGraphQLProvider _adoptGraphQlProvider;
     private readonly IOptionsMonitor<LevelOptions> _levelOptions;
-    private readonly IDistributedCache<SpinOutputCache> _distributedCache;
+    private readonly IDistributedCache<SpinOutputCache> _spinCache;
     private readonly ISecretProvider _secretProvider;
     private readonly ChainOptions _chainOptions;
     private IOptionsMonitor<SpinRewardOptions> _spinRewardOptions;
+    private readonly IDistributedCache<MilestoneTaskCache> _milestoneTaskCache;
+    private readonly IContractProvider _contractProvider;
 
     private const string LoginTaskId = "login";
     private const string InviteTaskId = "invite";
     private const string TradeTaskId = "trade";
     private const string AdoptTaskId = "adopt";
     private const string AdoptOnceTaskId = "adoptOnce";
+    private const string CatEmojiTaskId = "catEmoji";
+    private const string AdoptMilestoneTaskId = "adoptMilestone";
+    private const string InviteMilestoneTaskId = "inviteMilestone";
+    private const int MilestoneStartFrom = 1730160000;
     private const string DefaultTick = "SGR";
 
     public TasksApplicationService(
@@ -60,11 +67,14 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         IAbpDistributedLock distributedLock,
         IMessageProvider messageProvider,
         IAdoptGraphQLProvider adoptGraphQlProvider,
-        IOptionsMonitor<LevelOptions> levelOptions, 
-        IDistributedCache<SpinOutputCache> distributedCache, 
-        ISecretProvider secretProvider, 
-        IOptionsMonitor<ChainOptions> chainOptions, 
-        IOptionsMonitor<SpinRewardOptions> spinRewardOptions)
+        IOptionsMonitor<LevelOptions> levelOptions,
+        IDistributedCache<SpinOutputCache> spinCache,
+        ISecretProvider secretProvider,
+        IOptionsMonitor<ChainOptions> chainOptions,
+        IOptionsMonitor<SpinRewardOptions> spinRewardOptions,
+        IDistributedCache<MilestoneTaskCache> milestoneTaskCache,
+        IContractProvider _contractProvider
+    )
     {
         _tasksProvider = tasksProvider;
         _logger = logger;
@@ -75,10 +85,12 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         _messageProvider = messageProvider;
         _adoptGraphQlProvider = adoptGraphQlProvider;
         _levelOptions = levelOptions;
-        _distributedCache = distributedCache;
+        _spinCache = spinCache;
         _secretProvider = secretProvider;
         _chainOptions = chainOptions.CurrentValue;
         _spinRewardOptions = spinRewardOptions;
+        _milestoneTaskCache = milestoneTaskCache;
+        _contractProvider = _contractProvider;
     }
 
     public async Task<GetTaskListOutput> GetTaskListAsync(GetTaskListInput input)
@@ -118,10 +130,10 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         accomplishmentTaskList =
             accomplishmentTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
 
-        DateTime nowUtc = DateTime.UtcNow;
-        DateTime tomorrowUtcZero =
+        var nowUtc = DateTime.UtcNow;
+        var tomorrowUtcZero =
             new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc).AddDays(1);
-        TimeSpan timeDifference = tomorrowUtcZero - nowUtc;
+        var timeDifference = tomorrowUtcZero - nowUtc;
 
         return new GetTaskListOutput
         {
@@ -161,9 +173,9 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         }
 
         _logger.LogDebug("GetDailyTaskList, task:{task}", JsonConvert.SerializeObject(dailyTaskList));
-        DateTime nowUtc = DateTime.UtcNow;
-        DateTime todayBegin = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc);
-        DateTime todayEnd = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 23, 59, 59, DateTimeKind.Utc);
+        var nowUtc = DateTime.UtcNow;
+        var todayBegin = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc);
+        var todayEnd = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 23, 59, 59, DateTimeKind.Utc);
         foreach (var tasksDto in dailyTaskList)
         {
             tasksDto.Link = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Link;
@@ -265,7 +277,6 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                     }
                 }
             }
-
         }
 
         return dailyTaskList;
@@ -325,6 +336,100 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         return taskList;
     }
 
+    private async Task<List<TasksDto>> GetAccomplishmentTasksAsync(List<TaskConfig> taskInfoList, string address)
+    {
+        var taskList = new List<TasksDto>();
+
+        foreach (var taskInfo in taskInfoList)
+        {
+            if (taskInfo.TaskId == AdoptMilestoneTaskId)
+            {
+                var tasksDto = new TasksDto();
+
+                _logger.LogDebug("check adopt milestone for address:{address}", address);
+                var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(MilestoneStartFrom,
+                    TimeHelper.GetTimeStampInSeconds());
+                var gen9AdoptByCurrentAddress =
+                    res.Where(i => i.Adopter == address && i.Gen == 9).ToList();
+                var cnt = gen9AdoptByCurrentAddress.Count;
+                _logger.LogDebug("check adopt milestone for address:{address}, adopt times: {cnt}", address, cnt);
+
+                var lastClaimLevel = await GetMilestoneTaskLevelAsync(address, taskInfo.TaskId);
+                var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
+
+                if (cnt >= nextLevel)
+                {
+                    tasksDto.Status = UserTaskStatus.Finished;
+                }
+                else
+                {
+                    tasksDto.Status = UserTaskStatus.Created;
+                }
+
+                tasksDto.Name = "Adopt Gen9 Cats (" + cnt + "/" + nextLevel + ")";
+
+                taskList.Add(tasksDto);
+            }
+
+            if (taskInfo.TaskId == InviteMilestoneTaskId)
+            {
+                var tasksDto = new TasksDto();
+
+                _logger.LogDebug("check invite milestone for address:{address}", address);
+                var cnt =
+                    await _tasksProvider.GetInviteCountAsync(new List<string> { address }, MilestoneStartFrom);
+
+                var lastClaimLevel = await GetMilestoneTaskLevelAsync(address, taskInfo.TaskId);
+                var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
+
+                if (cnt >= nextLevel)
+                {
+                    tasksDto.Status = UserTaskStatus.Finished;
+                }
+                else
+                {
+                    tasksDto.Status = UserTaskStatus.Created;
+                }
+
+                tasksDto.Name = "invite friends (" + cnt + "/" + nextLevel + ")";
+
+                taskList.Add(tasksDto);
+            }
+        }
+
+        return taskList;
+    }
+
+    private int GetNextMilestoneLevel(int currentLevel, TaskConfig config)
+    {
+        var milestoneConfig = config.Milestone.Split(",");
+        var beginLevels = milestoneConfig[0].Split("/");
+        var step = int.Parse(milestoneConfig[1]);
+        var lastConfigLevel = int.Parse(beginLevels.Last());
+        if (currentLevel < lastConfigLevel)
+        {
+            foreach (var level in beginLevels)
+            {
+                if (currentLevel < int.Parse(level))
+                {
+                    return int.Parse(level);
+                }
+            }
+
+            return lastConfigLevel;
+        }
+        else
+        {
+            var level = lastConfigLevel;
+            while (level <= currentLevel)
+            {
+                level += step;
+            }
+
+            return level;
+        }
+    }
+
     public async Task<TaskData> FinishAsync(FinishInput input)
     {
         var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
@@ -355,7 +460,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         if (dailyTaskId.Contains(input.TaskId))
         {
             date = today;
-            key += ("_" + today);
+            key += "_" + today;
         }
 
         await using var handle =
@@ -382,9 +487,9 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             }
         }
 
-        DateTime nowUtc = DateTime.UtcNow;
-        DateTime todayBegin = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc);
-        DateTime todayEnd = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 23, 59, 59, DateTimeKind.Utc);
+        var nowUtc = DateTime.UtcNow;
+        var todayBegin = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 0, 0, 0, DateTimeKind.Utc);
+        var todayEnd = new DateTime(nowUtc.Year, nowUtc.Month, nowUtc.Day, 23, 59, 59, DateTimeKind.Utc);
 
         if (input.TaskId == TradeTaskId)
         {
@@ -495,20 +600,42 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
         _logger.LogInformation("claim task, {taskId}, {address}", input.TaskId, currentAddress);
 
+        var taskOption = _tasksOptions.CurrentValue;
+        var taskList = taskOption.TaskList;
+
+        var accomplishmentIds = taskList.Where(i => i.Type == TaskType.Accomplishment).Select(i => i.TaskId).ToList();
+
+        if (accomplishmentIds.Contains(input.TaskId))
+        {
+            return await ClaimForAccomplishmentTaskAsync(input);
+        }
+
+        return await ClaimForNormalTaskAsync(input);
+    }
+
+    private async Task<ClaimOutput> ClaimForNormalTaskAsync(ClaimInput input)
+    {
+        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        if (currentAddress.IsNullOrEmpty())
+        {
+            _logger.LogError("Get current address failed");
+            throw new UserFriendlyException("Invalid user");
+        }
+
         var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
-        // var today = "20241017";
 
         var date = "";
         var key = input.TaskId + "_" + currentAddress;
 
         var taskOption = _tasksOptions.CurrentValue;
         var taskList = taskOption.TaskList;
-        var dailyTasks = taskList.Where(i => i.Type == TaskType.Daily).ToList();
-        var dailyTaskId = dailyTasks.Select(i => i.TaskId).ToList();
+
+        var dailyTaskId = taskList.Where(i => i.Type == TaskType.Daily).Select(i => i.TaskId).ToList();
+
         if (dailyTaskId.Contains(input.TaskId))
         {
             date = today;
-            key += ("_" + date);
+            key += "_" + date;
         }
 
         await using var handle =
@@ -575,9 +702,9 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             _logger.LogError("invalid taskId, address: {address}, task:{task}", currentAddress, input.TaskId);
             throw new UserFriendlyException("invalid taskId");
         }
-        
+
         var totalScoreBefore = await GetCurrentFishScoreAsync(currentAddress);
-        
+
         await _tasksProvider.AddTaskScoreDetailAsync(new AddTaskScoreDetailInput
         {
             Address = currentAddress,
@@ -585,11 +712,88 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             Score = score,
             Id = key
         });
-        
+
         await Task.Delay(500);
-        
+
         var output = _objectMapper.Map<TasksDto, ClaimOutput>(res);
         output.FishScore = totalScoreBefore + score;
+        return output;
+    }
+
+
+    private async Task<ClaimOutput> ClaimForAccomplishmentTaskAsync(ClaimInput input)
+    {
+        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        if (currentAddress.IsNullOrEmpty())
+        {
+            _logger.LogError("Get current address failed");
+            throw new UserFriendlyException("Invalid user");
+        }
+
+        var key = input.TaskId + "_" + currentAddress;
+        await using var handle =
+            await _distributedLock.TryAcquireAsync(key);
+
+        if (handle == null)
+        {
+            _logger.LogError("get lock failed");
+            throw new UserFriendlyException("please try later");
+        }
+
+        var output = new ClaimOutput
+        {
+            TaskId = input.TaskId,
+            FishScore = await GetCurrentFishScoreAsync(currentAddress)
+        };
+
+        var taskList = _tasksOptions.CurrentValue.TaskList;
+        var taskInfo = taskList.First(i => i.TaskId == input.TaskId);
+
+        if (input.TaskId == InviteMilestoneTaskId)
+        {
+            var cnt =
+                await _tasksProvider.GetInviteCountAsync(new List<string> { currentAddress }, MilestoneStartFrom);
+
+            var lastClaimLevel = await GetMilestoneTaskLevelAsync(currentAddress, input.TaskId);
+            var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
+
+            if (cnt >= nextLevel)
+            {
+                // todo: call contract method to add voucher
+                await SetMilestoneTaskLevelAsync(currentAddress, input.TaskId, nextLevel);
+                output.Status = UserTaskStatus.Claimed;
+            }
+            else
+            {
+                _logger.LogError("invite not enough for next level, current: {cnt}, next: {nxt}", cnt, nextLevel);
+                throw new UserFriendlyException("Invalid user");
+            }
+        }
+
+        if (input.TaskId == AdoptMilestoneTaskId)
+        {
+            var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(MilestoneStartFrom,
+                TimeHelper.GetTimeStampInSeconds());
+            var gen9AdoptByCurrentAddress =
+                res.Where(i => i.Adopter == currentAddress && i.Gen == 9).ToList();
+            var cnt = gen9AdoptByCurrentAddress.Count;
+
+            var lastClaimLevel = await GetMilestoneTaskLevelAsync(currentAddress, input.TaskId);
+            var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
+
+            if (cnt >= nextLevel)
+            {
+                // todo: call contract method to add voucher
+                await SetMilestoneTaskLevelAsync(currentAddress, input.TaskId, nextLevel);
+                output.Status = UserTaskStatus.Claimed;
+            }
+            else
+            {
+                _logger.LogError("adopt not enough for next level, current: {cnt}, next: {nxt}", cnt, nextLevel);
+                throw new UserFriendlyException("Invalid user");
+            }
+        }
+
         return output;
     }
 
@@ -628,7 +832,6 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var accomplishmentTasks = taskList.Where(i => i.Type == TaskType.Accomplishment).ToList();
 
         var bizDate = DateTime.UtcNow.ToString(TimeHelper.Pattern);
-        // var bizDate = "20241017";
 
         var dailyTaskList = await _tasksProvider.GetTasksAsync(new GetTasksInput
         {
@@ -657,27 +860,27 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         {
             DailyTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(dailyTaskList),
             SocialTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(socialTaskList),
-            AccomplishmentTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(accomplishmentTaskList),
+            AccomplishmentTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(accomplishmentTaskList)
         };
     }
-    
+
     public async Task<SpinOutput> SpinAsync()
     {
         _logger.LogDebug("SpinAsync");
-        
+
         var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
         if (currentAddress.IsNullOrEmpty())
         {
             _logger.LogError("Get current address failed");
             throw new UserFriendlyException("Invalid user");
         }
-        
+
         var key = "spin" + "_" + currentAddress;
         await using var handle =
             await _distributedLock.TryAcquireAsync(key);
 
         _logger.LogDebug("SpinAsync for address, address:{address}", currentAddress);
-        
+
         // check if score is enough
         var currentScore = await GetCurrentFishScoreAsync(currentAddress);
         if (currentScore < 100)
@@ -685,21 +888,21 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             _logger.LogError("not enough fish score, address:{address}, score:{score}", currentAddress, currentScore);
             throw new UserFriendlyException("not enough score");
         }
-        
+
         // query last spin seed from cache
-        var cache = await _distributedCache.GetAsync(key);
+        var cache = await _spinCache.GetAsync(key);
         var nowTs = TimeHelper.GetTimeStampInSeconds();
         if (cache != null)
         {
             _logger.LogWarning(
                 "found cache, seed: {id}", cache.Seed);
-            bool isSpinFinished = await _tasksProvider.IsSpinFinished(cache.Seed);
-            
+            var isSpinFinished = await _tasksProvider.IsSpinFinished(cache.Seed);
+
             if (!isSpinFinished && nowTs < cache.ExpirationTime)
             {
                 _logger.LogWarning(
                     "found unfinished seed in cache, seed: {id}, sig: {sig} ", cache.Seed, cache.Signature);
-                
+
                 return new SpinOutput
                 {
                     Seed = cache.Seed,
@@ -709,17 +912,17 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 };
             }
         }
-        
+
         // query unfinished spin seed from es
-        var unfinishedSpin = await  _tasksProvider.GetUnfinishedSpinAsync(currentAddress);
+        var unfinishedSpin = await _tasksProvider.GetUnfinishedSpinAsync(currentAddress);
         var validSpins = unfinishedSpin.Where(i => i.ExpirationTime > nowTs).ToList();
         if (!validSpins.IsNullOrEmpty())
         {
             var validSpin = validSpins.FirstOrDefault();
             _logger.LogWarning(
                 "already generated signature, seed: {id}", validSpin.Seed);
-            
-            bool isSpinFinished = await _tasksProvider.IsSpinFinished(validSpin.Seed);
+
+            var isSpinFinished = await _tasksProvider.IsSpinFinished(validSpin.Seed);
             if (isSpinFinished)
             {
                 await _tasksProvider.FinishSpinAsync(validSpin.Seed);
@@ -737,7 +940,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 };
             }
         }
-        
+
         // generate new spin seed and signature
         var now = DateTime.UtcNow;
         var expirationTime = new DateTime(now.Year, now.Month, now.Day)
@@ -745,7 +948,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             .ToUtcSeconds();
         var uid = Guid.NewGuid().ToString();
         var seed = HashHelper.ComputeFrom(uid);
-        
+
         var data = new SpinInput
         {
             Tick = DefaultTick,
@@ -763,27 +966,27 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             ExpirationTime = expirationTime,
             Signature = signature
         };
-        await _distributedCache.SetAsync(key, cacheData, new DistributedCacheEntryOptions
+        await _spinCache.SetAsync(key, cacheData, new DistributedCacheEntryOptions
         {
             SlidingExpiration = TimeSpan.FromDays(1)
         });
-        
+
         // write es
         await _tasksProvider.AddSpinAsync(new AddSpinInput
         {
             Address = currentAddress,
             Seed = seed.ToHex(),
             ExpirationTime = expirationTime,
-            Tick =  DefaultTick,
+            Tick = DefaultTick,
             Signature = signature
         });
-        
+
         // wait for es to be read
         await Task.Delay(200);
-        
+
         _logger.LogWarning(
             "generate new seed: {id}, sig: {sig} ", seed.ToHex(), signature);
-        
+
         return new SpinOutput
         {
             Seed = seed.ToHex(),
@@ -792,7 +995,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             Signature = ByteStringHelper.FromHexString(signature)
         };
     }
-    
+
     private async Task<decimal> GetCurrentFishScoreAsync(string address)
     {
         var scoreFromTask = await _tasksProvider.GetTotalScoreFromTask(address);
@@ -800,31 +1003,33 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
         // var scoreConsumeFromSpin = await _tasksProvider.GetConsumeScoreFromSpin(address);
         var scoreConsumeFromSpin = 0;
-        var unfinishedSpin = await  _tasksProvider.GetUnfinishedSpinAsync(address);
+        var unfinishedSpin = await _tasksProvider.GetUnfinishedSpinAsync(address);
         foreach (var spin in unfinishedSpin)
         {
-            bool isSpinFinished = await _tasksProvider.IsSpinFinished(spin.Seed);
+            var isSpinFinished = await _tasksProvider.IsSpinFinished(spin.Seed);
             if (isSpinFinished)
             {
                 scoreConsumeFromSpin += 100;
             }
         }
+
         var finsihedSpinCount = await _tasksProvider.GetFinishedSpinCountAsync(address);
         scoreConsumeFromSpin += finsihedSpinCount * 100;
-        _logger.LogDebug("Get consume fish score from spin, address:{address}, score:{score}", address, scoreConsumeFromSpin);
+        _logger.LogDebug("Get consume fish score from spin, address:{address}, score:{score}", address,
+            scoreConsumeFromSpin);
 
         var scoreFromSpinReward = await _tasksProvider.GetScoreFromSpinRewardAsync(address);
         _logger.LogDebug("Get spin reward fish score, address:{address}, score:{score}", address, scoreFromSpinReward);
-        
+
         return scoreFromTask + scoreFromSpinReward - scoreConsumeFromSpin;
     }
-    
+
 
     public async Task<VoucherAdoptionOutput> VoucherAdoptionAsync(VoucherAdoptionInput input)
     {
         var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
         _logger.LogDebug("VoucherAdoptionAsync, id: {id}, address: {address}", input.VoucherId, currentAddress);
-        
+
         var voucherAdoptionResult = await _tasksProvider.GetVoucherAdoptionAsync(input.VoucherId);
         if (voucherAdoptionResult == null || voucherAdoptionResult.VoucherId.IsNullOrEmpty())
         {
@@ -842,7 +1047,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 IsRare = false
             };
         }
-        
+
         var data = new ConfirmVoucherInput
         {
             VoucherId = Hash.LoadFromHex(input.VoucherId)
@@ -867,14 +1072,14 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             _logger.LogError("Get rewardOption failed");
             throw new UserFriendlyException("Get rewardOption failed");
         }
-        
+
         var rewardConfig = await _tasksProvider.GetSpinRewardConfigAsync();
         if (rewardConfig == null || rewardConfig.RewardList.IsNullOrEmpty())
         {
             _logger.LogError("Get rewardConfig failed");
             throw new UserFriendlyException("Get rewardConfig failed");
         }
-        
+
         var list = new List<RewardItem>();
 
         foreach (var reward in rewardConfig.RewardList)
@@ -885,10 +1090,94 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 Content = rewardOptions.RewardList.FirstOrDefault(i => i.Name == reward.Name)?.Content ?? ""
             });
         }
-        
+
         return new SpinRewardOutput
         {
             RewardList = list
         };
+    }
+
+    public async Task LogTgBotAsync(LogTgBotInput input)
+    {
+        _logger.LogDebug("LogTgBotAsync");
+
+        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        if (currentAddress.IsNullOrEmpty())
+        {
+            _logger.LogError("LogTgBotAsync, Get current address failed");
+            throw new UserFriendlyException("Invalid user");
+        }
+
+        var currentScore = await GetCurrentFishScoreAsync(currentAddress);
+
+        input.Address = currentAddress;
+        input.Score = currentScore;
+        await _tasksProvider.AddTgBotLogAsync(input);
+    }
+
+    private async Task<int> GetMilestoneTaskLevelAsync(string address, string taskId)
+    {
+        var key = $"milestone_{address}_{taskId}";
+        var cache = await _milestoneTaskCache.GetAsync(key);
+        if (cache != null)
+        {
+            return cache.Level;
+        }
+
+        return await _tasksProvider.GetLastMilestoneLevelAsync(address, taskId);
+    }
+
+    private async Task SetMilestoneTaskLevelAsync(string address, string taskId, int level)
+    {
+        var key = $"milestone_{address}_{taskId}";
+
+        var cacheData = new MilestoneTaskCache
+        {
+            TaskId = taskId,
+            Level = level
+        };
+        await _milestoneTaskCache.SetAsync(key, cacheData, new DistributedCacheEntryOptions
+        {
+            SlidingExpiration = TimeSpan.FromDays(1)
+        });
+
+        var index = new MilestoneVoucherClaimedIndex
+        {
+            Id = $"{address}_{taskId}_{level}",
+            Address = address,
+            TaskId = taskId,
+            Level = level,
+            Amount = 1,
+            CreatedTime = TimeHelper.GetTimeStampInSeconds()
+        };
+        await _tasksProvider.AddMilestoneVoucherClaimedAsync(index);
+    }
+
+    public async Task SendAirdropVoucherTransactionAsync(string chainId, string address)
+    {
+        var aelfAddress = Address.FromBase58(address);
+        var param = new AirdropVoucherInput
+        {
+            Tick = DefaultTick,
+            Amount = 1,
+            List = { aelfAddress }
+        };
+
+        var rawTxResult = await _contractProvider.CreateTransactionAsync(chainId,
+            _chainOptions.ChainInfos[chainId].PointTxPublicKey,
+            _chainOptions.ChainInfos[chainId].SchrodingerContractAddress, "AirdropVoucher", param);
+        _logger.LogInformation("SendAirdropVoucherTransactionAsync rawTxResult: {result}", JsonConvert.SerializeObject(rawTxResult));
+
+        var signedTransaction = rawTxResult.transaction;
+
+        var transactionOutput = await _contractProvider.SendTransactionWithRetAsync(chainId, signedTransaction);
+        var transactionResult =
+            await _contractProvider.CheckTransactionStatusAsync(transactionOutput.TransactionId, chainId);
+        
+        _logger.LogInformation("SendAirdropVoucherTransactionAsync transactionId: {id}", transactionOutput.TransactionId);
+        if (!transactionResult.Result)
+        {
+            throw new UserFriendlyException(transactionResult.Error);
+        }
     }
 }

@@ -23,3 +23,9 @@ public class TaskListDto
 {
     public List<TasksDto> TaskList { get; set; } = new();
 }
+
+public class MilestoneTaskCache
+{
+    public string TaskId { get; set; }
+    public int Level { get; set; }
+}

@@ -13,6 +13,7 @@ public class TaskConfig
     public TaskType Type { get; set; }
     public string Link { get; set; }
     public string LinkType { get; set; }
+    public string Milestone { get; set; }
 }
 
 public enum TaskType
