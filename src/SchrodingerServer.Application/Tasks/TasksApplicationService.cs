@@ -73,7 +73,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         IOptionsMonitor<ChainOptions> chainOptions,
         IOptionsMonitor<SpinRewardOptions> spinRewardOptions,
         IDistributedCache<MilestoneTaskCache> milestoneTaskCache,
-        IContractProvider _contractProvider
+        IContractProvider contractProvider
     )
     {
         _tasksProvider = tasksProvider;
@@ -90,7 +90,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         _chainOptions = chainOptions.CurrentValue;
         _spinRewardOptions = spinRewardOptions;
         _milestoneTaskCache = milestoneTaskCache;
-        _contractProvider = _contractProvider;
+        _contractProvider = contractProvider;
     }
 
     public async Task<GetTaskListOutput> GetTaskListAsync(GetTaskListInput input)
@@ -1171,10 +1171,10 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var signedTransaction = rawTxResult.transaction;
 
         var transactionOutput = await _contractProvider.SendTransactionWithRetAsync(chainId, signedTransaction);
+        _logger.LogInformation("SendAirdropVoucherTransactionAsync transactionId: {id}", transactionOutput.TransactionId);
         var transactionResult =
             await _contractProvider.CheckTransactionStatusAsync(transactionOutput.TransactionId, chainId);
         
-        _logger.LogInformation("SendAirdropVoucherTransactionAsync transactionId: {id}", transactionOutput.TransactionId);
         if (!transactionResult.Result)
         {
             throw new UserFriendlyException(transactionResult.Error);
