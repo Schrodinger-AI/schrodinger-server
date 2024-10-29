@@ -1165,7 +1165,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
         var rawTxResult = await _contractProvider.CreateTransactionAsync(chainId,
             _chainOptions.ChainInfos[chainId].PointTxPublicKey,
-            _chainOptions.ChainInfos[chainId].SchrodingerContractAddress, "AirdropVoucher", param);
+            _chainOptions.ChainInfos[chainId].SchrodingerContractAddress, "AirdropVoucher", param.ToByteString().ToBase64());
         _logger.LogInformation("SendAirdropVoucherTransactionAsync rawTxResult: {result}", JsonConvert.SerializeObject(rawTxResult));
 
         var signedTransaction = rawTxResult.transaction;
