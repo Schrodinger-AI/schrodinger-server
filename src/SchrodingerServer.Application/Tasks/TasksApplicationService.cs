@@ -467,6 +467,27 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             _logger.LogError("get lock failed");
             throw new UserFriendlyException("please try later");
         }
+        
+        if (input.TaskId == CatEmojiTaskId)
+        {
+            if (input.ExtraData.TryGetValue("name", out var userName))
+            {
+                if (userName.Contains("\ud83d\udc31"))
+                {
+                    _logger.LogInformation("finish cat task success, address: {address}", currentAddress);
+                }
+                else
+                {
+                    _logger.LogError("user name without cat, address: {address}, name: {name}", currentAddress, userName);
+                    throw new UserFriendlyException("user name without cat");
+                }
+            }
+            else
+            {
+                _logger.LogError("param without user name, address: {address}", currentAddress);
+                throw new UserFriendlyException("param without user name");
+            }
+        }
 
         if (input.TaskId == InviteTaskId)
         {
