@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SchrodingerServer.Common.Options;
 using SchrodingerServer.Users.Index;
 
 namespace SchrodingerServer.Tasks.Dtos;
@@ -17,6 +18,7 @@ public class TasksDto
     public DateTime UpdatedTime { get; set; }
     public string Link { get; set; }
     public string LinkType { get; set; }
+    public RewardType RewardType { get; set; }
 }
 
 public class TaskListDto

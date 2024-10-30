@@ -44,6 +44,7 @@ public interface ITasksProvider
     Task<int> GetInviteCountAsync(List<string> addressList, int beginTs);
     Task AddMilestoneVoucherClaimedAsync(MilestoneVoucherClaimedIndex record);
     Task<int> GetLastMilestoneLevelAsync(string address, string taskId);
+    Task DeleteMilestoneVoucherClaimedRecordAsync(string taskId, string address, int level);
 }
 
 public class TasksProvider : ITasksProvider, ISingletonDependency
@@ -592,6 +593,28 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
     public async Task AddMilestoneVoucherClaimedAsync(MilestoneVoucherClaimedIndex record)
     {
         await _milestoneVoucherClaimedIndexRepository.AddAsync(record);
+    }
+    
+    public async Task DeleteMilestoneVoucherClaimedRecordAsync(string taskId, string address, int level)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<MilestoneVoucherClaimedIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.Address).Value(address)),
+            q => q.Term(i => i.Field(f => f.TaskId).Value(taskId)),
+            q => q.Range(i => i.Field(f => f.Level).GreaterThan(level))
+        };
+
+        QueryContainer Filter(QueryContainerDescriptor<MilestoneVoucherClaimedIndex> f) =>
+            f.Bool(b => b.Must(mustQuery));
+        
+        var res = await _milestoneVoucherClaimedIndexRepository.GetListAsync(Filter);
+        if (res != null && !res.Item2.IsNullOrEmpty())
+        {
+            foreach (var item in res.Item2)
+            {
+                await _milestoneVoucherClaimedIndexRepository.DeleteAsync(item);
+            }
+        }
     }
 
     public async Task<int> GetLastMilestoneLevelAsync(string address, string taskId)

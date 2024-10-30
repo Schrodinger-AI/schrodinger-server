@@ -125,7 +125,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         _logger.LogDebug("GetSocialTaskList, list:{socialTaskList}", JsonConvert.SerializeObject(socialTaskList));
         socialTaskList = socialTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
 
-        var accomplishmentTaskList = await GetOtherTasksAsync(accomplishmentTasks, currentAddress);
+        var accomplishmentTaskList = await GetAccomplishmentTasksAsync(accomplishmentTasks, currentAddress);
         _logger.LogDebug("GetAccomplishmentTaskList, list:{accomplishmentTaskList}",
             JsonConvert.SerializeObject(accomplishmentTaskList));
         accomplishmentTaskList =
@@ -343,10 +343,9 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
         foreach (var taskInfo in taskInfoList)
         {
+            var tasksDto = _objectMapper.Map<TaskConfig, TasksDto>(taskInfo);
             if (taskInfo.TaskId == AdoptMilestoneTaskId)
             {
-                var tasksDto = new TasksDto();
-                
                 var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(MilestoneStartFrom,
                     TimeHelper.GetTimeStampInSeconds());
                 var gen9AdoptByCurrentAddress =
@@ -367,14 +366,10 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 }
 
                 tasksDto.Name = "Adopt GEN9 Cats(" + cnt + "/" + nextLevel + ")";
-
-                taskList.Add(tasksDto);
             }
 
             if (taskInfo.TaskId == InviteMilestoneTaskId)
             {
-                var tasksDto = new TasksDto();
-                
                 var cnt =
                     await _tasksProvider.GetInviteCountAsync(new List<string> { address }, MilestoneStartFrom);
 
@@ -393,9 +388,9 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 }
 
                 tasksDto.Name = "Invite friends(" + cnt + "/" + nextLevel + ")";
-
-                taskList.Add(tasksDto);
             }
+            
+            taskList.Add(tasksDto);
         }
 
         return taskList;
@@ -608,25 +603,18 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
         if (accomplishmentIds.Contains(input.TaskId))
         {
-            return await ClaimForAccomplishmentTaskAsync(input);
+            return await ClaimForAccomplishmentTaskAsync(input, currentAddress);
         }
 
-        return await ClaimForNormalTaskAsync(input);
+        return await ClaimForNormalTaskAsync(input, currentAddress);
     }
 
-    private async Task<ClaimOutput> ClaimForNormalTaskAsync(ClaimInput input)
+    private async Task<ClaimOutput> ClaimForNormalTaskAsync(ClaimInput input, string address)
     {
-        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
-        if (currentAddress.IsNullOrEmpty())
-        {
-            _logger.LogError("Get current address failed");
-            throw new UserFriendlyException("Invalid user");
-        }
-
         var today = DateTime.UtcNow.ToString(TimeHelper.Pattern);
 
         var date = "";
-        var key = input.TaskId + "_" + currentAddress;
+        var key = input.TaskId + "_" + address;
 
         var taskOption = _tasksOptions.CurrentValue;
         var taskList = taskOption.TaskList;
@@ -650,7 +638,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
         var tasks = await _tasksProvider.GetTasksAsync(new GetTasksInput
         {
-            Address = currentAddress,
+            Address = address,
             TaskIdList = new List<string> { input.TaskId },
             Date = date
         });
@@ -658,27 +646,27 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var taskInfo = tasks.FirstOrDefault();
         if (taskInfo == null)
         {
-            _logger.LogError("user task not exist, address: {address}, task:{task}", currentAddress, input.TaskId);
+            _logger.LogError("user task not exist, address: {address}, task:{task}", address, input.TaskId);
             throw new UserFriendlyException("user task not exist");
         }
 
         if (taskInfo.Status == UserTaskStatus.Claimed)
         {
-            _logger.LogError("already claimed, address:{address}, status:{status}, task:{task}", currentAddress,
+            _logger.LogError("already claimed, address:{address}, status:{status}, task:{task}", address,
                 taskInfo.Status, input.TaskId);
             throw new UserFriendlyException("already claimed");
         }
 
         if (taskInfo.Status != UserTaskStatus.Finished)
         {
-            _logger.LogError("invalid status, address:{address}, status:{status}, task:{task}", currentAddress,
+            _logger.LogError("invalid status, address:{address}, status:{status}, task:{task}", address,
                 taskInfo.Status, input.TaskId);
             throw new UserFriendlyException("task not finished");
         }
 
         var res = await _tasksProvider.ChangeTaskStatusAsync(new ChangeTaskStatusInput
         {
-            Address = currentAddress,
+            Address = address,
             TaskId = input.TaskId,
             Status = UserTaskStatus.Claimed,
             Date = date
@@ -686,13 +674,13 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
         if (res == null)
         {
-            _logger.LogError("user task not exist, address: {address}, task:{task}", currentAddress, input.TaskId);
+            _logger.LogError("user task not exist, address: {address}, task:{task}", address, input.TaskId);
             throw new UserFriendlyException("user task not exist");
         }
 
         if (res.Status != UserTaskStatus.Claimed)
         {
-            _logger.LogError("claim task failed, address: {address}, task:{task}, status:{status}", currentAddress,
+            _logger.LogError("claim task failed, address: {address}, task:{task}, status:{status}", address,
                 input.TaskId, res.Status);
             throw new UserFriendlyException("claim failed");
         }
@@ -700,15 +688,15 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var score = res.Score;
         if (score == 0)
         {
-            _logger.LogError("invalid taskId, address: {address}, task:{task}", currentAddress, input.TaskId);
+            _logger.LogError("invalid taskId, address: {address}, task:{task}", address, input.TaskId);
             throw new UserFriendlyException("invalid taskId");
         }
 
-        var totalScoreBefore = await GetCurrentFishScoreAsync(currentAddress);
+        var totalScoreBefore = await GetCurrentFishScoreAsync(address);
 
         await _tasksProvider.AddTaskScoreDetailAsync(new AddTaskScoreDetailInput
         {
-            Address = currentAddress,
+            Address = address,
             TaskId = input.TaskId,
             Score = score,
             Id = key
@@ -722,16 +710,9 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     }
 
 
-    private async Task<ClaimOutput> ClaimForAccomplishmentTaskAsync(ClaimInput input)
+    private async Task<ClaimOutput> ClaimForAccomplishmentTaskAsync(ClaimInput input, string address)
     {
-        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
-        if (currentAddress.IsNullOrEmpty())
-        {
-            _logger.LogError("Get current address failed");
-            throw new UserFriendlyException("Invalid user");
-        }
-
-        var key = input.TaskId + "_" + currentAddress;
+        var key = input.TaskId + "_" + address;
         await using var handle =
             await _distributedLock.TryAcquireAsync(key);
 
@@ -744,7 +725,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var output = new ClaimOutput
         {
             TaskId = input.TaskId,
-            FishScore = await GetCurrentFishScoreAsync(currentAddress)
+            FishScore = await GetCurrentFishScoreAsync(address)
         };
 
         var taskList = _tasksOptions.CurrentValue.TaskList;
@@ -752,36 +733,35 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
         if (input.TaskId == InviteMilestoneTaskId)
         {
-            var cnt =
-                await _tasksProvider.GetInviteCountAsync(new List<string> { currentAddress }, MilestoneStartFrom);
-
-            var lastClaimLevel = await GetMilestoneTaskLevelAsync(currentAddress, input.TaskId);
+            var cnt = await _tasksProvider.GetInviteCountAsync(new List<string> { address }, MilestoneStartFrom);
+            var lastClaimLevel = await GetMilestoneTaskLevelAsync(address, input.TaskId);
             var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
             
-            _logger.LogDebug("check invite milestone for address:{address}, current: {cnt}, next level: {nxt}", currentAddress, cnt, nextLevel);
+            _logger.LogDebug("check invite milestone for address:{address}, current: {cnt}, next level: {nxt}", address, cnt, nextLevel);
 
             if (cnt >= nextLevel)
             {
-                await SetMilestoneTaskLevelAsync(currentAddress, input.TaskId, nextLevel);
+                await SetMilestoneTaskLevelAsync(address, input.TaskId, nextLevel);
                 
                 var chainId = _levelOptions.CurrentValue.ChainIdForReal;
-                var transactionRes = await SendAirdropVoucherTransactionAsync(currentAddress, chainId);
+                var transactionRes = await SendAirdropVoucherTransactionAsync(address, chainId);
                 if (!transactionRes.Result)
                 {
                     _logger.LogError("send transaction failed, err:{err}", transactionRes.Error);
                     
-                    // compensate if send transaction failed
-                    await SetMilestoneTaskLevelAsync(currentAddress, input.TaskId, lastClaimLevel);
+                    // rollback if send transaction failed
+                    await RollbackMilestoneTaskLevelAsync(address, input.TaskId, lastClaimLevel);
                     throw new UserFriendlyException("send transaction failed, err:{err}", transactionRes.Error);
                 }
                 
+                nextLevel = GetNextMilestoneLevel(nextLevel, taskInfo);
                 output.Name = "Invite friends(" + cnt + "/" + nextLevel + ")";
-                output.Status = UserTaskStatus.Claimed;
+                output.Status = cnt >= nextLevel ? UserTaskStatus.Finished : UserTaskStatus.Created;
             }
             else
             {
                 _logger.LogError("invite not enough for next level, current: {cnt}, next: {nxt}", cnt, nextLevel);
-                throw new UserFriendlyException("Invalid user");
+                throw new UserFriendlyException("invite not enough for next level");
             }
         }
 
@@ -790,36 +770,37 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             var res = await _adoptGraphQlProvider.GetAdoptInfoByTime(MilestoneStartFrom,
                 TimeHelper.GetTimeStampInSeconds());
             var gen9AdoptByCurrentAddress =
-                res.Where(i => i.Adopter == currentAddress && i.Gen == 9).ToList();
+                res.Where(i => i.Adopter == address && i.Gen == 9).ToList();
             var cnt = gen9AdoptByCurrentAddress.Count;
-
-            var lastClaimLevel = await GetMilestoneTaskLevelAsync(currentAddress, input.TaskId);
+            
+            var lastClaimLevel = await GetMilestoneTaskLevelAsync(address, input.TaskId);
             var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
             
-            _logger.LogDebug("check adopt milestone for address:{address}, current: {cnt}, next level: {nxt}", currentAddress, cnt, nextLevel);
+            _logger.LogDebug("check adopt milestone for address:{address}, current: {cnt}, next level: {nxt}", address, cnt, nextLevel);
 
             if (cnt >= nextLevel)
             {
-                await SetMilestoneTaskLevelAsync(currentAddress, input.TaskId, nextLevel);
+                await SetMilestoneTaskLevelAsync(address, input.TaskId, nextLevel);
                 
                 var chainId = _levelOptions.CurrentValue.ChainIdForReal;
-                var transactionRes = await SendAirdropVoucherTransactionAsync(currentAddress, chainId);
+                var transactionRes = await SendAirdropVoucherTransactionAsync(address, chainId);
                 if (!transactionRes.Result)
                 {
                     _logger.LogError("send transaction failed, err:{err}", transactionRes.Error);
                     
-                    // compensate if send transaction failed
-                    await SetMilestoneTaskLevelAsync(currentAddress, input.TaskId, lastClaimLevel);
+                    // rollback if send transaction failed
+                    await RollbackMilestoneTaskLevelAsync(address, input.TaskId, lastClaimLevel);
                     throw new UserFriendlyException("send transaction failed, err:{err}", transactionRes.Error);
                 }
                 
+                nextLevel = GetNextMilestoneLevel(nextLevel, taskInfo);
                 output.Name = "Adopt GEN9 Cats(" + cnt + "/" + nextLevel + ")";
-                output.Status = UserTaskStatus.Claimed;
+                output.Status = cnt >= nextLevel ? UserTaskStatus.Finished : UserTaskStatus.Created;
             }
             else
             {
                 _logger.LogError("adopt not enough for next level, current: {cnt}, next: {nxt}", cnt, nextLevel);
-                throw new UserFriendlyException("Invalid user");
+                throw new UserFriendlyException("adopt not enough for next level");
             }
         }
 
@@ -1180,6 +1161,23 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             CreatedTime = TimeHelper.GetTimeStampInSeconds()
         };
         await _tasksProvider.AddMilestoneVoucherClaimedAsync(index);
+    }
+    
+    private async Task RollbackMilestoneTaskLevelAsync(string address, string taskId, int level)
+    {
+        var key = $"milestone_{address}_{taskId}";
+
+        var cacheData = new MilestoneTaskCache
+        {
+            TaskId = taskId,
+            Level = level
+        };
+        await _milestoneTaskCache.SetAsync(key, cacheData, new DistributedCacheEntryOptions
+        {
+            SlidingExpiration = TimeSpan.FromDays(1)
+        });
+        
+        await _tasksProvider.DeleteMilestoneVoucherClaimedRecordAsync(taskId, address, level);
     }
 
     public async Task<CheckTransactionDto> SendAirdropVoucherTransactionAsync(string chainId, string address)

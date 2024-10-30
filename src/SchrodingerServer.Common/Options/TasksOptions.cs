@@ -14,6 +14,8 @@ public class TaskConfig
     public string Link { get; set; }
     public string LinkType { get; set; }
     public string Milestone { get; set; }
+    
+    public RewardType RewardType { get; set; }
 }
 
 public enum TaskType
@@ -21,4 +23,10 @@ public enum TaskType
     Daily = 1,
     Social = 2,
     Accomplishment = 3
+}
+
+public enum RewardType
+{
+    FishScore,
+    Voucher
 }
