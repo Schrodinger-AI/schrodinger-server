@@ -80,7 +80,6 @@ public class TaskController
         await _tasksApplicationService.LogTgBotAsync(input);
     }
     
-    
     [HttpPost("test-voucher")]
     public async Task AddVoucherAsync(AddVoucherInput input)
     {
