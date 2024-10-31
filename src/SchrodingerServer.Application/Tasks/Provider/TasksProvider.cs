@@ -586,6 +586,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
             index.ExtraData = input.ExtraData;
             index.Language = input.Language;
             index.Address = input.Address;
+            index.Username = input.Username;
             await _tgBotLogIndexRepository.UpdateAsync(index);
         }
     }

@@ -27,7 +27,7 @@ public class DomainController : AbpController
     {
         var domain = DeviceInfoContext.CurrentDeviceInfo.Host ?? CommonConstant.EmptyString;
         var domainValid = await _userActionProvider.CheckDomainAsync(domain);
-        AssertHelper.IsTrue(domainValid, "Invalid host{0}", domain);
+        AssertHelper.IsTrue(domainValid, "Invalid host: {0}", domain);
         return CommonConstant.Success;
     }
 }
