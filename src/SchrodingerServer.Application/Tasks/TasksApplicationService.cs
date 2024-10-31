@@ -182,6 +182,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             tasksDto.Link = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Link;
             tasksDto.Name = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Name;
             tasksDto.LinkType = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).LinkType;
+            tasksDto.Type = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Type;
 
             if (tasksDto.TaskId == InviteTaskId && tasksDto.Status == UserTaskStatus.Created)
             {
@@ -332,6 +333,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             tasksDto.Link = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Link;
             tasksDto.Name = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Name;
             tasksDto.LinkType = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).LinkType;
+            tasksDto.Type = taskInfoList.First(i => i.TaskId == tasksDto.TaskId).Type;
         }
 
         return taskList;

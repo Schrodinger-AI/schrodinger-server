@@ -19,6 +19,7 @@ public class TasksDto
     public string Link { get; set; }
     public string LinkType { get; set; }
     public RewardType RewardType { get; set; }
+    public TaskType Type { get; set; }
 }
 
 public class TaskListDto
