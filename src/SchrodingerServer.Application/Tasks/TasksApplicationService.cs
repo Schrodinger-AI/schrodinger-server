@@ -765,7 +765,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 await SetMilestoneTaskLevelAsync(address, input.TaskId, nextLevel);
                 
                 var chainId = _levelOptions.CurrentValue.ChainIdForReal;
-                var transactionRes = await SendAirdropVoucherTransactionAsync(address, chainId);
+                var transactionRes = await SendAirdropVoucherTransactionAsync(chainId, address);
                 if (!transactionRes.Result)
                 {
                     _logger.LogError("send transaction failed, err:{err}", transactionRes.Error);
@@ -804,7 +804,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 await SetMilestoneTaskLevelAsync(address, input.TaskId, nextLevel);
                 
                 var chainId = _levelOptions.CurrentValue.ChainIdForReal;
-                var transactionRes = await SendAirdropVoucherTransactionAsync(address, chainId);
+                var transactionRes = await SendAirdropVoucherTransactionAsync(chainId, address);
                 if (!transactionRes.Result)
                 {
                     _logger.LogError("send transaction failed, err:{err}", transactionRes.Error);
