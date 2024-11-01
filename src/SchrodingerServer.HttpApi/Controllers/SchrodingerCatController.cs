@@ -78,5 +78,4 @@ public class SchrodingerCatController
     {
         return await _schrodingerCatService.GetStrayCatsAsync(input);
     }
-    
 }
