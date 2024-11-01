@@ -1257,4 +1257,29 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             return new CheckTransactionDto();
         }
     }
+
+    public async Task<bool> CheckUserAsync(string userId)
+    {
+        if (userId.IsNullOrEmpty())
+        {
+            _logger.LogError("CheckUserAsync, userId is null or empty");
+            return false;
+        }
+        
+        var address = await _tasksProvider.GetAddressByUserIdAsync(userId);
+        if (address.IsNullOrEmpty())
+        {
+            _logger.LogInformation("CheckUserAsync, user id not exist, {userId}", userId);
+            return false;
+        }
+
+        var domain = await _tasksProvider.GetUserRegisterDomainByAddressAsync(address);
+        if (domain.IsNullOrEmpty())
+        {
+            _logger.LogInformation("CheckUserAsync, user address not joined, {address}, {userId}", address, userId);
+            return false;
+        }
+
+        return true;
+    }
 }

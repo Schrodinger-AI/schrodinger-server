@@ -45,6 +45,8 @@ public interface ITasksProvider
     Task AddMilestoneVoucherClaimedAsync(MilestoneVoucherClaimedIndex record);
     Task<int> GetLastMilestoneLevelAsync(string address, string taskId);
     Task DeleteMilestoneVoucherClaimedRecordAsync(string taskId, string address, int level);
+    Task<string> GetUserRegisterDomainByAddressAsync(string address);
+    Task<string> GetAddressByUserIdAsync(string address);
 }
 
 public class TasksProvider : ITasksProvider, ISingletonDependency
@@ -637,5 +639,58 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         }
 
         return 0;
+    }
+    
+    public async Task<string> GetUserRegisterDomainByAddressAsync(string address)
+    {
+        var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.PointPlatform)
+            .SendQueryAsync<DomainUserRelationShipQuery>(new GraphQLRequest
+            {
+                Query =
+                    @"query($domainIn:[String!]!,$addressIn:[String!]!,$dappNameIn:[String!]!,$skipCount:Int!,$maxResultCount:Int!){
+                    queryUserAsync(input: {domainIn:$domainIn,addressIn:$addressIn,dappNameIn:$dappNameIn,skipCount:$skipCount,maxResultCount:$maxResultCount}){
+                        totalRecordCount
+                        data {
+                          id
+                          domain
+                          address
+                          dappName
+                          createTime
+                        }
+                }
+            }",
+                Variables = new
+                {
+                    domainIn = new List<string>(), dappNameIn = new List<string>(),
+                    addressIn = new List<string>() { address }, skipCount = 0, maxResultCount = 1
+                }
+            });
+        var ans = res.Data?.QueryUserAsync.Data;
+        if (ans == null || ans.Count == 0)
+        {
+            return "";
+        }
+
+        return ans[0].Domain;
+    }
+
+    public async Task<string> GetAddressByUserIdAsync(string userId)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<TgBotLogIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.UserId).Value(userId))
+        };
+        
+
+        QueryContainer Filter(QueryContainerDescriptor<TgBotLogIndex> f) => f.Bool(b => b.Must(mustQuery));
+
+        var res = await _tgBotLogIndexRepository.GetAsync(Filter);
+
+        if (res != null)
+        {
+            return res.Address;
+        }
+
+        return "";
     }
 }

@@ -80,9 +80,9 @@ public class TaskController
         await _tasksApplicationService.LogTgBotAsync(input);
     }
     
-    [HttpPost("test-voucher")]
-    public async Task AddVoucherAsync(AddVoucherInput input)
+    [HttpGet("check/{userId}")]
+    public async Task<bool> CheckUserAsync(string userId)
     {
-        await _tasksApplicationService.SendAirdropVoucherTransactionAsync(input.ChainId, input.Address);
+        return await _tasksApplicationService.CheckUserAsync(userId);
     }
 }

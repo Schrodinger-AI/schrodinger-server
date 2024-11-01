@@ -16,4 +16,5 @@ public interface ITasksApplicationService
     Task<SpinRewardOutput> SpinRewardAsync();
     Task LogTgBotAsync(LogTgBotInput input);
     Task<CheckTransactionDto> SendAirdropVoucherTransactionAsync(string address, string chainId);
+    Task<bool> CheckUserAsync(string userId);
 }
