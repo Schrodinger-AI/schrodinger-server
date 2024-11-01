@@ -379,17 +379,23 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
                 
                 _logger.LogDebug("check invite milestone for address:{address}, cnt: {cnt}, next: {nxt}", address, cnt, nextLevel);
-
-                if (cnt >= nextLevel)
+                
+                var inviteLevelLimit = _tasksOptions.CurrentValue.InviteLimit;
+                if (lastClaimLevel >= inviteLevelLimit)
+                {
+                    tasksDto.Status = UserTaskStatus.Claimed;
+                    tasksDto.Name = "Invite friends(" + cnt + "/" + inviteLevelLimit + ")";
+                }
+                else if (cnt >= nextLevel)
                 {
                     tasksDto.Status = UserTaskStatus.Finished;
+                    tasksDto.Name = "Invite friends(" + cnt + "/" + nextLevel + ")";
                 }
                 else
                 {
                     tasksDto.Status = UserTaskStatus.Created;
+                    tasksDto.Name = "Invite friends(" + cnt + "/" + nextLevel + ")";
                 }
-
-                tasksDto.Name = "Invite friends(" + cnt + "/" + nextLevel + ")";
             }
             
             taskList.Add(tasksDto);
@@ -760,9 +766,16 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             var lastClaimLevel = await GetMilestoneTaskLevelAsync(address, input.TaskId);
             var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
             
-            _logger.LogDebug("check invite milestone for address:{address}, current: {cnt}, next level: {nxt}", address, cnt, nextLevel);
+            _logger.LogDebug("check invite milestone for address: {address}, current: {cnt}, next level: {nxt}", address, cnt, nextLevel);
 
-            if (cnt >= nextLevel)
+            var inviteLevelLimit = _tasksOptions.CurrentValue.InviteLimit;
+            if (lastClaimLevel >= inviteLevelLimit)
+            {
+                _logger.LogDebug("reach invite limit for address: {address}", address);
+                output.Status = UserTaskStatus.Claimed;
+                output.Name = "Invite friends(" + cnt + "/" + inviteLevelLimit + ")";
+            }
+            else if (cnt >= nextLevel)
             {
                 await SetMilestoneTaskLevelAsync(address, input.TaskId, nextLevel);
                 
@@ -778,12 +791,21 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 }
                 
                 nextLevel = GetNextMilestoneLevel(nextLevel, taskInfo);
-                output.Name = "Invite friends(" + cnt + "/" + nextLevel + ")";
-                output.Status = cnt >= nextLevel ? UserTaskStatus.Finished : UserTaskStatus.Created;
+                if (nextLevel > inviteLevelLimit)
+                {
+                    _logger.LogDebug("reach invite limit for address: {address}", address);
+                    output.Status = UserTaskStatus.Claimed;
+                    output.Name = "Invite friends(" + cnt + "/" + inviteLevelLimit + ")";
+                }
+                else
+                {
+                    output.Name = "Invite friends(" + cnt + "/" + nextLevel + ")";
+                    output.Status = cnt >= nextLevel ? UserTaskStatus.Finished : UserTaskStatus.Created;
+                }
             }
             else
             {
-                _logger.LogError("invite not enough for next level, current: {cnt}, next: {nxt}", cnt, nextLevel);
+                _logger.LogError("invite not enough for next level, address: {address}, current: {cnt}, next: {nxt}", address, cnt, nextLevel);
                 throw new UserFriendlyException("invite not enough for next level");
             }
         }
@@ -799,7 +821,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             var lastClaimLevel = await GetMilestoneTaskLevelAsync(address, input.TaskId);
             var nextLevel = GetNextMilestoneLevel(lastClaimLevel, taskInfo);
             
-            _logger.LogDebug("check adopt milestone for address:{address}, current: {cnt}, next level: {nxt}", address, cnt, nextLevel);
+            _logger.LogDebug("check adopt milestone for address: {address}, current: {cnt}, next level: {nxt}", address, cnt, nextLevel);
 
             if (cnt >= nextLevel)
             {
@@ -809,7 +831,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 var transactionRes = await SendAirdropVoucherTransactionAsync(chainId, address);
                 if (!transactionRes.Result)
                 {
-                    _logger.LogError("send transaction failed, err:{err}", transactionRes.Error);
+                    _logger.LogError("send transaction failed, err: {err}", transactionRes.Error);
                     
                     // rollback if send transaction failed
                     await RollbackMilestoneTaskLevelAsync(address, input.TaskId, lastClaimLevel);
@@ -822,7 +844,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             }
             else
             {
-                _logger.LogError("adopt not enough for next level, current: {cnt}, next: {nxt}", cnt, nextLevel);
+                _logger.LogError("adopt not enough for next level, address: {address}, current: {cnt}, next: {nxt}", address, cnt, nextLevel);
                 throw new UserFriendlyException("adopt not enough for next level");
             }
         }

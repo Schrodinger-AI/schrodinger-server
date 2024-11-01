@@ -3,6 +3,7 @@ namespace SchrodingerServer.Common.Options;
 public class TasksOptions
 {
     public List<TaskConfig> TaskList { get; set; }
+    public int InviteLimit { get; set; } = 100;
 }
 
 public class TaskConfig
