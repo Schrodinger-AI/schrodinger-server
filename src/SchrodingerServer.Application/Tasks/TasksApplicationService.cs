@@ -56,7 +56,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
     private const string CatEmojiTaskId = "catEmoji";
     private const string AdoptMilestoneTaskId = "adoptMilestone";
     private const string InviteMilestoneTaskId = "inviteMilestone";
-    private const int MilestoneStartFrom = 1730160000;
+    private const int MilestoneStartFrom = 1730505600;
     private const string DefaultTick = "SGR";
 
     public TasksApplicationService(
