@@ -517,3 +517,13 @@ message ConfirmVoucherInput {
   aelf.Hash voucher_id = 1;
   bytes signature = 10000;    
 }
+
+message AirdropVoucherInput {
+  string tick = 1;                
+  repeated aelf.Address list = 2;  
+  int64 amount = 3;               
+}
+
+message AddressList {
+  repeated aelf.Address data = 1;
+}

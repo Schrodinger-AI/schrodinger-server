@@ -84,7 +84,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
             AssertHelper.NotEmpty(address, "invalid parameter address.");
             AssertHelper.IsTrue(long.TryParse(timestampVal, out var timestamp) && timestamp > 0,
                 "invalid parameter timestamp value.");
-            AssertHelper.IsTrue(await _userActionProvider.CheckDomainAsync(registerHost), string.Format("Invalid host:{0}", registerHost));
+            AssertHelper.IsTrue(await _userActionProvider.CheckDomainAsync(registerHost), string.Format("Invalid host: {0}", registerHost));
 
             var publicKey = ByteArrayHelper.HexStringToByteArray(publicKeyVal);
             var signature = ByteArrayHelper.HexStringToByteArray(signatureVal);

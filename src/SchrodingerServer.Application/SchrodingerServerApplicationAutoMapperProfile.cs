@@ -71,5 +71,6 @@ public class SchrodingerServerApplicationAutoMapperProfile : Profile
         CreateMap<TasksDto, ClaimOutput>();
         CreateMap<TasksScoreDetailIndex, TaskScoreDetailDto>().ReverseMap();
         CreateMap<SpinIndex, SpinDto>().ReverseMap();
+        CreateMap<LogTgBotInput, TgBotLogIndex>().ReverseMap();
     }
 }

@@ -73,4 +73,16 @@ public class TaskController
         return await _tasksApplicationService.SpinRewardAsync();
     }
     
+    [Authorize]
+    [HttpPost("log")]
+    public async Task LogTgBotAsync(LogTgBotInput input)
+    {
+        await _tasksApplicationService.LogTgBotAsync(input);
+    }
+    
+    [HttpGet("check/{userId}")]
+    public async Task<bool> CheckUserAsync(string userId)
+    {
+        return await _tasksApplicationService.CheckUserAsync(userId);
+    }
 }
