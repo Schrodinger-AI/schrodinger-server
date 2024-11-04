@@ -1154,7 +1154,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
     public async Task LogTgBotAsync(LogTgBotInput input)
     {
-        _logger.LogDebug("LogTgBotAsync");
+        _logger.LogDebug("LogTgBotAsync, input:{input}", JsonConvert.SerializeObject(input));
 
         var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
         if (currentAddress.IsNullOrEmpty())
@@ -1162,12 +1162,31 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             _logger.LogError("LogTgBotAsync, Get current address failed");
             throw new UserFriendlyException("Invalid user");
         }
+        
+        var key = $"log_{currentAddress}";
+        await using var handle =
+            await _distributedLock.TryAcquireAsync(key);
 
+        if (handle == null)
+        {
+            _logger.LogError("get lock failed");
+            throw new UserFriendlyException("please try later");
+        }
+        
+        var userId = await  _tasksProvider.GetUserIdByAddressAsync(currentAddress);
+        if (!userId.IsNullOrEmpty() && userId != input.UserId)
+        {
+            _logger.LogError("Address already bound with userId. address: {address}, userId: {userId}, " +
+                             "attempt UserId: {attemptUserId}", currentAddress, userId, input.UserId);
+            return;
+        }
+        
         var currentScore = await GetCurrentFishScoreAsync(currentAddress);
 
         input.Address = currentAddress;
         input.Score = currentScore;
         await _tasksProvider.AddTgBotLogAsync(input);
+        await Task.Delay(500);
     }
 
     private async Task<int> GetMilestoneTaskLevelAsync(string address, string taskId)

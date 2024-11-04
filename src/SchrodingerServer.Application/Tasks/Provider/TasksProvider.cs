@@ -46,7 +46,8 @@ public interface ITasksProvider
     Task<int> GetLastMilestoneLevelAsync(string address, string taskId);
     Task DeleteMilestoneVoucherClaimedRecordAsync(string taskId, string address, int level);
     Task<string> GetUserRegisterDomainByAddressAsync(string address);
-    Task<string> GetAddressByUserIdAsync(string address);
+    Task<string> GetAddressByUserIdAsync(string userId);
+    Task<string> GetUserIdByAddressAsync(string address);
 }
 
 public class TasksProvider : ITasksProvider, ISingletonDependency
@@ -567,7 +568,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
     {
         var mustQuery = new List<Func<QueryContainerDescriptor<TgBotLogIndex>, QueryContainer>>
         {
-            q => q.Term(i => i.Field(f => f.UserId).Value(input.UserId))
+            q => q.Term(i => i.Field(f => f.Id).Value(input.UserId))
         };
 
         QueryContainer Filter(QueryContainerDescriptor<TgBotLogIndex> f) =>
@@ -587,7 +588,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
             index.Score = input.Score;
             index.ExtraData = input.ExtraData;
             index.Language = input.Language;
-            index.Address = input.Address;
+            // index.Address = input.Address;
             index.Username = input.Username;
             await _tgBotLogIndexRepository.UpdateAsync(index);
         }
@@ -678,10 +679,9 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
     {
         var mustQuery = new List<Func<QueryContainerDescriptor<TgBotLogIndex>, QueryContainer>>
         {
-            q => q.Term(i => i.Field(f => f.UserId).Value(userId))
+            q => q.Term(i => i.Field(f => f.Id).Value(userId))
         };
         
-
         QueryContainer Filter(QueryContainerDescriptor<TgBotLogIndex> f) => f.Bool(b => b.Must(mustQuery));
 
         var res = await _tgBotLogIndexRepository.GetAsync(Filter);
@@ -691,6 +691,26 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
             return res.Address;
         }
 
+        return "";
+    }
+    
+    public async Task<string> GetUserIdByAddressAsync(string address)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<TgBotLogIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.Address).Value(address))
+        };
+
+        QueryContainer Filter(QueryContainerDescriptor<TgBotLogIndex> f) => f.Bool(b => b.Must(mustQuery));
+        
+        var res = await _tgBotLogIndexRepository.GetListAsync(Filter, skip: 0, limit: 10,
+            sortType: SortOrder.Ascending, sortExp: o => o.RegisterTime);
+        
+        if (res != null && !res.Item2.IsNullOrEmpty())
+        {
+            return res.Item2.First().UserId;
+        }
+        
         return "";
     }
 }
