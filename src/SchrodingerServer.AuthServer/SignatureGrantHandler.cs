@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using AElf;
@@ -20,6 +21,7 @@ using Newtonsoft.Json;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using SchrodingerServer.Common;
+using SchrodingerServer.Common.HttpClient;
 using SchrodingerServer.Dto;
 using SchrodingerServer.Options;
 using SchrodingerServer.Users;
@@ -43,6 +45,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
 
     private readonly IOptionsMonitor<TimeRangeOption> _timeRangeOption;
     private readonly IOptionsMonitor<GraphQLOption> _graphQlOption;
+    private readonly IHttpProvider _httpProvider;
 
     private const string LockKeyPrefix = "SchrodingerServer:Auth:SignatureGrantHandler:";
     private const string SourcePortkey = "portkey";
@@ -52,7 +55,8 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         ILogger<SignatureGrantHandler> logger, IAbpDistributedLock distributedLock,
         IHttpContextAccessor httpContextAccessor, IdentityUserManager userManager,
         IOptionsMonitor<TimeRangeOption> timeRangeOption,
-        IOptionsMonitor<GraphQLOption> graphQlOption, IUserActionProvider userActionProvider)
+        IOptionsMonitor<GraphQLOption> graphQlOption, IUserActionProvider userActionProvider, 
+        IHttpProvider httpProvider)
     {
         _userInformationProvider = userInformationProvider;
         _logger = logger;
@@ -62,6 +66,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         _timeRangeOption = timeRangeOption;
         _graphQlOption = graphQlOption;
         _userActionProvider = userActionProvider;
+        _httpProvider = httpProvider;
     }
 
     public string Name { get; } = "signature";
@@ -120,14 +125,18 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
             _logger.LogInformation("GetCaHolderInfo, signAddress: {address}, address: {address}, source: {source}", signAddress.ToBase58(), address, source);
             if (source == SourcePortkey)
             {
+                var manager = signAddress.ToBase58();
                 var portkeyUrl = _graphQlOption.CurrentValue.PortkeyUrl;
-                var caHolderInfos = await GetCaHolderInfo(portkeyUrl, signAddress.ToBase58());
-                _logger.LogInformation("GetCaHolderInfo finished, address: {address}, infos: {infos}", signAddress.ToBase58(),JsonConvert.SerializeObject(caHolderInfos));
+                var caHolderInfos = await GetCaHolderInfo(portkeyUrl, manager);
+                _logger.LogInformation("GetCaHolderInfo finished, address: {address}, infos: {infos}", manager, JsonConvert.SerializeObject(caHolderInfos));
                 AssertHelper.NotNull(caHolderInfos, "CaHolder not found.");
                 AssertHelper.NotEmpty(caHolderInfos.CaHolderManagerInfo, "CaHolder manager not found.");
-                AssertHelper.IsTrue(
-                    caHolderInfos.CaHolderManagerInfo.Select(m => m.CaAddress).Any(add => add == address),
-                    "PublicKey not manager of address");
+                if (caHolderInfos.CaHolderManagerInfo.Select(m => m.CaAddress).All(add => add != address))
+                {
+                    var caHolderManagerInfo = await GetCaHolderManagerInfoAsync(manager);
+                    AssertHelper.IsTrue(caHolderManagerInfo != null && caHolderManagerInfo.CaAddress == address,
+                        "PublicKey not manager of address");
+                }
 
                 //Find caHash by caAddress
                 foreach (var account in caHolderInfos.CaHolderManagerInfo)
@@ -203,7 +212,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
             return ForbidResult(OpenIddictConstants.Errors.ServerError, "Internal error.");
         }
     }
-
+    
     private static ForbidResult ForbidResult(string errorType, string errorDescription)
     {
         return new ForbidResult(
@@ -245,7 +254,39 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         };
 
         var graphQlResponse = await graphQlClient.SendQueryAsync<IndexerCAHolderInfos>(graphQlRequest);
-        return graphQlResponse.Data;
+        // return graphQlResponse.Data;
+        var indexerCaHolderInfos = graphQlResponse.Data;
+        
+        if (!indexerCaHolderInfos.CaHolderManagerInfo.IsNullOrEmpty())
+        {
+            return indexerCaHolderInfos;
+        }
+
+        var caHolderManagerInfo = await GetCaHolderManagerInfoAsync(managerAddress);
+        if (caHolderManagerInfo != null)
+        {
+            indexerCaHolderInfos.CaHolderManagerInfo.Add(caHolderManagerInfo);
+        }
+
+        return indexerCaHolderInfos;
+    }
+    
+    private async Task<CAHolderManager?> GetCaHolderManagerInfoAsync(string manager)
+    {
+        var portkeyCaHolderInfoUrl = _graphQlOption.CurrentValue.PortkeyCaHolderInfoUrl;
+    
+        var apiInfo = new ApiInfo(HttpMethod.Get, "/api/app/account/manager/check");
+        var param = new Dictionary<string, string> { { "manager", manager } };
+        try
+        {
+            var resp = await _httpProvider.InvokeAsync<CAHolderManager>(portkeyCaHolderInfoUrl, apiInfo, param: param);
+            return resp;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "get ca holder manager info fail.");
+            return null;
+        }
     }
 
     private async Task<bool> CreateUserAsync(IdentityUserManager userManager,
