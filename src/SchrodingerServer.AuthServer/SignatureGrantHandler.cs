@@ -134,6 +134,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
                 if (caHolderInfos.CaHolderManagerInfo.Select(m => m.CaAddress).All(add => add != address))
                 {
                     var caHolderManagerInfo = await GetCaHolderManagerInfoAsync(manager);
+                    _logger.LogInformation("GetCaHolderManagerInfoAsync, address: {address}, infos: {infos}", manager, JsonConvert.SerializeObject(caHolderManagerInfo));
                     AssertHelper.IsTrue(caHolderManagerInfo != null && caHolderManagerInfo.CaAddress == address,
                         "PublicKey not manager of address");
                 }
