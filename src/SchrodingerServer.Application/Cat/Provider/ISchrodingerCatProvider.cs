@@ -41,7 +41,7 @@ public interface ISchrodingerCatProvider
     
     Task<SchrodingerIndexerStrayCatsDto> GetStrayCatsListAsync(StrayCatsInput input);
     
-    Task<RarityDataDto> GetRarityDataAsync(List<string> symbolIds);
+    Task<RarityDataDto> GetRankDataAsync(List<string> symbolIds);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -601,7 +601,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         }
     }
     
-    public async Task<RarityDataDto> GetRarityDataAsync(List<string> symbolIds)
+    public async Task<RarityDataDto> GetRankDataAsync(List<string> symbolIds)
     {
         try
         {

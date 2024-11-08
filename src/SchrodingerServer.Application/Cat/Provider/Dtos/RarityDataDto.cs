@@ -12,6 +12,7 @@ public class RarityInfo
     public string Symbol { get; set; }
     public int Rank { get; set; }
     public int Generation { get; set; }
+    public string AdoptId { get; set; }
 }
 
 public class RarityDataDtoQuery

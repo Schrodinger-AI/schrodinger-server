@@ -66,7 +66,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         if (!input.Rarities.IsNullOrEmpty())
         {
             indexerList = await GetSchrodingerCatAllList(input);
-            var data = await SetLevelInfoAsync(indexerList, input.Address, input.ChainId);
+            var data = await SetLevelInfoAsync(indexerList, input.Address);
            
             data.ForEach(item =>
             {
@@ -87,7 +87,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
             indexerList = schrodingerIndexerListDto.Data;
-            var data = await SetLevelInfoAsync(indexerList, input.Address, input.ChainId);
+            var data = await SetLevelInfoAsync(indexerList, input.Address);
             
             data.ForEach(item =>
             {
@@ -187,28 +187,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         detail.CollectionId = collectionId;
         return detail;
     }
-
-    private async Task<SchrodingerListDto> GetSchrodingerCatPageList(GetCatListInput input)
-    {
-        var result = new SchrodingerListDto();
-        input.FilterSgr = true;
-        var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
-        var data = await SetLevelInfoAsync(schrodingerIndexerListDto.Data, input.Address, input.ChainId, input.SearchAddress);
-        if (input.Rarities.IsNullOrEmpty())
-        {
-            result.Data = data;
-            result.TotalCount = schrodingerIndexerListDto.TotalCount;
-            return result;
-        }
-
-        var pageData = data
-            .Where(cat => input.Rarities.Contains(cat.Rarity))
-            .OrderByDescending(cat => cat.AdoptTime)
-            .ToList();
-        result.Data = pageData;
-        result.TotalCount = schrodingerIndexerListDto.TotalCount;
-        return result;
-    }
+    
     private async Task<SchrodingerListDto> GetSchrodingerAllCatsPageList(GetCatListInput input)
     {
         var result = new SchrodingerListDto();
@@ -260,26 +239,32 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         return result;
     }
     
-    private async Task<List<SchrodingerDto>> SetLevelInfoAsync(List<SchrodingerIndexerDto> indexerList, string address,
-        string chainId, string searchAddress = "")
+    private async Task<List<SchrodingerDto>> SetLevelInfoAsync(List<SchrodingerIndexerDto> indexerList, string address)
     {
         var list = _objectMapper.Map<List<SchrodingerIndexerDto>, List<SchrodingerDto>>(indexerList);
 
         var genNineList = list.Where(cat => cat.Generation == 9).ToList();
         var genOtherList = list.Where(cat => cat.Generation != 9).ToList();
+        
+        var symbolIds = genNineList.Select(cat => cat.Symbol).ToList();
+        var itemLevelList = new List<RankData>();
+        
+        var rankData = await _schrodingerCatProvider.GetRankDataAsync(symbolIds);
+        
+        var map = new Dictionary<string, RankData>();
 
-        // var traitInfos = genNineList.Select(cat => cat.Traits).ToList();
-        //
-        // var getLevelInfoInputDto = BuildParams(traitInfos, address, chainId, searchAddress);
-        //
-        // var itemLevelList = await GetItemLevelInfoAsync(getLevelInfoInputDto);
-
-        var itemLevelList = await GetRarityDataAsync(new GetRarityDataDto
+        foreach (var rarity in rankData.RarityInfo)
         {
-            Address = address,
-            IsGen9 = true,
-            SymbolIds = genNineList.Select(cat => cat.Symbol).ToList()
-        });
+            _logger.LogInformation("rarity data: {a} {b}}", address, rarity.Rank);
+            var rarityData = await _levelProvider.GetRarityInfo(address, rarity.Rank, true);
+            map[rarity.Symbol] = rarityData;
+        }
+
+        foreach (var adoptId in symbolIds)
+        {
+            var rarityData = map[adoptId];
+            itemLevelList.Add(rarityData);
+        }
         
         if (genNineList.Count != itemLevelList.Count)
         {
@@ -333,7 +318,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     {
         var result = new List<RankData>();
 
-        var rarityData = await _schrodingerCatProvider.GetRarityDataAsync(input.SymbolIds);
+        var rarityData = await _schrodingerCatProvider.GetRankDataAsync(input.SymbolIds);
         
         var map = new Dictionary<string, RankData>();
 
@@ -714,6 +699,24 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
     public async Task<RankData> GetRarityAsync(GetRarityAsync input)
     {
-        return new RankData();
+        _logger.LogInformation("GetRarityAsync symbol:{symbol}",input.Symbol);
+        
+        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+
+        var rankData = await _schrodingerCatProvider.GetRankDataAsync(new List<string>
+        {
+            input.Symbol
+        });
+
+        if (rankData.RarityInfo.IsNullOrEmpty())
+        {
+            _logger.LogInformation("GetRarityAsync, rankData is null, {symbol}", input.Symbol);
+            return  new RankData();
+        }
+        
+        var rank = rankData.RarityInfo.FirstOrDefault();
+        var res = await _levelProvider.GetRarityInfo(currentAddress, rank.Rank, rank.Generation == 9);
+        
+        return res;
     }
 }
