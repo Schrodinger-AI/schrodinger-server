@@ -40,6 +40,8 @@ public interface ISchrodingerCatProvider
     Task<SchrodingerIndexerBoxDto> GetSchrodingerBoxDetailAsync(GetCatDetailInput input);
     
     Task<SchrodingerIndexerStrayCatsDto> GetStrayCatsListAsync(StrayCatsInput input);
+    
+    Task<RarityDataDto> GetRarityDataAsync(List<string> symbolIds);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -596,6 +598,37 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             _logger.LogError(e, "StrayCats Indexer error");
             return new SchrodingerIndexerStrayCatsDto();
+        }
+    }
+    
+    public async Task<RarityDataDto> GetRarityDataAsync(List<string> symbolIds)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<RarityDataDtoQuery>(new GraphQLRequest
+            {
+                Query =
+                    @"query($symbolIds:[String!]!){
+                    getRarityData(input: {symbolIds:$symbolIds}){
+                        rarityInfo{
+                        symbol,
+                        rank,
+                        generation
+                    }
+                }
+            }",
+                Variables = new
+                {
+                    symbolIds = symbolIds
+                }
+            });
+
+            return indexerResult.GetRarityData;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetRarityDataAsync Indexer error");
+            return new RarityDataDto();
         }
     }
 }

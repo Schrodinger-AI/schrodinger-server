@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using SchrodingerServer.Cat;
+using SchrodingerServer.Dto;
 using SchrodingerServer.Dtos.Cat;
 using Volo.Abp;
 
@@ -77,5 +78,11 @@ public class SchrodingerCatController
     public async Task<StrayCatsListDto> GetStrayCatsAsync(StrayCatsInput input)
     {
         return await _schrodingerCatService.GetStrayCatsAsync(input);
+    }
+    
+    [HttpPost("rarity")]
+    public async Task<RankData> GetRarityAsync(GetRarityAsync input)
+    {
+        return await _schrodingerCatService.GetRarityAsync(input);
     }
 }

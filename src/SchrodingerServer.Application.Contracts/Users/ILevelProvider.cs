@@ -15,4 +15,6 @@ public interface ILevelProvider
     Task<bool> CheckAddressIsInWhiteListAsync(string address);
     
     Task<List<NftInfo>> BatchGetForestNftInfoAsync(List<string> nftIdList, string chainId);
+
+    Task<RankData> GetRarityInfo(string address, int rank, bool isGen9);
 }

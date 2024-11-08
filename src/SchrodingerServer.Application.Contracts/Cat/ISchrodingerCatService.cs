@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using SchrodingerServer.Dto;
 using SchrodingerServer.Dtos.Cat;
 
 namespace SchrodingerServer.Cat;
@@ -24,4 +25,6 @@ public interface ISchrodingerCatService
     Task<BlindBoxDetailDto> GetSchrodingerBoxDetailAsync (GetCatDetailInput input);
 
     Task<StrayCatsListDto> GetStrayCatsAsync(StrayCatsInput input);
+    
+    Task<RankData> GetRarityAsync(GetRarityAsync input);
 }
