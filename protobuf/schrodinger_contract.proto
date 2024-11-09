@@ -527,3 +527,10 @@ message AirdropVoucherInput {
 message AddressList {
   repeated aelf.Address data = 1;
 }
+
+message BreedInput {
+  aelf.Hash adopt_id_a = 1;  // NFT/盲盒A对应的adoptId
+  aelf.Hash adopt_id_b = 2;  // NFT/盲盒B对应的adoptId
+  int64 level = 3;            // a和b的level
+  bytes signature = 10000;    // 后端签名
+}

@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using Schrodinger;
 using SchrodingerServer.Cat.Provider;
 using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.Common;
@@ -33,13 +35,15 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     private readonly IUserInformationProvider _userInformationProvider;
     private readonly IUserActionProvider _userActionProvider;
     private readonly IOptionsMonitor<ActivityTraitOptions> _traitsOptions;
+    private readonly ISecretProvider _secretProvider;
+    private readonly ChainOptions _chainOptions;
 
     private static readonly List<string> GenOneTraitTypes = new() { "Background", "Clothes", "Breed" };
 
     public SchrodingerCatService(ISchrodingerCatProvider schrodingerCatProvider, ILevelProvider levelProvider,
         IObjectMapper objectMapper, ILogger<SchrodingerCatService> logger, IOptionsMonitor<LevelOptions> levelOptions,
         IUserInformationProvider userInformationProvider,IUserActionProvider userActionProvider, 
-        IOptionsMonitor<ActivityTraitOptions> traitsOptions)
+        IOptionsMonitor<ActivityTraitOptions> traitsOptions, ISecretProvider secretProvider, ChainOptions chainOptions)
     {
         _schrodingerCatProvider = schrodingerCatProvider;
         _levelProvider = levelProvider;
@@ -49,6 +53,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         _userInformationProvider = userInformationProvider;
         _userActionProvider = userActionProvider;
         _traitsOptions = traitsOptions;
+        _secretProvider = secretProvider;
+        _chainOptions = chainOptions;
     }
 
     public async Task<SchrodingerListDto> GetSchrodingerCatListAsync(GetCatListInput input)
@@ -799,6 +805,21 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             throw new UserFriendlyException("cat not same level");
         }
         
-        return new CombineOutput();
+        var data = new BreedInput
+        {
+            AdoptIdA = HashHelper.ComputeFrom(rankData.RarityInfo[0].AdoptId),
+            AdoptIdB = HashHelper.ComputeFrom(rankData.RarityInfo[1].AdoptId),
+            Level = 1
+        };
+        
+        var dataHash = HashHelper.ComputeFrom(data);
+        var signature = await _secretProvider.GetSignatureFromHashAsync(_chainOptions.PublicKey, dataHash);
+        
+        return new CombineOutput
+        {
+            AdoptIds = rankData.RarityInfo.Select(x => x.AdoptId).ToList(),
+            Level = 1,
+            Signature = ByteStringHelper.FromHexString(signature)
+        };
     }
 }
