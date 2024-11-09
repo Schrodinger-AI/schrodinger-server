@@ -27,4 +27,6 @@ public interface ISchrodingerCatService
     Task<StrayCatsListDto> GetStrayCatsAsync(StrayCatsInput input);
     
     Task<RankData> GetRarityAsync(GetRarityAsync input);
+    
+    Task<CombineOutput> CombineAsync(CombineInput input);
 }

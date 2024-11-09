@@ -85,4 +85,10 @@ public class SchrodingerCatController
     {
         return await _schrodingerCatService.GetRarityAsync(input);
     }
+    
+    [HttpPost("combine")]
+    public async Task<CombineOutput> CombineAsync(CombineInput input)
+    {
+        return await _schrodingerCatService.CombineAsync(input);
+    }
 }

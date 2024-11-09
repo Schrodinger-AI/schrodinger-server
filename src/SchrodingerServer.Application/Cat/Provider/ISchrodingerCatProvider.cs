@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using GraphQL;
 using Microsoft.Extensions.Logging;
 using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.Common.GraphQL;
+using SchrodingerServer.Dto;
 using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Message.Dtos;
 using SchrodingerServer.Message.Provider.Dto;
@@ -42,6 +44,8 @@ public interface ISchrodingerCatProvider
     Task<SchrodingerIndexerStrayCatsDto> GetStrayCatsListAsync(StrayCatsInput input);
     
     Task<RarityDataDto> GetRankDataAsync(List<string> symbolIds);
+
+    Task<List<AdpotInfoDto>> GetLatestRareAdoptionAsync(int number, long beginTime);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
@@ -63,8 +67,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerQuery>(new GraphQLRequest
             {
                 Query =
-                    @"query($keyword:String!, $chainId:String!, $address:String!, $tick:String!, $traits:[TraitInput!],$generations:[Int!],$skipCount:Int!,$maxResultCount:Int!,$filterSgr:Boolean!){
-                    getSchrodingerList(input: {keyword:$keyword,chainId:$chainId,address:$address,tick:$tick,traits:$traits,generations:$generations,skipCount:$skipCount,maxResultCount:$maxResultCount,filterSgr:$filterSgr}){
+                    @"query($keyword:String!, $chainId:String!, $address:String!, $tick:String!, $traits:[TraitInput!],$generations:[Int!],$skipCount:Int!,$maxResultCount:Int!,$filterSgr:Boolean!,$minAmount:String!){
+                    getSchrodingerList(input: {keyword:$keyword,chainId:$chainId,address:$address,tick:$tick,traits:$traits,generations:$generations,skipCount:$skipCount,maxResultCount:$maxResultCount,filterSgr:$filterSgr,minAmount:$minAmount}){
                         totalCount,
                         data{
                         symbol,
@@ -85,7 +89,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                 {
                     keyword = input.Keyword ?? "", chainId = input.ChainId ?? "", address = input.Address ?? "",
                     tick = input.Tick ?? "", traits = input.Traits, generations = input.Generations,
-                    skipCount = input.SkipCount, maxResultCount = input.MaxResultCount,filterSgr = input.FilterSgr
+                    skipCount = input.SkipCount, maxResultCount = input.MaxResultCount,filterSgr = input.FilterSgr,
+                    minAmount = input.MinAmount ?? ""
                 }
             });
 
@@ -482,8 +487,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxListQuery>(new GraphQLRequest
             {
                 Query =
-                    @"query($adopter:String!, $adoptTime:Long!){
-                    getBlindBoxList(input: {adopter:$adopter, adoptTime:$adoptTime}){
+                    @"query($adopter:String!, $adoptTime:Long!, $minAmount:String!, $generation:Int!){
+                    getBlindBoxList(input: {adopter:$adopter, adoptTime:$adoptTime, minAmount:$minAmount, generation:$generation}){
                         totalCount,
                         data{
                         symbol,
@@ -503,7 +508,9 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                 Variables = new
                 {
                     Adopter = input.Address,
-                    AdoptTime = input.AdoptTime
+                    AdoptTime = input.AdoptTime,
+                    MinAmount = input.MinAmount ?? "",
+                    Generation = input.Generation
                 }
             });
 
@@ -550,7 +557,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "GetSchrodingerBoxList Indexer error");
+            _logger.LogError(e, "getBlindBoxDetail Indexer error");
             return new SchrodingerIndexerBoxDto();
         }
     }
@@ -613,7 +620,9 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         rarityInfo{
                         symbol,
                         rank,
-                        generation
+                        generation,
+                        adoptId,
+                        adopter
                     }
                 }
             }",
@@ -630,5 +639,41 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             _logger.LogError(e, "GetRarityDataAsync Indexer error");
             return new RarityDataDto();
         }
+    }
+    
+    public async Task<List<AdpotInfoDto>> GetLatestRareAdoptionAsync(int number, long beginTime)
+    {
+        var adpotInfoDto = await _graphQlHelper.QueryAsync<LatestRareAdoptInfoQuery>(new GraphQLRequest
+        {
+            Query =
+                @"query($beginTime:Long!, 
+                        $number:Int!
+                ){
+                       getLatestRareAdoption(input: {
+                          beginTime:$beginTime, 
+                          number:$number})
+                   {
+                       symbol,
+                       level,
+                       rank,
+                       rarity,
+                       adopter,
+                       adoptTime
+                   }
+              }",
+            Variables = new
+            {
+                beginTime = beginTime,
+                number = 200
+            }
+        });
+        if (adpotInfoDto == null || adpotInfoDto.GetLatestRareAdoption == null)
+        {
+            _logger.LogError("getLatestRareAdoption failed");
+            return null;
+        }
+        
+        var sortedList =  adpotInfoDto.GetLatestRareAdoption.OrderByDescending(x => int.Parse(x.Level)).ThenBy(x => x.AdoptTime).Take(number).ToList();
+        return sortedList;
     }
 }

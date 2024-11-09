@@ -719,4 +719,86 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         return res;
     }
+
+    public async Task<CombineOutput> CombineAsync(CombineInput input)
+    {
+        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        // var currentAddress = input.Address;
+        if (currentAddress.IsNullOrEmpty())
+        {
+            _logger.LogError("CombineAsync Get current address failed");
+            throw new UserFriendlyException("Invalid user");
+        }
+
+        if (input.Symbols.Count != 2)
+        {
+            _logger.LogError("CombineAsync, invalid input, {input}", JsonConvert.SerializeObject(input));
+            throw new UserFriendlyException("Invalid input");
+        }
+        
+        var rankData = await _schrodingerCatProvider.GetRankDataAsync(input.Symbols);
+        
+        // check holding amount and generation
+        foreach (var symbol in input.Symbols)
+        {
+            // query as cat 
+            var holderDetail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(new GetCatDetailInput
+            {
+                Address = currentAddress,
+                Symbol = symbol,
+                ChainId = _levelOptions.CurrentValue.ChainIdForReal
+            });
+
+            if (!holderDetail.Symbol.IsNullOrEmpty())
+            {
+                if (holderDetail.HolderAmount < 100000000)
+                {
+                    _logger.LogError("not enough cat for, address:{address}, symbol:{symbol}, holderAmount:{holderAmount}", currentAddress, symbol, holderDetail.HolderAmount);
+                    throw new UserFriendlyException("holding not enough cat");
+                }
+
+                if (holderDetail.Generation != 9)
+                {
+                    _logger.LogError("cat not gen 9, address:{address}, symbol:{symbol}, gen:{gen}", currentAddress, symbol, holderDetail.Generation);
+                    throw new UserFriendlyException("must use gen 9 cat");
+                }
+            }
+            else
+            {
+                var boxDetail = rankData.RarityInfo.FirstOrDefault(x => x.Symbol == symbol);
+                var amount = boxDetail?.OutputAmount ?? 0;
+                var adopter = boxDetail?.Adopter ?? "";
+
+                if (adopter != currentAddress)
+                {
+                    _logger.LogError("box not owned by user, address:{address}, symbol:{symbol}, adopter:{adopter}", currentAddress, symbol, adopter);
+                    throw new UserFriendlyException("box not owned by user");
+                }
+                
+                if (amount < 100000000)
+                {
+                    _logger.LogError("not enough box for, address:{address}, symbol:{symbol}, holderAmount:{holderAmount}", currentAddress, symbol, amount);
+                    throw new UserFriendlyException("holding not enough box");
+                }
+                
+                var gen = boxDetail?.Generation ?? 0;
+                if (gen != 9)
+                {
+                    _logger.LogError("box not gen 9, address:{address}, symbol:{symbol}, gen:{gen}", currentAddress, symbol, gen);
+                    throw new UserFriendlyException("must use gen 9 box");
+                }
+            }
+        }
+        
+        var rarityInfo1 = await _levelProvider.GetRarityInfo(currentAddress, rankData.RarityInfo[0].Rank, true);
+        var rarityInfo2 = await _levelProvider.GetRarityInfo(currentAddress, rankData.RarityInfo[1].Rank, true);
+
+        if (rarityInfo1.LevelInfo.Describe != rarityInfo2.LevelInfo.Describe)
+        {
+            _logger.LogError("cat not same level, address:{address}, symbol1:{symbol1}, symbol2:{symbol2}", currentAddress, input.Symbols[0], input.Symbols[1]);
+            throw new UserFriendlyException("cat not same level");
+        }
+        
+        return new CombineOutput();
+    }
 }

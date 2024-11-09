@@ -6,4 +6,6 @@ public class GetBlindBoxListInput
     public int SkipCount { get; set; } 
     public int MaxResultCount { get; set; }
     public long AdoptTime { get; set; }
+    public string MinAmount { get; set; }
+    public int Generation { get; set; }
 }
