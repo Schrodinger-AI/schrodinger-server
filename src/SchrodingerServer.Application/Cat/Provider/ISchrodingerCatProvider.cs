@@ -681,7 +681,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             Variables = new
             {
                 beginTime = beginTime,
-                number = 200
+                number = number
             }
         });
         if (adpotInfoDto == null || adpotInfoDto.GetLatestRareAdoption == null)

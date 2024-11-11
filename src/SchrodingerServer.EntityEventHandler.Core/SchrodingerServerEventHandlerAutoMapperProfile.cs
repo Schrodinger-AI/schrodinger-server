@@ -3,6 +3,7 @@ using AutoMapper;
 using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.ContractInvoke.Eto;
 using SchrodingerServer.ContractInvoke.Index;
+using SchrodingerServer.Dto;
 using SchrodingerServer.Dtos.TraitsDto;
 using SchrodingerServer.Users;
 using SchrodingerServer.Users.Eto;
@@ -33,5 +34,6 @@ public class SchrodingerServerEventHandlerAutoMapperProfile : Profile
         CreateMap<XpRecordEto, ZealyUserXpRecordIndex>();
         CreateMap<AddXpRecordEto, ZealyUserXpRecordIndex>();
         CreateMap<SchrodingerIndexerDto, PointsSnapshotIndex>();
+        CreateMap<PoolDataDto, PoolDataIndex>().ReverseMap();
     }
 }
