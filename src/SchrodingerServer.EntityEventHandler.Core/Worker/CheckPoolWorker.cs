@@ -55,6 +55,7 @@ public class CheckPoolWorker : AsyncPeriodicBackgroundWorkerBase
     
     protected override async Task DoWorkAsync(PeriodicBackgroundWorkerContext workerContext)
     {
+        _logger.LogInformation("CheckPoolWorker begin");
         await using var handle = await _distributedLock.TryAcquireAsync(_lockKey);
         var openSwitch = _workerOptionsMonitor.CurrentValue.GetWorkerSwitch(_lockKey);
         
