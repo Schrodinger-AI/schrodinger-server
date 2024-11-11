@@ -253,4 +253,13 @@ public class ContractProvider : IContractProvider, ISingletonDependency
             RawTransaction = signedTransaction.ToByteArray().ToHex()
         });
     }
+    
+    public async Task<T> CallTransactionAsync<T>(string chainId, string rawTx) where T : class, IMessage<T>, new()
+    {
+        var client = Client(chainId);
+        var result = await client.ExecuteTransactionAsync(new ExecuteTransactionDto { RawTransaction = rawTx });
+        var value = new T();
+        value.MergeFrom(ByteArrayHelper.HexStringToByteArray(result));
+        return value;
+    }
 }

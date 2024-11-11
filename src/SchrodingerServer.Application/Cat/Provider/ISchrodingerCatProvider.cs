@@ -2,15 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf.Indexing.Elasticsearch;
 using GraphQL;
 using Microsoft.Extensions.Logging;
+using Nest;
 using SchrodingerServer.Cat.Provider.Dtos;
+using SchrodingerServer.Common;
 using SchrodingerServer.Common.GraphQL;
 using SchrodingerServer.Dto;
 using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Message.Dtos;
 using SchrodingerServer.Message.Provider.Dto;
+using SchrodingerServer.Users.Index;
 using Volo.Abp.DependencyInjection;
+using Volo.Abp.ObjectMapping;
 
 namespace SchrodingerServer.Cat.Provider;
 
@@ -46,17 +51,29 @@ public interface ISchrodingerCatProvider
     Task<RarityDataDto> GetRankDataAsync(List<string> symbolIds);
 
     Task<List<AdpotInfoDto>> GetLatestRareAdoptionAsync(int number, long beginTime);
+
+    Task<PoolDataDto> GetPoolDataAsync(string poolId);
+
+    Task SavePoolDataAsync(PoolDataDto poolData);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
 {
     private readonly IGraphQlHelper _graphQlHelper;
     private readonly ILogger<SchrodingerCatProvider> _logger;
+    private readonly INESTRepository<PoolDataIndex, string> _poolDataRepository;
+    private readonly IObjectMapper _objectMapper;
 
-    public SchrodingerCatProvider(IGraphQlHelper graphQlHelper, ILogger<SchrodingerCatProvider> logger)
+    public SchrodingerCatProvider(
+        IGraphQlHelper graphQlHelper, 
+        ILogger<SchrodingerCatProvider> logger, 
+        INESTRepository<PoolDataIndex, string> poolDataRepository, 
+        IObjectMapper objectMapper)
     {
         _graphQlHelper = graphQlHelper;
         _logger = logger;
+        _poolDataRepository = poolDataRepository;
+        _objectMapper = objectMapper;
     }
 
 
@@ -675,5 +692,51 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         
         var sortedList =  adpotInfoDto.GetLatestRareAdoption.OrderByDescending(x => int.Parse(x.Level)).ThenBy(x => x.AdoptTime).Take(number).ToList();
         return sortedList;
+    }
+    
+    public async Task<PoolDataDto> GetPoolDataAsync(string poolId)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<PoolDataIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.PoolId).Value(poolId))
+        };
+        
+        QueryContainer Filter(QueryContainerDescriptor<PoolDataIndex> f) => f.Bool(b => b.Must(mustQuery));
+
+        var res = await _poolDataRepository.GetAsync(Filter);
+
+        if (res != null)
+        {
+            return _objectMapper.Map<PoolDataIndex, PoolDataDto>(res);;
+        }
+
+        return null;
+    }
+
+    public async Task SavePoolDataAsync(PoolDataDto poolData)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<PoolDataIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.PoolId).Value(poolData.PoolId))
+        };
+        
+        QueryContainer Filter(QueryContainerDescriptor<PoolDataIndex> f) => f.Bool(b => b.Must(mustQuery));
+
+        var index = await _poolDataRepository.GetAsync(Filter);
+
+        if (index != null)
+        {
+            index.UpdateTime = TimeHelper.GetTimeStampInSeconds();
+            index.Balance = poolData.Balance;
+            index.WinnerAddress = poolData.WinnerAddress;
+            index.WinnerSymbol = poolData.WinnerSymbol;
+        }
+        else
+        {
+            index = _objectMapper.Map<PoolDataDto, PoolDataIndex>(poolData);
+            index.Id = poolData.PoolId;
+            index.CreatedTime = TimeHelper.GetTimeStampInSeconds();
+            index.UpdateTime = index.CreatedTime;
+        }
     }
 }
