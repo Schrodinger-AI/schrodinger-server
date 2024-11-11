@@ -61,6 +61,7 @@ public class SchrodingerServerEntityEventHandlerModule : AbpModule
         Configure<LevelOptions>(configuration.GetSection("LevelOptions"));
         Configure<SchrodingerPoolOptions>(configuration.GetSection("SchrodingerPoolOptions"));
         Configure<ChainOptions>(configuration.GetSection("ChainOptions"));
+        Configure<SecurityServerOptions>(configuration.GetSection("SecurityServer"));
         ConfigureHangfire(context, configuration);
         ConfigureGraphQl(context, configuration);
         ConfigureRedis(context, configuration, context.Services.GetHostingEnvironment());
