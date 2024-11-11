@@ -738,5 +738,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             index.CreatedTime = TimeHelper.GetTimeStampInSeconds();
             index.UpdateTime = index.CreatedTime;
         }
+        
+        await _poolDataRepository.AddOrUpdateAsync(index);
     }
 }
