@@ -92,13 +92,13 @@ public class SchrodingerCatController
         return await _schrodingerCatService.CombineAsync(input);
     }
     
-    [HttpPost("pool")]
+    [HttpGet("pool")]
     public async Task<PoolOutput> GetPoolAsync()
     {
         return await _schrodingerCatService.GetPoolAsync();
     }
     
-    [HttpPost("pool-rank")]
+    [HttpGet("pool-rank")]
     public async Task<GetPoolWinnerOutput> GetPoolWinnerAsync()
     {
         return await _schrodingerCatService.GetPoolWinnerAsync();
