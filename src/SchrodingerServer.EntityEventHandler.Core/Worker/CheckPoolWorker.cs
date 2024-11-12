@@ -68,6 +68,13 @@ public class CheckPoolWorker : AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
+        var now = DateTime.UtcNow.ToUtcSeconds();
+        if (now >= _schrodingerPoolOptionsMonitor.CurrentValue.Deadline)
+        {
+            _logger.LogInformation("Pool has expired, deadline:{deadline}", _schrodingerPoolOptionsMonitor.CurrentValue.Deadline);
+            return;
+        }
+        
         var poolData = await _schrodingerCatProvider.GetPoolDataAsync(poolId);
         
         // if we already have a winner, no need to check and update the pool
