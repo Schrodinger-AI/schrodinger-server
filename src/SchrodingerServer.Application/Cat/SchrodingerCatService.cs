@@ -44,7 +44,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     public SchrodingerCatService(ISchrodingerCatProvider schrodingerCatProvider, ILevelProvider levelProvider,
         IObjectMapper objectMapper, ILogger<SchrodingerCatService> logger, IOptionsMonitor<LevelOptions> levelOptions,
         IUserInformationProvider userInformationProvider,IUserActionProvider userActionProvider, 
-        IOptionsMonitor<ActivityTraitOptions> traitsOptions, ISecretProvider secretProvider, ChainOptions chainOptions, 
+        IOptionsMonitor<ActivityTraitOptions> traitsOptions, ISecretProvider secretProvider, IOptionsMonitor<ChainOptions> chainOptions, 
         IOptionsMonitor<PoolOptions> poolOptionsMonitor)
     {
         _schrodingerCatProvider = schrodingerCatProvider;
@@ -56,7 +56,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         _userActionProvider = userActionProvider;
         _traitsOptions = traitsOptions;
         _secretProvider = secretProvider;
-        _chainOptions = chainOptions;
+        _chainOptions = chainOptions.CurrentValue;
         _poolOptionsMonitor = poolOptionsMonitor;
     }
 
@@ -872,7 +872,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         if (!poolData.WinnerAddress.IsNullOrEmpty())
         {
             var rankData = await _levelProvider.GetRarityInfo(poolData.WinnerAddress, poolData.WinnerRank, true);
-            
+            var rarity = rankData.LevelInfo.Describe.Split(",").ToList()[0];
+            res.WinnerImage = BoxHelper.GetBoxImage(true, rarity);
             res.WinnerAddress = poolData.WinnerAddress;
             res.WinnerSymbol = poolData.WinnerSymbol;
             res.WinnerDescribe = rankData.LevelInfo.Describe;
@@ -889,17 +890,20 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         long targetRank = _poolOptionsMonitor.CurrentValue.TargetRank;
         var adoptRecords = await _schrodingerCatProvider.GetLatestRareAdoptionAsync(50, _poolOptionsMonitor.CurrentValue.BeginTs);
-        var winningList = adoptRecords.Where(o => o.Rank > 0 && o.Rank <= targetRank).OrderBy(o => o.AdoptTime).Take(_poolOptionsMonitor.CurrentValue.RankNumber).ToList();
+        var winningList = adoptRecords.Take(_poolOptionsMonitor.CurrentValue.RankNumber).ToList();
         
         var rankList = new List<PoolRankItem>();
         foreach (var item in winningList)
         {
             var rankData = await _levelProvider.GetRarityInfo(item.Adopter, item.Rank, true);
+            var rarity = rankData.LevelInfo.Describe.Split(",").ToList()[0];
+            
             rankList.Add(new PoolRankItem
             {
                 Address = item.Adopter,
                 Symbol = item.Symbol,
-                Describe = rankData.LevelInfo.Describe
+                Describe = rankData.LevelInfo.Describe,
+                Image = BoxHelper.GetBoxImage(true, rarity)
             });
         }
         
