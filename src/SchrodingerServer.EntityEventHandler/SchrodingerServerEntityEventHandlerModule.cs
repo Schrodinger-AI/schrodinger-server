@@ -59,7 +59,7 @@ public class SchrodingerServerEntityEventHandlerModule : AbpModule
         Configure<WorkerOptions>(configuration.GetSection("WorkerOptions"));
         Configure<PointTradeOptions>(configuration.GetSection("PointTradeOptions"));
         Configure<LevelOptions>(configuration.GetSection("LevelOptions"));
-        Configure<SchrodingerPoolOptions>(configuration.GetSection("SchrodingerPoolOptions"));
+        Configure<PoolOptions>(configuration.GetSection("PoolOptions"));
         Configure<ChainOptions>(configuration.GetSection("ChainOptions"));
         Configure<SecurityServerOptions>(configuration.GetSection("SecurityServer"));
         ConfigureHangfire(context, configuration);

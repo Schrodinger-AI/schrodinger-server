@@ -16,5 +16,5 @@ public interface ILevelProvider
     
     Task<List<NftInfo>> BatchGetForestNftInfoAsync(List<string> nftIdList, string chainId);
 
-    Task<RankData> GetRarityInfo(string address, int rank, bool isGen9);
+    Task<RankData> GetRarityInfo(string address, int rank, bool isGen9, bool fullData = false);
 }

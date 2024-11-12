@@ -29,4 +29,8 @@ public interface ISchrodingerCatService
     Task<RankData> GetRarityAsync(GetRarityAsync input);
     
     Task<CombineOutput> CombineAsync(CombineInput input);
+    
+    Task<PoolOutput> GetPoolAsync();
+    
+    Task<GetPoolWinnerOutput> GetPoolWinnerAsync();
 }

@@ -5,12 +5,14 @@ using System.Threading.Tasks;
 using AElf;
 using AElf.Contracts.MultiToken;
 using AElf.Types;
+using Elasticsearch.Net;
 using Google.Protobuf;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SchrodingerServer.Cat.Provider;
 using SchrodingerServer.Common;
+using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dto;
 using SchrodingerServer.EntityEventHandler.Core.Options;
 using SchrodingerServer.Grains.Grain.ApplicationHandler;
@@ -24,7 +26,7 @@ public class CheckPoolWorker : AsyncPeriodicBackgroundWorkerBase
 {
     private readonly ILogger<CheckPoolWorker> _logger;
     private readonly IOptionsMonitor<WorkerOptions> _workerOptionsMonitor;
-    private readonly IOptionsMonitor<SchrodingerPoolOptions> _schrodingerPoolOptionsMonitor;
+    private readonly IOptionsMonitor<PoolOptions> _schrodingerPoolOptionsMonitor;
     
     private readonly IAbpDistributedLock _distributedLock;
     private readonly ISchrodingerCatProvider _schrodingerCatProvider;
@@ -40,7 +42,7 @@ public class CheckPoolWorker : AsyncPeriodicBackgroundWorkerBase
         IAbpDistributedLock distributedLock,
         ISchrodingerCatProvider schrodingerCatProvider,
         IContractProvider contractProvider,
-        IOptionsMonitor<SchrodingerPoolOptions> schrodingerPoolOptionsMonitor
+        IOptionsMonitor<PoolOptions> schrodingerPoolOptionsMonitor
     ) : base(timer,
         serviceScopeFactory)
     {
@@ -75,6 +77,7 @@ public class CheckPoolWorker : AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
+        _logger.LogInformation("Pool has no winner for now");
         var balance = await CheckPoolBalance();
         _logger.LogInformation("Pool balance is {balance}", balance);
         
@@ -98,6 +101,8 @@ public class CheckPoolWorker : AsyncPeriodicBackgroundWorkerBase
             var winningOne = winningList.First();
             poolData.WinnerAddress = winningOne.Adopter;
             poolData.WinnerSymbol = winningOne.Symbol;
+            poolData.WinnerRank = winningOne.Rank;
+            poolData.WinnerLevel = winningOne.Level.IsNullOrEmpty() ? 0 : int.Parse(winningOne.Level);
             _logger.LogInformation("Winner is {address}, {symbol}, {rank}", winningOne.Adopter, winningOne.Symbol, winningOne.Rank);
         }
         

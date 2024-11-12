@@ -37,13 +37,15 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     private readonly IOptionsMonitor<ActivityTraitOptions> _traitsOptions;
     private readonly ISecretProvider _secretProvider;
     private readonly ChainOptions _chainOptions;
+    private readonly IOptionsMonitor<PoolOptions> _poolOptionsMonitor;
 
     private static readonly List<string> GenOneTraitTypes = new() { "Background", "Clothes", "Breed" };
 
     public SchrodingerCatService(ISchrodingerCatProvider schrodingerCatProvider, ILevelProvider levelProvider,
         IObjectMapper objectMapper, ILogger<SchrodingerCatService> logger, IOptionsMonitor<LevelOptions> levelOptions,
         IUserInformationProvider userInformationProvider,IUserActionProvider userActionProvider, 
-        IOptionsMonitor<ActivityTraitOptions> traitsOptions, ISecretProvider secretProvider, ChainOptions chainOptions)
+        IOptionsMonitor<ActivityTraitOptions> traitsOptions, ISecretProvider secretProvider, ChainOptions chainOptions, 
+        IOptionsMonitor<PoolOptions> poolOptionsMonitor)
     {
         _schrodingerCatProvider = schrodingerCatProvider;
         _levelProvider = levelProvider;
@@ -55,6 +57,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         _traitsOptions = traitsOptions;
         _secretProvider = secretProvider;
         _chainOptions = chainOptions;
+        _poolOptionsMonitor = poolOptionsMonitor;
     }
 
     public async Task<SchrodingerListDto> GetSchrodingerCatListAsync(GetCatListInput input)
@@ -320,29 +323,29 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         return result;
     }
     
-    private async Task<List<RankData>> GetRarityDataAsync(GetRarityDataDto input)
-    {
-        var result = new List<RankData>();
-
-        var rarityData = await _schrodingerCatProvider.GetRankDataAsync(input.SymbolIds);
-        
-        var map = new Dictionary<string, RankData>();
-
-        foreach (var rarity in rarityData.RarityInfo)
-        {
-            _logger.LogInformation("rarity data: {a} {b}}", input.Address, rarity.Rank);
-            var rankData = await _levelProvider.GetRarityInfo(input.Address, rarity.Rank, input.IsGen9);
-            map[rarity.Symbol] = rankData;
-        }
-
-        foreach (var adoptId in input.SymbolIds)
-        {
-            var rankData = map[adoptId];
-            result.Add(rankData);
-        }
-        
-        return result;
-    }
+    // private async Task<List<RankData>> GetRarityDataAsync(GetRarityDataDto input)
+    // {
+    //     var result = new List<RankData>();
+    //
+    //     var rarityData = await _schrodingerCatProvider.GetRankDataAsync(input.SymbolIds);
+    //     
+    //     var map = new Dictionary<string, RankData>();
+    //
+    //     foreach (var rarity in rarityData.RarityInfo)
+    //     {
+    //         _logger.LogInformation("rarity data: {a} {b}}", input.Address, rarity.Rank);
+    //         var rankData = await _levelProvider.GetRarityInfo(input.Address, rarity.Rank, input.IsGen9);
+    //         map[rarity.Symbol] = rankData;
+    //     }
+    //
+    //     foreach (var adoptId in input.SymbolIds)
+    //     {
+    //         var rankData = map[adoptId];
+    //         result.Add(rankData);
+    //     }
+    //     
+    //     return result;
+    // }
 
     private static GetLevelInfoInputDto BuildParams(List<List<TraitsInfo>> traitInfosList, string address,
         string chainId, string searchAddress = "")
@@ -796,21 +799,27 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             }
         }
         
-        var rarityInfo1 = await _levelProvider.GetRarityInfo(currentAddress, rankData.RarityInfo[0].Rank, true);
-        var rarityInfo2 = await _levelProvider.GetRarityInfo(currentAddress, rankData.RarityInfo[1].Rank, true);
+        var rarityInfo1 = await _levelProvider.GetRarityInfo(currentAddress, rankData.RarityInfo[0].Rank, true, true);
+        var rarityInfo2 = await _levelProvider.GetRarityInfo(currentAddress, rankData.RarityInfo[1].Rank, true, true);
 
         if (rarityInfo1.LevelInfo.Describe != rarityInfo2.LevelInfo.Describe)
         {
-            _logger.LogError("cat not same level, address:{address}, symbol1:{symbol1}, symbol2:{symbol2}", currentAddress, input.Symbols[0], input.Symbols[1]);
+            _logger.LogError("not at same level, address:{address}, symbol1:{symbol1}, symbol2:{symbol2}, " +
+                             "level: {level1} {level2}", currentAddress, input.Symbols[0], input.Symbols[1], 
+                rarityInfo1.LevelInfo.Level, rarityInfo2.LevelInfo.Level);
             throw new UserFriendlyException("cat not same level");
         }
-        
+
+        var level = rarityInfo1.LevelInfo.Level.IsNullOrEmpty() ? 0 : long.Parse(rarityInfo1.LevelInfo.Level);
         var data = new BreedInput
         {
             AdoptIdA = HashHelper.ComputeFrom(rankData.RarityInfo[0].AdoptId),
             AdoptIdB = HashHelper.ComputeFrom(rankData.RarityInfo[1].AdoptId),
-            Level = 1
+            Level = level
         };
+        _logger.LogInformation(
+            "combine param, address:{address}, adoptIdA:{adoptIdA}, adoptIdB:{adoptIdB}, level:{level}", currentAddress,
+            rankData.RarityInfo[0].AdoptId, rankData.RarityInfo[1].AdoptId, level);
         
         var dataHash = HashHelper.ComputeFrom(data);
         var signature = await _secretProvider.GetSignatureFromHashAsync(_chainOptions.PublicKey, dataHash);
@@ -818,8 +827,84 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         return new CombineOutput
         {
             AdoptIds = rankData.RarityInfo.Select(x => x.AdoptId).ToList(),
-            Level = 1,
+            Level = level,
             Signature = ByteStringHelper.FromHexString(signature)
         };
+    }
+
+    public async Task<PoolOutput> GetPoolAsync()
+    {
+        var poolId = _poolOptionsMonitor.CurrentValue.PoolId;
+        var poolData = await _schrodingerCatProvider.GetPoolDataAsync(poolId);
+        if (poolData == null)
+        {
+            _logger.LogInformation("GetPoolAsync Error, no pool data");
+            throw new UserFriendlyException("No pool data");
+        }
+
+        var res = new PoolOutput
+        {
+            Prize = poolData.Balance
+        };
+        
+        var now = DateTime.UtcNow.ToUtcSeconds();
+        if (now >= _poolOptionsMonitor.CurrentValue.Deadline)
+        {
+            res.Countdown = 0;
+            return res;
+        }
+
+        res.Countdown = _poolOptionsMonitor.CurrentValue.Deadline - now;
+        return res;
+    }
+
+    public async Task<GetPoolWinnerOutput> GetPoolWinnerAsync()
+    {
+        var poolId = _poolOptionsMonitor.CurrentValue.PoolId;
+        var poolData = await _schrodingerCatProvider.GetPoolDataAsync(poolId);
+        if (poolData == null)
+        {
+            _logger.LogInformation("GetPoolAsync Error, no pool data");
+            throw new UserFriendlyException("No pool data");
+        }
+        
+        var res = new GetPoolWinnerOutput();
+        if (!poolData.WinnerAddress.IsNullOrEmpty())
+        {
+            var rankData = await _levelProvider.GetRarityInfo(poolData.WinnerAddress, poolData.WinnerRank, true);
+            
+            res.WinnerAddress = poolData.WinnerAddress;
+            res.WinnerSymbol = poolData.WinnerSymbol;
+            res.WinnerDescribe = rankData.LevelInfo.Describe;
+            res.IsOver = true;
+            return res;
+        }
+        
+        var now = DateTime.UtcNow.ToUtcSeconds();
+        if (now >= _poolOptionsMonitor.CurrentValue.Deadline)
+        {
+            res.IsOver = true;
+            return res;
+        }
+        
+        long targetRank = _poolOptionsMonitor.CurrentValue.TargetRank;
+        var adoptRecords = await _schrodingerCatProvider.GetLatestRareAdoptionAsync(50, _poolOptionsMonitor.CurrentValue.BeginTs);
+        var winningList = adoptRecords.Where(o => o.Rank > 0 && o.Rank <= targetRank).OrderBy(o => o.AdoptTime).Take(_poolOptionsMonitor.CurrentValue.RankNumber).ToList();
+        
+        var rankList = new List<PoolRankItem>();
+        foreach (var item in winningList)
+        {
+            var rankData = await _levelProvider.GetRarityInfo(item.Adopter, item.Rank, true);
+            rankList.Add(new PoolRankItem
+            {
+                Address = item.Adopter,
+                Symbol = item.Symbol,
+                Describe = rankData.LevelInfo.Describe
+            });
+        }
+        
+        res.RankList = rankList;
+
+        return res;
     }
 }

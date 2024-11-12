@@ -342,11 +342,14 @@ public class LevelProvider : ApplicationService, ILevelProvider
         }
     }
     
-    public async Task<RankData> GetRarityInfo(string address, int rank, bool isGen9)
+    public async Task<RankData> GetRarityInfo(string address, int rank, bool isGen9, bool fullData)
     {
-        var isInWhiteList = await CheckAddressIsInWhiteListAsync(address);
-        var price = await GetAwakenPrice();
-        return await GenerateRarity(price, rank, isGen9, isInWhiteList);
+        if (!fullData)
+        {
+            var isInWhiteList = await CheckAddressIsInWhiteListAsync(address);
+            return await GenerateRarity(rank, isGen9, isInWhiteList);
+        }
+        return await GenerateRarity(rank, isGen9, true);
     }
     
     private async Task<double> GetAwakenPrice()
@@ -378,7 +381,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
         return price;
     }
     
-    private async Task<RankData> GenerateRarity(double price, int rank, bool isGen9, bool isInWhiteList)
+    private async Task<RankData> GenerateRarity(int rank, bool isGen9, bool isInWhiteList)
     {
         var rankData = new RankData
         {
@@ -388,6 +391,8 @@ public class LevelProvider : ApplicationService, ILevelProvider
             },
             LevelInfo =  new LevelInfoDto()
         };
+
+        var price = await GetAwakenPrice();
         var levelInfo = await GetItemLevelDicAsync(rank, price);
             
         if (levelInfo == null)
