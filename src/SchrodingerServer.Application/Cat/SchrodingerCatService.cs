@@ -738,10 +738,16 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
             if (!holderDetail.Symbol.IsNullOrEmpty())
             {
-                if (holderDetail.HolderAmount < 100000000)
+                if (holderDetail.Amount < 100000000)
                 {
-                    _logger.LogError("not enough cat for, address:{address}, symbol:{symbol}, holderAmount:{holderAmount}", currentAddress, symbol, holderDetail.HolderAmount);
+                    _logger.LogError("not enough cat for, address:{address}, symbol:{symbol}, holderAmount:{holderAmount}", currentAddress, symbol, holderDetail.Amount);
                     throw new UserFriendlyException("holding not enough cat");
+                }
+                
+                if (holderDetail.Address != currentAddress)
+                {
+                    _logger.LogError("cat not owned by user, address:{address}, symbol:{symbol}, owner:{owner}", currentAddress, symbol, holderDetail.Address);
+                    throw new UserFriendlyException("not holding cat");
                 }
 
                 if (holderDetail.Generation != 9)
