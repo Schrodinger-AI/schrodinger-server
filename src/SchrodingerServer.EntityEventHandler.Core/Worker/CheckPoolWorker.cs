@@ -32,7 +32,6 @@ public class CheckPoolWorker : AsyncPeriodicBackgroundWorkerBase
     private readonly ISchrodingerCatProvider _schrodingerCatProvider;
     private readonly IContractProvider _contractProvider;
     private readonly string _lockKey = "CheckPoolWorker";
-    private readonly string poolId = "pool1";
 
     public CheckPoolWorker(
         AbpAsyncTimer timer,
@@ -75,6 +74,7 @@ public class CheckPoolWorker : AsyncPeriodicBackgroundWorkerBase
             return;
         }
         
+        var poolId = _schrodingerPoolOptionsMonitor.CurrentValue.PoolId;
         var poolData = await _schrodingerCatProvider.GetPoolDataAsync(poolId);
         
         // if we already have a winner, no need to check and update the pool
