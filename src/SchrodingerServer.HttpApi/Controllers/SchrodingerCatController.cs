@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchrodingerServer.Cat;
 using SchrodingerServer.Dto;
@@ -86,6 +87,7 @@ public class SchrodingerCatController
         return await _schrodingerCatService.GetRarityAsync(input);
     }
     
+    [Authorize]
     [HttpPost("combine")]
     public async Task<CombineOutput> CombineAsync(CombineInput input)
     {
