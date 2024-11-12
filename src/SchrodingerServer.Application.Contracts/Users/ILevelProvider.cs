@@ -10,6 +10,8 @@ public interface ILevelProvider
 
     Task<double> GetAwakenSGRPrice();
 
+    Task<double> GetAwakenELFPrice();
+
     Task<LevelInfoDto> GetItemLevelDicAsync(int rank, double price);
 
     Task<bool> CheckAddressIsInWhiteListAsync(string address);

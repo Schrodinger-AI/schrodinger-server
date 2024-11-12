@@ -629,25 +629,15 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 schrodingerDto.Rank = 0;
             }
         }
-
-        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
         
         boxList.ForEach(x =>
         {
-            if (x.Rarity.NotNullOrEmpty())
+            if (x.Generation == 9 && x.Rarity.IsNullOrEmpty())
             {
-                x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.RareBoxTestnet : BoxImageConst.RareBox;
-                // x.Describe = x.Rarity + ",,";
-            }
-            else if (x.Generation == 9)
-            {
-                x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NormalBoxTestnet : BoxImageConst.NormalBox;
                 x.Describe = "Common,,";
             }
-            else
-            {
-                x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet : BoxImageConst.NonGen9Box;
-            }
+            
+            x.InscriptionImageUri = BoxHelper.GetBoxImage(x.Generation == 9, x.Rarity);
             
             var specialTag = TraitHelper.GetSpecialTraitOfElection(_traitsOptions.CurrentValue, _objectMapper.Map<List<TraitDto>, List<TraitsInfo>>(x.Traits));
             x.SpecialTrait = specialTag;
@@ -670,20 +660,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         var boxDetail = await _schrodingerCatProvider.GetSchrodingerBoxDetailAsync(input);
         
-        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
         var resp = _objectMapper.Map<SchrodingerIndexerBoxDto, BlindBoxDetailDto>(boxDetail);
-        if (resp.Rarity.NotNullOrEmpty())
-        {
-            resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.RareBoxTestnet : BoxImageConst.RareBox;
-        }
-        else if (resp.Generation == 9)
-        {
-            resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NormalBoxTestnet : BoxImageConst.NormalBox;
-        }
-        else
-        {
-            resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet :  BoxImageConst.NonGen9Box;
-        }
+        resp.InscriptionImageUri = BoxHelper.GetBoxImage(resp.Generation == 9, resp.Rarity);
         
         var specialTag = TraitHelper.GetSpecialTraitOfElection(_traitsOptions.CurrentValue, _objectMapper.Map<List<TraitDto>, List<TraitsInfo>>(resp.Traits));
         resp.SpecialTrait = specialTag;
@@ -841,10 +819,14 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             _logger.LogInformation("GetPoolAsync Error, no pool data");
             throw new UserFriendlyException("No pool data");
         }
-
+        
+        var elfPrice = await _levelProvider.GetAwakenELFPrice();
+        var sgrPrice = await _levelProvider.GetAwakenSGRPrice() * elfPrice;
+        
         var res = new PoolOutput
         {
-            Prize = poolData.Balance
+            Prize = poolData.Balance,
+            UsdtValue = (long) (poolData.Balance * sgrPrice)
         };
         
         var now = DateTime.UtcNow.ToUtcSeconds();

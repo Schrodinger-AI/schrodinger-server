@@ -208,7 +208,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
                 });
             if (resp is not { Code: "20000" })
             {
-                _logger.LogError("AwakenPrice get failed,response:{response}",(resp == null ? "non result" : resp.Code));
+                _logger.LogError("get sgr price failed,response:{response}",(resp == null ? "non result" : resp.Code));
                 return price;
             }
 
@@ -216,7 +216,37 @@ public class LevelProvider : ApplicationService, ILevelProvider
         }
         catch (Exception e)
         {
-            _logger.LogError("AwakenPrice get failed",e);
+            _logger.LogError("get sgr price failed. {msg}",e.Message);
+        }
+
+        return price;
+    }
+    
+    public async Task<double> GetAwakenELFPrice()
+    {
+        //get awaken price
+        var price = 0.0;
+        try
+        {
+            var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
+                PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
+                {
+                    ["token0Symbol"] = "ELF",
+                    ["token1Symbol"] = "USDT",
+                    ["feeRate"] = "0.0005",
+                    ["chainId"] = _levelOptions.CurrentValue.ChainId
+                });
+            if (resp is not { Code: "20000" })
+            {
+                _logger.LogError("get elf price failed, response:{response}",(resp == null ? "non result" : resp.Code));
+                return price;
+            }
+
+            price = (double)(resp.Data.Items?.First().ValueLocked1 / resp.Data.Items?.First().ValueLocked0);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("get elf price failed, {msg}", e.Message);
         }
 
         return price;
@@ -352,35 +382,6 @@ public class LevelProvider : ApplicationService, ILevelProvider
         return await GenerateRarity(rank, isGen9, true);
     }
     
-    private async Task<double> GetAwakenPrice()
-    {
-        var price = 0.0;
-        try
-        {
-            var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
-                PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
-                {
-                    ["token0Symbol"] = "SGR-1",
-                    ["token1Symbol"] = "ELF",
-                    ["feeRate"] = "0.03",
-                    ["chainId"] = _levelOptions.CurrentValue.ChainId
-                });
-            if (resp is not { Code: "20000" })
-            {
-                _logger.LogError("AwakenPrice get failed,response:{response}",(resp == null ? "non result" : resp.Code));
-                return price;
-            }
-
-            price = (double)(resp.Data.Items?.First().ValueLocked1 / resp.Data.Items?.First().ValueLocked0);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError("AwakenPrice get failed", e);
-        }
-        
-        return price;
-    }
-    
     private async Task<RankData> GenerateRarity(int rank, bool isGen9, bool isInWhiteList)
     {
         var rankData = new RankData
@@ -392,7 +393,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
             LevelInfo =  new LevelInfoDto()
         };
 
-        var price = await GetAwakenPrice();
+        var price = await GetAwakenSGRPrice();
         var levelInfo = await GetItemLevelDicAsync(rank, price);
             
         if (levelInfo == null)
