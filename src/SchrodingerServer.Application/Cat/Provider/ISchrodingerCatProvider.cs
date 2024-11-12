@@ -639,7 +639,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         rank,
                         generation,
                         adoptId,
-                        adopter
+                        adopter,
+                        outputAmount    
                     }
                 }
             }",
