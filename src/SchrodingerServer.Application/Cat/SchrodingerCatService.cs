@@ -843,6 +843,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             Prize = poolData.Balance,
             UsdtValue = (long) (poolData.Balance * sgrPrice)
         };
+        _logger.LogInformation("GetPoolAsync Balance {balance}", poolData.Balance);
         
         var now = DateTime.UtcNow.ToUtcSeconds();
         if (now >= _poolOptionsMonitor.CurrentValue.Deadline)
@@ -851,7 +852,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             return res;
         }
 
-        return new PoolOutput();
+        res.Countdown = _poolOptionsMonitor.CurrentValue.Deadline - now;
+        return res;
     }
 
     public async Task<GetPoolWinnerOutput> GetPoolWinnerAsync()
