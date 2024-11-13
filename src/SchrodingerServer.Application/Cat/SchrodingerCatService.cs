@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AElf;
+using Google.Protobuf;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -257,6 +258,11 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         var symbolIds = genNineList.Select(cat => cat.Symbol).ToList();
         var itemLevelList = new List<RankData>();
+
+        if (symbolIds.Count == 0)
+        {
+            return list;
+        }
         
         var rankData = await _schrodingerCatProvider.GetRankDataAsync(symbolIds);
         
