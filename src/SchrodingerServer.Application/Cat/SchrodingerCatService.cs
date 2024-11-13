@@ -801,7 +801,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
 
         var level = rarityInfo1.LevelInfo.Level.IsNullOrEmpty() ? 0 : long.Parse(rarityInfo1.LevelInfo.Level);
-        var data = new BreedInput
+        var data = new MergeInput
         {
             AdoptIdA = HashHelper.ComputeFrom(rankData.RarityInfo[0].AdoptId),
             AdoptIdB = HashHelper.ComputeFrom(rankData.RarityInfo[1].AdoptId),
