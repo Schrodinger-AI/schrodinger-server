@@ -805,7 +805,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             AdoptIdA = HashHelper.ComputeFrom(rankData.RarityInfo[0].AdoptId),
             AdoptIdB = HashHelper.ComputeFrom(rankData.RarityInfo[1].AdoptId),
-            Level = level
+            Level = level + 1
         };
         _logger.LogInformation(
             "combine param, address:{address}, adoptIdA:{adoptIdA}, adoptIdB:{adoptIdB}, level:{level}", currentAddress,
