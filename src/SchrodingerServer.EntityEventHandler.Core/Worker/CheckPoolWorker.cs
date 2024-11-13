@@ -51,7 +51,7 @@ public class CheckPoolWorker : AsyncPeriodicBackgroundWorkerBase
         _schrodingerCatProvider = schrodingerCatProvider;
         _contractProvider = contractProvider;
         _schrodingerPoolOptionsMonitor = schrodingerPoolOptionsMonitor;
-        timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey) * 60 * 1000;
+        timer.Period = _workerOptionsMonitor.CurrentValue.GetWorkerPeriodMinutes(_lockKey)  * 1000;
     }
     
     protected override async Task DoWorkAsync(PeriodicBackgroundWorkerContext workerContext)

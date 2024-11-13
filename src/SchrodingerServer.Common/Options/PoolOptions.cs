@@ -8,7 +8,7 @@ public class PoolOptions
     public string TokenContractAddress { get; set; }
     public string PublicKey { get; set; }
     public string ChainId { get; set; }
-    public int RankNumber { get; set; } = 3;
+    public int RankNumber { get; set; } = 5;
     public long Deadline { get; set; } = 1731859200;
     public string PoolId { get; set; } = "pool1";
 }
