@@ -803,6 +803,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         var level = rarityInfo1.LevelInfo.Level.IsNullOrEmpty() ? 0 : long.Parse(rarityInfo1.LevelInfo.Level);
         var data = new MergeInput
         {
+            Tick = "SGR",
             AdoptIdA = HashHelper.ComputeFrom(rankData.RarityInfo[0].AdoptId),
             AdoptIdB = HashHelper.ComputeFrom(rankData.RarityInfo[1].AdoptId),
             Level = level + 1
@@ -816,8 +817,9 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         return new CombineOutput
         {
+            Tick = "SGR",
             AdoptIds = rankData.RarityInfo.Select(x => x.AdoptId).ToList(),
-            Level = level,
+            Level = level + 1,
             Signature = ByteStringHelper.FromHexString(signature)
         };
     }
@@ -848,8 +850,33 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             return res;
         }
 
-        res.Countdown = _poolOptionsMonitor.CurrentValue.Deadline - now;
-        return res;
+        return new PoolOutput();
+        // var poolId = _poolOptionsMonitor.CurrentValue.PoolId;
+        // var poolData = await _schrodingerCatProvider.GetPoolDataAsync(poolId);
+        // if (poolData == null)
+        // {
+        //     _logger.LogInformation("GetPoolAsync Error, no pool data");
+        //     throw new UserFriendlyException("No pool data");
+        // }
+        //
+        // var elfPrice = await _levelProvider.GetAwakenELFPrice();
+        // var sgrPrice = await _levelProvider.GetAwakenSGRPrice() * elfPrice;
+        //
+        // var res = new PoolOutput
+        // {
+        //     Prize = poolData.Balance,
+        //     UsdtValue = (long) (poolData.Balance * sgrPrice)
+        // };
+        //
+        // var now = DateTime.UtcNow.ToUtcSeconds();
+        // if (now >= _poolOptionsMonitor.CurrentValue.Deadline)
+        // {
+        //     res.Countdown = 0;
+        //     return res;
+        // }
+        //
+        // res.Countdown = _poolOptionsMonitor.CurrentValue.Deadline - now;
+        // return res;
     }
 
     public async Task<GetPoolWinnerOutput> GetPoolWinnerAsync()
