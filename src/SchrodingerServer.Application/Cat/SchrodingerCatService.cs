@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AElf;
+using AElf.Types;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -804,8 +805,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         var data = new MergeInput
         {
             Tick = "SGR",
-            AdoptIdA = HashHelper.ComputeFrom(rankData.RarityInfo[0].AdoptId),
-            AdoptIdB = HashHelper.ComputeFrom(rankData.RarityInfo[1].AdoptId),
+            AdoptIdA = Hash.LoadFromHex(rankData.RarityInfo[0].AdoptId),
+            AdoptIdB = Hash.LoadFromHex(rankData.RarityInfo[1].AdoptId),
             Level = level + 1
         };
         _logger.LogInformation(
@@ -851,32 +852,6 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
 
         return new PoolOutput();
-        // var poolId = _poolOptionsMonitor.CurrentValue.PoolId;
-        // var poolData = await _schrodingerCatProvider.GetPoolDataAsync(poolId);
-        // if (poolData == null)
-        // {
-        //     _logger.LogInformation("GetPoolAsync Error, no pool data");
-        //     throw new UserFriendlyException("No pool data");
-        // }
-        //
-        // var elfPrice = await _levelProvider.GetAwakenELFPrice();
-        // var sgrPrice = await _levelProvider.GetAwakenSGRPrice() * elfPrice;
-        //
-        // var res = new PoolOutput
-        // {
-        //     Prize = poolData.Balance,
-        //     UsdtValue = (long) (poolData.Balance * sgrPrice)
-        // };
-        //
-        // var now = DateTime.UtcNow.ToUtcSeconds();
-        // if (now >= _poolOptionsMonitor.CurrentValue.Deadline)
-        // {
-        //     res.Countdown = 0;
-        //     return res;
-        // }
-        //
-        // res.Countdown = _poolOptionsMonitor.CurrentValue.Deadline - now;
-        // return res;
     }
 
     public async Task<GetPoolWinnerOutput> GetPoolWinnerAsync()
