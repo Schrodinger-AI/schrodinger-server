@@ -11,6 +11,8 @@ public class PoolDataIndex : SchrodingerEntity<string>, IIndexBuild
     [Keyword] public string PoolId { get; set; }
     [Keyword] public string WinnerAddress { get; set; }
     [Keyword] public string WinnerSymbol { get; set; }
+    public int WinnerLevel { get; set; }
+    public int WinnerRank { get; set; }
     public long Balance { get; set; }
     public Dictionary<string, string> ExtraData { get; set; } = new();
     public long CreatedTime { get; set; }
