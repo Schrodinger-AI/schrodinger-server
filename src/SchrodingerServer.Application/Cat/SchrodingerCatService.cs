@@ -843,7 +843,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             Prize = poolData.Balance,
             UsdtValue = (long) (poolData.Balance * sgrPrice)
         };
-        _logger.LogInformation("GetPoolAsync Balance {balance}", poolData.Balance);
+        _logger.LogInformation("GetPoolAsync Balance {balance}, sgr price: {price}", poolData.Balance, sgrPrice);
         
         var now = DateTime.UtcNow.ToUtcSeconds();
         if (now >= _poolOptionsMonitor.CurrentValue.Deadline)
@@ -886,7 +886,6 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             return res;
         }
         
-        long targetRank = _poolOptionsMonitor.CurrentValue.TargetRank;
         var adoptRecords = await _schrodingerCatProvider.GetLatestRareAdoptionAsync(50, _poolOptionsMonitor.CurrentValue.BeginTs);
         var winningList = adoptRecords.Take(_poolOptionsMonitor.CurrentValue.RankNumber).ToList();
         
