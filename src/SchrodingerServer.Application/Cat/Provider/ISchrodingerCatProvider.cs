@@ -732,6 +732,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             index.Balance = poolData.Balance;
             index.WinnerAddress = poolData.WinnerAddress;
             index.WinnerSymbol = poolData.WinnerSymbol;
+            index.WinnerRank = poolData.WinnerRank;
+            index.WinnerLevel = poolData.WinnerLevel;
         }
         else
         {
