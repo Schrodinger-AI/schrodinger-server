@@ -664,9 +664,9 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         var adpotInfoDto = await _graphQlHelper.QueryAsync<LatestRareAdoptInfoQuery>(new GraphQLRequest
         {
             Query =
-                @"query($beginTime:Long!, 
-                        $number:Int!,
-                        $beginTime:Long!
+                @"query(
+                    $beginTime:Long!, 
+                    $number:Int!
                 ){
                        getLatestRareAdoption(input: {
                           beginTime:$beginTime, 
