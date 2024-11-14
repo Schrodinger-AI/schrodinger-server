@@ -665,7 +665,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         {
             Query =
                 @"query($beginTime:Long!, 
-                        $number:Int!
+                        $number:Int!,
+                        $beginTime:Long!
                 ){
                        getLatestRareAdoption(input: {
                           beginTime:$beginTime, 
