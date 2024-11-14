@@ -12,3 +12,10 @@ public class GetLevelInfoInputDto
     public bool IsGen9 { get; set; }
     public string SpecialTag { get; set; } = "";
 }
+
+public class GetRarityDataDto
+{
+    public string Address { get; set; }
+    public bool IsGen9 { get; set; }
+    public List<string> SymbolIds { get; set; }
+}

@@ -1,6 +1,8 @@
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchrodingerServer.Cat;
+using SchrodingerServer.Dto;
 using SchrodingerServer.Dtos.Cat;
 using Volo.Abp;
 
@@ -77,5 +79,30 @@ public class SchrodingerCatController
     public async Task<StrayCatsListDto> GetStrayCatsAsync(StrayCatsInput input)
     {
         return await _schrodingerCatService.GetStrayCatsAsync(input);
+    }
+    
+    [HttpPost("rarity")]
+    public async Task<RankData> GetRarityAsync(GetRarityAsync input)
+    {
+        return await _schrodingerCatService.GetRarityAsync(input);
+    }
+    
+    [Authorize]
+    [HttpPost("combine")]
+    public async Task<CombineOutput> CombineAsync(CombineInput input)
+    {
+        return await _schrodingerCatService.CombineAsync(input);
+    }
+    
+    [HttpGet("pool")]
+    public async Task<PoolOutput> GetPoolAsync()
+    {
+        return await _schrodingerCatService.GetPoolAsync();
+    }
+    
+    [HttpGet("pool-rank")]
+    public async Task<GetPoolWinnerOutput> GetPoolWinnerAsync()
+    {
+        return await _schrodingerCatService.GetPoolWinnerAsync();
     }
 }

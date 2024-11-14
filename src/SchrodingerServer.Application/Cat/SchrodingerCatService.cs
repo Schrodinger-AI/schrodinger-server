@@ -2,9 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf;
+using AElf.Types;
+using Google.Protobuf;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using Schrodinger;
 using SchrodingerServer.Cat.Provider;
 using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.Common;
@@ -33,13 +37,17 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     private readonly IUserInformationProvider _userInformationProvider;
     private readonly IUserActionProvider _userActionProvider;
     private readonly IOptionsMonitor<ActivityTraitOptions> _traitsOptions;
+    private readonly ISecretProvider _secretProvider;
+    private readonly ChainOptions _chainOptions;
+    private readonly IOptionsMonitor<PoolOptions> _poolOptionsMonitor;
 
     private static readonly List<string> GenOneTraitTypes = new() { "Background", "Clothes", "Breed" };
 
     public SchrodingerCatService(ISchrodingerCatProvider schrodingerCatProvider, ILevelProvider levelProvider,
         IObjectMapper objectMapper, ILogger<SchrodingerCatService> logger, IOptionsMonitor<LevelOptions> levelOptions,
         IUserInformationProvider userInformationProvider,IUserActionProvider userActionProvider, 
-        IOptionsMonitor<ActivityTraitOptions> traitsOptions)
+        IOptionsMonitor<ActivityTraitOptions> traitsOptions, ISecretProvider secretProvider, IOptionsMonitor<ChainOptions> chainOptions, 
+        IOptionsMonitor<PoolOptions> poolOptionsMonitor)
     {
         _schrodingerCatProvider = schrodingerCatProvider;
         _levelProvider = levelProvider;
@@ -49,6 +57,9 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         _userInformationProvider = userInformationProvider;
         _userActionProvider = userActionProvider;
         _traitsOptions = traitsOptions;
+        _secretProvider = secretProvider;
+        _chainOptions = chainOptions.CurrentValue;
+        _poolOptionsMonitor = poolOptionsMonitor;
     }
 
     public async Task<SchrodingerListDto> GetSchrodingerCatListAsync(GetCatListInput input)
@@ -66,7 +77,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         if (!input.Rarities.IsNullOrEmpty())
         {
             indexerList = await GetSchrodingerCatAllList(input);
-            var data = await SetLevelInfoAsync(indexerList, input.Address, input.ChainId);
+            var data = await SetLevelInfoAsync(indexerList, input.Address);
            
             data.ForEach(item =>
             {
@@ -87,7 +98,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
             indexerList = schrodingerIndexerListDto.Data;
-            var data = await SetLevelInfoAsync(indexerList, input.Address, input.ChainId);
+            var data = await SetLevelInfoAsync(indexerList, input.Address);
             
             data.ForEach(item =>
             {
@@ -187,28 +198,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         detail.CollectionId = collectionId;
         return detail;
     }
-
-    private async Task<SchrodingerListDto> GetSchrodingerCatPageList(GetCatListInput input)
-    {
-        var result = new SchrodingerListDto();
-        input.FilterSgr = true;
-        var schrodingerIndexerListDto = await _schrodingerCatProvider.GetSchrodingerCatListAsync(input);
-        var data = await SetLevelInfoAsync(schrodingerIndexerListDto.Data, input.Address, input.ChainId, input.SearchAddress);
-        if (input.Rarities.IsNullOrEmpty())
-        {
-            result.Data = data;
-            result.TotalCount = schrodingerIndexerListDto.TotalCount;
-            return result;
-        }
-
-        var pageData = data
-            .Where(cat => input.Rarities.Contains(cat.Rarity))
-            .OrderByDescending(cat => cat.AdoptTime)
-            .ToList();
-        result.Data = pageData;
-        result.TotalCount = schrodingerIndexerListDto.TotalCount;
-        return result;
-    }
+    
     private async Task<SchrodingerListDto> GetSchrodingerAllCatsPageList(GetCatListInput input)
     {
         var result = new SchrodingerListDto();
@@ -260,19 +250,38 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         return result;
     }
     
-    private async Task<List<SchrodingerDto>> SetLevelInfoAsync(List<SchrodingerIndexerDto> indexerList, string address,
-        string chainId, string searchAddress = "")
+    private async Task<List<SchrodingerDto>> SetLevelInfoAsync(List<SchrodingerIndexerDto> indexerList, string address)
     {
         var list = _objectMapper.Map<List<SchrodingerIndexerDto>, List<SchrodingerDto>>(indexerList);
 
         var genNineList = list.Where(cat => cat.Generation == 9).ToList();
         var genOtherList = list.Where(cat => cat.Generation != 9).ToList();
+        
+        var symbolIds = genNineList.Select(cat => cat.Symbol).ToList();
+        var itemLevelList = new List<RankData>();
 
-        var traitInfos = genNineList.Select(cat => cat.Traits).ToList();
+        if (symbolIds.Count == 0)
+        {
+            return list;
+        }
+        
+        var rankData = await _schrodingerCatProvider.GetRankDataAsync(symbolIds);
+        
+        var map = new Dictionary<string, RankData>();
 
-        var getLevelInfoInputDto = BuildParams(traitInfos, address, chainId, searchAddress);
+        foreach (var rarity in rankData.RarityInfo)
+        {
+            _logger.LogInformation("rarity data: {a} {b}}", address, rarity.Rank);
+            var rarityData = await _levelProvider.GetRarityInfo(address, rarity.Rank, true);
+            map[rarity.Symbol] = rarityData;
+        }
 
-        var itemLevelList = await GetItemLevelInfoAsync(getLevelInfoInputDto);
+        foreach (var adoptId in symbolIds)
+        {
+            var rarityData = map[adoptId];
+            itemLevelList.Add(rarityData);
+        }
+        
         if (genNineList.Count != itemLevelList.Count)
         {
             _logger.LogWarning("get item level count not equals, count1: {count1}, count2:{count2}", genNineList.Count, itemLevelList.Count);
@@ -320,6 +329,30 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
         return result;
     }
+    
+    // private async Task<List<RankData>> GetRarityDataAsync(GetRarityDataDto input)
+    // {
+    //     var result = new List<RankData>();
+    //
+    //     var rarityData = await _schrodingerCatProvider.GetRankDataAsync(input.SymbolIds);
+    //     
+    //     var map = new Dictionary<string, RankData>();
+    //
+    //     foreach (var rarity in rarityData.RarityInfo)
+    //     {
+    //         _logger.LogInformation("rarity data: {a} {b}}", input.Address, rarity.Rank);
+    //         var rankData = await _levelProvider.GetRarityInfo(input.Address, rarity.Rank, input.IsGen9);
+    //         map[rarity.Symbol] = rankData;
+    //     }
+    //
+    //     foreach (var adoptId in input.SymbolIds)
+    //     {
+    //         var rankData = map[adoptId];
+    //         result.Add(rankData);
+    //     }
+    //     
+    //     return result;
+    // }
 
     private static GetLevelInfoInputDto BuildParams(List<List<TraitsInfo>> traitInfosList, string address,
         string chainId, string searchAddress = "")
@@ -603,25 +636,15 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 schrodingerDto.Rank = 0;
             }
         }
-
-        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
         
         boxList.ForEach(x =>
         {
-            if (x.Rarity.NotNullOrEmpty())
+            if (x.Generation == 9 && x.Rarity.IsNullOrEmpty())
             {
-                x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.RareBoxTestnet : BoxImageConst.RareBox;
-                // x.Describe = x.Rarity + ",,";
-            }
-            else if (x.Generation == 9)
-            {
-                x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NormalBoxTestnet : BoxImageConst.NormalBox;
                 x.Describe = "Common,,";
             }
-            else
-            {
-                x.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet : BoxImageConst.NonGen9Box;
-            }
+            
+            x.InscriptionImageUri = BoxHelper.GetBoxImage(x.Generation == 9, x.Rarity);
             
             var specialTag = TraitHelper.GetSpecialTraitOfElection(_traitsOptions.CurrentValue, _objectMapper.Map<List<TraitDto>, List<TraitsInfo>>(x.Traits));
             x.SpecialTrait = specialTag;
@@ -644,20 +667,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         var boxDetail = await _schrodingerCatProvider.GetSchrodingerBoxDetailAsync(input);
         
-        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
         var resp = _objectMapper.Map<SchrodingerIndexerBoxDto, BlindBoxDetailDto>(boxDetail);
-        if (resp.Rarity.NotNullOrEmpty())
-        {
-            resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.RareBoxTestnet : BoxImageConst.RareBox;
-        }
-        else if (resp.Generation == 9)
-        {
-            resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NormalBoxTestnet : BoxImageConst.NormalBox;
-        }
-        else
-        {
-            resp.InscriptionImageUri = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet :  BoxImageConst.NonGen9Box;
-        }
+        resp.InscriptionImageUri = BoxHelper.GetBoxImage(resp.Generation == 9, resp.Rarity);
         
         var specialTag = TraitHelper.GetSpecialTraitOfElection(_traitsOptions.CurrentValue, _objectMapper.Map<List<TraitDto>, List<TraitsInfo>>(resp.Traits));
         resp.SpecialTrait = specialTag;
@@ -678,5 +689,223 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         
         var resp = _objectMapper.Map<SchrodingerIndexerStrayCatsDto, StrayCatsListDto>(boxDetail);
         return resp;
+    }
+
+    public async Task<RankData> GetRarityAsync(GetRarityAsync input)
+    {
+        _logger.LogInformation("GetRarityAsync symbol:{symbol}",input.Symbol);
+        
+        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+
+        var rankData = await _schrodingerCatProvider.GetRankDataAsync(new List<string>
+        {
+            input.Symbol
+        });
+
+        if (rankData.RarityInfo.IsNullOrEmpty())
+        {
+            _logger.LogInformation("GetRarityAsync, rankData is null, {symbol}", input.Symbol);
+            return  new RankData();
+        }
+        
+        var rank = rankData.RarityInfo.FirstOrDefault();
+        var res = await _levelProvider.GetRarityInfo(currentAddress, rank.Rank, rank.Generation == 9);
+        
+        return res;
+    }
+
+    public async Task<CombineOutput> CombineAsync(CombineInput input)
+    {
+        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        // var currentAddress = input.Address;
+        if (currentAddress.IsNullOrEmpty())
+        {
+            _logger.LogError("CombineAsync Get current address failed");
+            throw new UserFriendlyException("Invalid user");
+        }
+
+        if (input.Symbols.Count != 2)
+        {
+            _logger.LogError("CombineAsync, invalid input, {input}", JsonConvert.SerializeObject(input));
+            throw new UserFriendlyException("Invalid input");
+        }
+        
+        var rankData = await _schrodingerCatProvider.GetRankDataAsync(input.Symbols);
+        
+        // check holding amount and generation
+        foreach (var symbol in input.Symbols)
+        {
+            // query as cat 
+            var holderDetail = await _schrodingerCatProvider.GetSchrodingerCatDetailAsync(new GetCatDetailInput
+            {
+                Address = currentAddress,
+                Symbol = symbol,
+                ChainId = _levelOptions.CurrentValue.ChainIdForReal
+            });
+
+            if (!holderDetail.Symbol.IsNullOrEmpty())
+            {
+                if (holderDetail.Amount < 100000000)
+                {
+                    _logger.LogError("not enough cat for, address:{address}, symbol:{symbol}, holderAmount:{holderAmount}", currentAddress, symbol, holderDetail.Amount);
+                    throw new UserFriendlyException("holding not enough cat");
+                }
+                
+                if (holderDetail.Address != currentAddress)
+                {
+                    _logger.LogError("cat not owned by user, address:{address}, symbol:{symbol}, owner:{owner}", currentAddress, symbol, holderDetail.Address);
+                    throw new UserFriendlyException("not holding cat");
+                }
+
+                if (holderDetail.Generation != 9)
+                {
+                    _logger.LogError("cat not gen 9, address:{address}, symbol:{symbol}, gen:{gen}", currentAddress, symbol, holderDetail.Generation);
+                    throw new UserFriendlyException("must use gen 9 cat");
+                }
+            }
+            else
+            {
+                var boxDetail = rankData.RarityInfo.FirstOrDefault(x => x.Symbol == symbol);
+                var amount = boxDetail?.OutputAmount ?? 0;
+                var adopter = boxDetail?.Adopter ?? "";
+
+                if (adopter != currentAddress)
+                {
+                    _logger.LogError("box not owned by user, address:{address}, symbol:{symbol}, adopter:{adopter}", currentAddress, symbol, adopter);
+                    throw new UserFriendlyException("box not owned by user");
+                }
+                
+                if (amount < 100000000)
+                {
+                    _logger.LogError("not enough box for, address:{address}, symbol:{symbol}, holderAmount:{holderAmount}", currentAddress, symbol, amount);
+                    throw new UserFriendlyException("holding not enough box");
+                }
+                
+                var gen = boxDetail?.Generation ?? 0;
+                if (gen != 9)
+                {
+                    _logger.LogError("box not gen 9, address:{address}, symbol:{symbol}, gen:{gen}", currentAddress, symbol, gen);
+                    throw new UserFriendlyException("must use gen 9 box");
+                }
+            }
+        }
+        
+        var rarityInfo1 = await _levelProvider.GetRarityInfo(currentAddress, rankData.RarityInfo[0].Rank, true, true);
+        var rarityInfo2 = await _levelProvider.GetRarityInfo(currentAddress, rankData.RarityInfo[1].Rank, true, true);
+
+        if (rarityInfo1.LevelInfo.Describe != rarityInfo2.LevelInfo.Describe)
+        {
+            _logger.LogError("not at same level, address:{address}, symbol1:{symbol1}, symbol2:{symbol2}, " +
+                             "level: {level1} {level2}", currentAddress, input.Symbols[0], input.Symbols[1], 
+                rarityInfo1.LevelInfo.Level, rarityInfo2.LevelInfo.Level);
+            throw new UserFriendlyException("cat not same level");
+        }
+
+        var level = rarityInfo1.LevelInfo.Level.IsNullOrEmpty() ? 0 : long.Parse(rarityInfo1.LevelInfo.Level);
+        var data = new MergeInput
+        {
+            Tick = "SGR",
+            AdoptIdA = Hash.LoadFromHex(rankData.RarityInfo[0].AdoptId),
+            AdoptIdB = Hash.LoadFromHex(rankData.RarityInfo[1].AdoptId),
+            Level = level + 1
+        };
+        _logger.LogInformation(
+            "combine param, address:{address}, adoptIdA:{adoptIdA}, adoptIdB:{adoptIdB}, level:{level}", currentAddress,
+            rankData.RarityInfo[0].AdoptId, rankData.RarityInfo[1].AdoptId, level);
+        
+        var dataHash = HashHelper.ComputeFrom(data);
+        var signature = await _secretProvider.GetSignatureFromHashAsync(_chainOptions.PublicKey, dataHash);
+        
+        return new CombineOutput
+        {
+            Tick = "SGR",
+            AdoptIds = rankData.RarityInfo.Select(x => x.AdoptId).ToList(),
+            Level = level + 1,
+            Signature = ByteStringHelper.FromHexString(signature)
+        };
+    }
+
+    public async Task<PoolOutput> GetPoolAsync()
+    {
+        var poolId = _poolOptionsMonitor.CurrentValue.PoolId;
+        var poolData = await _schrodingerCatProvider.GetPoolDataAsync(poolId);
+        if (poolData == null)
+        {
+            _logger.LogInformation("GetPoolAsync Error, no pool data");
+            throw new UserFriendlyException("No pool data");
+        }
+        
+        var elfPrice = await _levelProvider.GetAwakenELFPrice();
+        var sgrPrice = await _levelProvider.GetAwakenSGRPrice() * elfPrice;
+        
+        var res = new PoolOutput
+        {
+            Prize = poolData.Balance,
+            UsdtValue = (long) (poolData.Balance * sgrPrice)
+        };
+        _logger.LogInformation("GetPoolAsync Balance {balance}, sgr price: {price}", poolData.Balance, sgrPrice);
+        
+        var now = DateTime.UtcNow.ToUtcSeconds();
+        if (now >= _poolOptionsMonitor.CurrentValue.Deadline)
+        {
+            res.Countdown = 0;
+            return res;
+        }
+
+        res.Countdown = _poolOptionsMonitor.CurrentValue.Deadline - now;
+        return res;
+    }
+
+    public async Task<GetPoolWinnerOutput> GetPoolWinnerAsync()
+    {
+        var poolId = _poolOptionsMonitor.CurrentValue.PoolId;
+        var poolData = await _schrodingerCatProvider.GetPoolDataAsync(poolId);
+        if (poolData == null)
+        {
+            _logger.LogInformation("GetPoolAsync Error, no pool data");
+            throw new UserFriendlyException("No pool data");
+        }
+        
+        var res = new GetPoolWinnerOutput();
+        if (!poolData.WinnerAddress.IsNullOrEmpty())
+        {
+            var rankData = await _levelProvider.GetRarityInfo(poolData.WinnerAddress, poolData.WinnerRank, true);
+            var rarity = rankData.LevelInfo.Describe.Split(",").ToList()[0];
+            res.WinnerImage = BoxHelper.GetBoxImage(true, rarity);
+            res.WinnerAddress = poolData.WinnerAddress;
+            res.WinnerSymbol = poolData.WinnerSymbol;
+            res.WinnerDescribe = rankData.LevelInfo.Describe;
+            res.IsOver = true;
+            return res;
+        }
+        
+        var now = DateTime.UtcNow.ToUtcSeconds();
+        if (now >= _poolOptionsMonitor.CurrentValue.Deadline)
+        {
+            res.IsOver = true;
+            return res;
+        }
+        
+        var adoptRecords = await _schrodingerCatProvider.GetLatestRareAdoptionAsync(50, _poolOptionsMonitor.CurrentValue.BeginTs);
+        var winningList = adoptRecords.Take(_poolOptionsMonitor.CurrentValue.RankNumber).ToList();
+        
+        var rankList = new List<PoolRankItem>();
+        foreach (var item in winningList)
+        {
+            var rankData = await _levelProvider.GetRarityInfo(item.Adopter, item.Rank, true);
+            var rarity = rankData.LevelInfo.Describe.Split(",").ToList()[0];
+            
+            rankList.Add(new PoolRankItem
+            {
+                Address = item.Adopter,
+                Symbol = item.Symbol,
+                Describe = rankData.LevelInfo.Describe,
+                Image = BoxHelper.GetBoxImage(true, rarity)
+            });
+        }
+        
+        res.RankList = rankList;
+
+        return res;
     }
 }

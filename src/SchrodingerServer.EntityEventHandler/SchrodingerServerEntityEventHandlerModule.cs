@@ -59,6 +59,9 @@ public class SchrodingerServerEntityEventHandlerModule : AbpModule
         Configure<WorkerOptions>(configuration.GetSection("WorkerOptions"));
         Configure<PointTradeOptions>(configuration.GetSection("PointTradeOptions"));
         Configure<LevelOptions>(configuration.GetSection("LevelOptions"));
+        Configure<PoolOptions>(configuration.GetSection("PoolOptions"));
+        Configure<ChainOptions>(configuration.GetSection("ChainOptions"));
+        Configure<SecurityServerOptions>(configuration.GetSection("SecurityServer"));
         ConfigureHangfire(context, configuration);
         ConfigureGraphQl(context, configuration);
         ConfigureRedis(context, configuration, context.Services.GetHostingEnvironment());
@@ -101,6 +104,7 @@ public class SchrodingerServerEntityEventHandlerModule : AbpModule
         context.AddBackgroundWorkerAsync<PointAccumulateForSGR12Worker>();
         context.AddBackgroundWorkerAsync<PointAccumulateForSGR8Worker>();
         context.AddBackgroundWorkerAsync<PointCompensateWorker>();
+        context.AddBackgroundWorkerAsync<CheckPoolWorker>();
         var client = context.ServiceProvider.GetRequiredService<IClusterClient>();
         AsyncHelper.RunSync(async ()=> await client.Connect());
     }

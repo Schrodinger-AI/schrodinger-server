@@ -30,6 +30,8 @@ public class AdpotInfoDto
     public int Decimals { get; set; }
     public DateTime AdoptTime { get; set; }
     public string Rarity { get; set; }
+    public int Rank { get; set; }
+    public string? Level { get; set; }
 }
 
 public class Trait
@@ -52,6 +54,10 @@ public class AdoptInfoByTimeQuery
 }
 
 
+public class LatestRareAdoptInfoQuery
+{
+    public List<AdpotInfoDto> GetLatestRareAdoption { get; set; }
+}
 
 
 

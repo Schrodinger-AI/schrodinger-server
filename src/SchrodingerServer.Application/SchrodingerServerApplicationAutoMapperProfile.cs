@@ -5,6 +5,7 @@ using SchrodingerServer.AddressRelationship.Dto;
 using SchrodingerServer.Cat.Provider.Dtos;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.ContractInvoke.Eto;
+using SchrodingerServer.Dto;
 using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Dtos.Faucets;
 using SchrodingerServer.Dtos.TraitsDto;
@@ -72,5 +73,6 @@ public class SchrodingerServerApplicationAutoMapperProfile : Profile
         CreateMap<TasksScoreDetailIndex, TaskScoreDetailDto>().ReverseMap();
         CreateMap<SpinIndex, SpinDto>().ReverseMap();
         CreateMap<LogTgBotInput, TgBotLogIndex>().ReverseMap();
+        CreateMap<PoolDataDto, PoolDataIndex>().ReverseMap();
     }
 }

@@ -81,6 +81,7 @@ namespace SchrodingerServer
             Configure<ActivityTraitOptions>(configuration.GetSection("ActivityTraitOptions"));
             Configure<TasksOptions>(configuration.GetSection("TasksOptions"));
             Configure<SpinRewardOptions>(configuration.GetSection("SpinRewardOptions"));
+            Configure<PoolOptions>(configuration.GetSection("PoolOptions"));
 
             ConfigureConventionalControllers();
             ConfigureAuthentication(context, configuration);

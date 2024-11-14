@@ -527,3 +527,11 @@ message AirdropVoucherInput {
 message AddressList {
   repeated aelf.Address data = 1;
 }
+
+message MergeInput {
+  string tick = 1;
+  aelf.Hash adopt_id_a = 2;  
+  aelf.Hash adopt_id_b = 3;  
+  int64 level = 4;            
+  bytes signature = 10000;    
+}

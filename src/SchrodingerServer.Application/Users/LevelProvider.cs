@@ -208,7 +208,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
                 });
             if (resp is not { Code: "20000" })
             {
-                _logger.LogError("AwakenPrice get failed,response:{response}",(resp == null ? "non result" : resp.Code));
+                _logger.LogError("get sgr price failed,response:{response}",(resp == null ? "non result" : resp.Code));
                 return price;
             }
 
@@ -216,7 +216,37 @@ public class LevelProvider : ApplicationService, ILevelProvider
         }
         catch (Exception e)
         {
-            _logger.LogError("AwakenPrice get failed",e);
+            _logger.LogError("get sgr price failed. {msg}",e.Message);
+        }
+
+        return price;
+    }
+    
+    public async Task<double> GetAwakenELFPrice()
+    {
+        //get awaken price
+        var price = 0.0;
+        try
+        {
+            var resp = await _httpProvider.InvokeAsync<AwakenPriceRespDto>(_levelOptions.CurrentValue.AwakenUrl,
+                PointServerProvider.Api.GetAwakenPrice, param: new Dictionary<string, string>
+                {
+                    ["token0Symbol"] = "ELF",
+                    ["token1Symbol"] = "USDT",
+                    ["feeRate"] = "0.0005",
+                    ["chainId"] = _levelOptions.CurrentValue.ChainId
+                });
+            if (resp is not { Code: "20000" })
+            {
+                _logger.LogError("get elf price failed, response:{response}",(resp == null ? "non result" : resp.Code));
+                return price;
+            }
+
+            price = (double)(resp.Data.Items?.First().ValueLocked1 / resp.Data.Items?.First().ValueLocked0);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError("get elf price failed, {msg}", e.Message);
         }
 
         return price;
@@ -340,6 +370,70 @@ public class LevelProvider : ApplicationService, ILevelProvider
             _logger.LogError("BatchGetForestNftInfoAsync Failed, {msg}", e);
             return new List<NftInfo>();
         }
+    }
+    
+    public async Task<RankData> GetRarityInfo(string address, int rank, bool isGen9, bool fullData)
+    {
+        if (!fullData)
+        {
+            var isInWhiteList = await CheckAddressIsInWhiteListAsync(address);
+            return await GenerateRarity(rank, isGen9, isInWhiteList);
+        }
+        return await GenerateRarity(rank, isGen9, true);
+    }
+    
+    private async Task<RankData> GenerateRarity(int rank, bool isGen9, bool isInWhiteList)
+    {
+        var rankData = new RankData
+        {
+            Rank = new Ranks
+            {
+                Rank = rank
+            },
+            LevelInfo =  new LevelInfoDto()
+        };
+
+        var price = await GetAwakenSGRPrice();
+        var levelInfo = await GetItemLevelDicAsync(rank, price);
+            
+        if (levelInfo == null)
+        {
+            if (isGen9)
+            {
+                rankData.LevelInfo.Describe = "Common,,";
+            }
+                
+            return rankData;
+        }
+            
+        if (levelInfo.Level.IsNullOrEmpty())
+        {
+            levelInfo.Token = "";
+            levelInfo.AwakenPrice = "";
+        }
+        else if (isInWhiteList) 
+        {
+            levelInfo.AwakenPrice = (double.Parse(levelInfo.Token) * price).ToString();
+        }
+            
+        rankData.LevelInfo = levelInfo;
+        // rankData.LevelInfo.SpecialTrait = input.SpecialTag;
+        if (isGen9 && rankData.LevelInfo.Describe.IsNullOrEmpty())
+        {
+            rankData.LevelInfo.Describe = "Common,,";
+        }
+            
+        if (isInWhiteList)
+        {
+            return rankData;
+        }
+
+        rankData.LevelInfo.Token = "";
+        rankData.LevelInfo.AwakenPrice = "";
+        rankData.LevelInfo.Level = "";
+        rankData.Rank.Rank = 0;
+
+        return rankData;
     }
     
 }

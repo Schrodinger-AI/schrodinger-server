@@ -49,7 +49,6 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
     private readonly IIpfsAppService _ipfsAppService;
     private readonly AwsS3Client _awsS3Client;
     private readonly IImageDispatcher _imageDispatcher;
-    private readonly IOptionsMonitor<LevelOptions> _levelOptions;
     private readonly IDistributedCache<string> _distributedCache;
     private readonly IVotesProvider _votesProvider;
 
@@ -59,7 +58,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         IOptionsMonitor<ChainOptions> chainOptions, IAdoptGraphQLProvider adoptGraphQlProvider,
         IOptionsMonitor<CmsConfigOptions> cmsConfigOptions, IUserActionProvider userActionProvider,
         ISecretProvider secretProvider, IIpfsAppService ipfsAppService, AwsS3Client awsS3Client, 
-        IImageDispatcher imageDispatcher, IOptionsMonitor<LevelOptions> levelOptions, 
+        IImageDispatcher imageDispatcher, 
         IDistributedCache<string> distributedCache, IVotesProvider votesProvider)
     {
         _logger = logger;
@@ -73,7 +72,6 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         _ipfsAppService = ipfsAppService;
         _awsS3Client = awsS3Client;
         _imageDispatcher = imageDispatcher;
-        _levelOptions = levelOptions;
         _distributedCache = distributedCache;
         _votesProvider = votesProvider;
     }
@@ -367,22 +365,9 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             Attributes = adoptInfo.Attributes,
             Generation = adoptInfo.Generation,
             Symbol =  adoptInfo.Symbol,
-            TokenName = adoptInfo.Symbol + "GEN" + adoptInfo.Generation.ToString()
+            TokenName = adoptInfo.Symbol + "GEN" + adoptInfo.Generation.ToString(),
+            BoxImage = BoxHelper.GetBoxImage(adoptInfo.Generation == 9, adoptInfo.Rarity)
         };
-
-        var chainId = _levelOptions.CurrentValue.ChainIdForReal;
-        if (adoptInfo.Rarity.NotNullOrEmpty())
-        {
-            output.AdoptImageInfo.BoxImage = chainId == "tDVW" ? BoxImageConst.RareBoxTestnet : BoxImageConst.RareBox;
-        }
-        else if (adoptInfo.Generation == 9)
-        {
-            output.AdoptImageInfo.BoxImage = chainId == "tDVW" ? BoxImageConst.NormalBoxTestnet : BoxImageConst.NormalBox;
-        }
-        else
-        {
-            output.AdoptImageInfo.BoxImage = chainId == "tDVW" ? BoxImageConst.NonGen9BoxTestnet : BoxImageConst.NonGen9Box;
-        }
         
         var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, address);
         var provider = _imageDispatcher.CurrentProvider();

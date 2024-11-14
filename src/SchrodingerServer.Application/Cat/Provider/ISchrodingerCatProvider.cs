@@ -1,14 +1,21 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using AElf.Indexing.Elasticsearch;
 using GraphQL;
 using Microsoft.Extensions.Logging;
+using Nest;
 using SchrodingerServer.Cat.Provider.Dtos;
+using SchrodingerServer.Common;
 using SchrodingerServer.Common.GraphQL;
+using SchrodingerServer.Dto;
 using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Message.Dtos;
 using SchrodingerServer.Message.Provider.Dto;
+using SchrodingerServer.Users.Index;
 using Volo.Abp.DependencyInjection;
+using Volo.Abp.ObjectMapping;
 
 namespace SchrodingerServer.Cat.Provider;
 
@@ -40,17 +47,33 @@ public interface ISchrodingerCatProvider
     Task<SchrodingerIndexerBoxDto> GetSchrodingerBoxDetailAsync(GetCatDetailInput input);
     
     Task<SchrodingerIndexerStrayCatsDto> GetStrayCatsListAsync(StrayCatsInput input);
+    
+    Task<RarityDataDto> GetRankDataAsync(List<string> symbolIds);
+
+    Task<List<AdpotInfoDto>> GetLatestRareAdoptionAsync(int number, long beginTime);
+
+    Task<PoolDataDto> GetPoolDataAsync(string poolId);
+
+    Task SavePoolDataAsync(PoolDataDto poolData);
 }
 
 public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDependency
 {
     private readonly IGraphQlHelper _graphQlHelper;
     private readonly ILogger<SchrodingerCatProvider> _logger;
+    private readonly INESTRepository<PoolDataIndex, string> _poolDataRepository;
+    private readonly IObjectMapper _objectMapper;
 
-    public SchrodingerCatProvider(IGraphQlHelper graphQlHelper, ILogger<SchrodingerCatProvider> logger)
+    public SchrodingerCatProvider(
+        IGraphQlHelper graphQlHelper, 
+        ILogger<SchrodingerCatProvider> logger, 
+        INESTRepository<PoolDataIndex, string> poolDataRepository, 
+        IObjectMapper objectMapper)
     {
         _graphQlHelper = graphQlHelper;
         _logger = logger;
+        _poolDataRepository = poolDataRepository;
+        _objectMapper = objectMapper;
     }
 
 
@@ -61,8 +84,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerQuery>(new GraphQLRequest
             {
                 Query =
-                    @"query($keyword:String!, $chainId:String!, $address:String!, $tick:String!, $traits:[TraitInput!],$generations:[Int!],$skipCount:Int!,$maxResultCount:Int!,$filterSgr:Boolean!){
-                    getSchrodingerList(input: {keyword:$keyword,chainId:$chainId,address:$address,tick:$tick,traits:$traits,generations:$generations,skipCount:$skipCount,maxResultCount:$maxResultCount,filterSgr:$filterSgr}){
+                    @"query($keyword:String!, $chainId:String!, $address:String!, $tick:String!, $traits:[TraitInput!],$generations:[Int!],$skipCount:Int!,$maxResultCount:Int!,$filterSgr:Boolean!,$minAmount:String!){
+                    getSchrodingerList(input: {keyword:$keyword,chainId:$chainId,address:$address,tick:$tick,traits:$traits,generations:$generations,skipCount:$skipCount,maxResultCount:$maxResultCount,filterSgr:$filterSgr,minAmount:$minAmount}){
                         totalCount,
                         data{
                         symbol,
@@ -83,7 +106,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                 {
                     keyword = input.Keyword ?? "", chainId = input.ChainId ?? "", address = input.Address ?? "",
                     tick = input.Tick ?? "", traits = input.Traits, generations = input.Generations,
-                    skipCount = input.SkipCount, maxResultCount = input.MaxResultCount,filterSgr = input.FilterSgr
+                    skipCount = input.SkipCount, maxResultCount = input.MaxResultCount,filterSgr = input.FilterSgr,
+                    minAmount = input.MinAmount ?? ""
                 }
             });
 
@@ -480,8 +504,8 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxListQuery>(new GraphQLRequest
             {
                 Query =
-                    @"query($adopter:String!, $adoptTime:Long!){
-                    getBlindBoxList(input: {adopter:$adopter, adoptTime:$adoptTime}){
+                    @"query($adopter:String!, $adoptTime:Long!, $minAmount:String!, $generation:Int!){
+                    getBlindBoxList(input: {adopter:$adopter, adoptTime:$adoptTime, minAmount:$minAmount, generation:$generation}){
                         totalCount,
                         data{
                         symbol,
@@ -501,7 +525,9 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                 Variables = new
                 {
                     Adopter = input.Address,
-                    AdoptTime = input.AdoptTime
+                    AdoptTime = input.AdoptTime,
+                    MinAmount = input.MinAmount ?? "",
+                    Generation = input.Generation
                 }
             });
 
@@ -548,7 +574,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "GetSchrodingerBoxList Indexer error");
+            _logger.LogError(e, "getBlindBoxDetail Indexer error");
             return new SchrodingerIndexerBoxDto();
         }
     }
@@ -597,5 +623,126 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             _logger.LogError(e, "StrayCats Indexer error");
             return new SchrodingerIndexerStrayCatsDto();
         }
+    }
+    
+    public async Task<RarityDataDto> GetRankDataAsync(List<string> symbolIds)
+    {
+        try
+        {
+            var indexerResult = await _graphQlHelper.QueryAsync<RarityDataDtoQuery>(new GraphQLRequest
+            {
+                Query =
+                    @"query($symbolIds:[String!]!){
+                    getRarityData(input: {symbolIds:$symbolIds}){
+                        rarityInfo{
+                        symbol,
+                        rank,
+                        generation,
+                        adoptId,
+                        adopter,
+                        outputAmount    
+                    }
+                }
+            }",
+                Variables = new
+                {
+                    symbolIds = symbolIds
+                }
+            });
+
+            return indexerResult.GetRarityData;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetRarityDataAsync Indexer error");
+            return new RarityDataDto();
+        }
+    }
+    
+    public async Task<List<AdpotInfoDto>> GetLatestRareAdoptionAsync(int number, long beginTime)
+    {
+        var adpotInfoDto = await _graphQlHelper.QueryAsync<LatestRareAdoptInfoQuery>(new GraphQLRequest
+        {
+            Query =
+                @"query(
+                    $beginTime:Long!, 
+                    $number:Int!
+                ){
+                       getLatestRareAdoption(input: {
+                          beginTime:$beginTime, 
+                          number:$number})
+                   {
+                       symbol,
+                       level,
+                       rank,
+                       rarity,
+                       adopter,
+                       adoptTime
+                   }
+              }",
+            Variables = new
+            {
+                beginTime = beginTime,
+                number = number
+            }
+        });
+        if (adpotInfoDto == null || adpotInfoDto.GetLatestRareAdoption == null)
+        {
+            _logger.LogError("getLatestRareAdoption failed");
+            return null;
+        }
+        
+        var sortedList =  adpotInfoDto.GetLatestRareAdoption.OrderByDescending(x => int.Parse(x.Level)).ThenBy(x => x.AdoptTime).Take(number).ToList();
+        return sortedList;
+    }
+    
+    public async Task<PoolDataDto> GetPoolDataAsync(string poolId)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<PoolDataIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.PoolId).Value(poolId))
+        };
+        
+        QueryContainer Filter(QueryContainerDescriptor<PoolDataIndex> f) => f.Bool(b => b.Must(mustQuery));
+
+        var res = await _poolDataRepository.GetAsync(Filter);
+
+        if (res != null)
+        {
+            return _objectMapper.Map<PoolDataIndex, PoolDataDto>(res);;
+        }
+
+        return null;
+    }
+
+    public async Task SavePoolDataAsync(PoolDataDto poolData)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<PoolDataIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.PoolId).Value(poolData.PoolId))
+        };
+        
+        QueryContainer Filter(QueryContainerDescriptor<PoolDataIndex> f) => f.Bool(b => b.Must(mustQuery));
+
+        var index = await _poolDataRepository.GetAsync(Filter);
+
+        if (index != null)
+        {
+            index.UpdateTime = TimeHelper.GetTimeStampInSeconds();
+            index.Balance = poolData.Balance;
+            index.WinnerAddress = poolData.WinnerAddress;
+            index.WinnerSymbol = poolData.WinnerSymbol;
+            index.WinnerRank = poolData.WinnerRank;
+            index.WinnerLevel = poolData.WinnerLevel;
+        }
+        else
+        {
+            index = _objectMapper.Map<PoolDataDto, PoolDataIndex>(poolData);
+            index.Id = poolData.PoolId;
+            index.CreatedTime = TimeHelper.GetTimeStampInSeconds();
+            index.UpdateTime = index.CreatedTime;
+        }
+        
+        await _poolDataRepository.AddOrUpdateAsync(index);
     }
 }

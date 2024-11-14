@@ -25,4 +25,6 @@ public interface IContractProvider
     Task<TransactionResultDto> QueryTransactionResultAsync(string chainId, string transactionId);
     Task<CheckTransactionDto> CheckTransactionStatusAsync(string transactionId, string chainId);
     Task<SendTransactionOutput> SendTransactionWithRetAsync(string chainId, Transaction signedTransaction);
+
+    Task<T> CallTransactionAsync<T>(string chainId, string rawTx) where T : class, IMessage<T>, new();
 }
