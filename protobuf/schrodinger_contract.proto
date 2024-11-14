@@ -530,8 +530,8 @@ message AddressList {
 
 message MergeInput {
   string tick = 1;
-  aelf.Hash adopt_id_a = 2;  // NFT/盲盒A对应的adoptId
-  aelf.Hash adopt_id_b = 3;  // NFT/盲盒B对应的adoptId
-  int64 level = 4;            // a和b的level
-  bytes signature = 10000;    // 后端签名
+  aelf.Hash adopt_id_a = 2;  
+  aelf.Hash adopt_id_b = 3;  
+  int64 level = 4;            
+  bytes signature = 10000;    
 }
