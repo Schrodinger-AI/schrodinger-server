@@ -85,4 +85,11 @@ public class TaskController
     {
         return await _tasksApplicationService.CheckUserAsync(userId);
     }
+    
+    [Authorize]
+    [HttpDelete("log/{userId}")]
+    public async Task DeleteLogAsync(string userId)
+    {
+        await _tasksApplicationService.DeleteLogAsync(userId);
+    }
 }

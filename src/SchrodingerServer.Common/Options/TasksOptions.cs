@@ -4,6 +4,7 @@ public class TasksOptions
 {
     public List<TaskConfig> TaskList { get; set; }
     public int InviteLimit { get; set; } = 100;
+    public List<string> Whitelist { get; set; }
 }
 
 public class TaskConfig
