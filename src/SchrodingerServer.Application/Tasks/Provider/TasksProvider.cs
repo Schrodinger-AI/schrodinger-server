@@ -48,6 +48,7 @@ public interface ITasksProvider
     Task<string> GetUserRegisterDomainByAddressAsync(string address);
     Task<string> GetAddressByUserIdAsync(string userId);
     Task<string> GetUserIdByAddressAsync(string address);
+    Task DeleteLogsAsync(string userId);
 }
 
 public class TasksProvider : ITasksProvider, ISingletonDependency
@@ -712,5 +713,19 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         }
         
         return "";
+    }
+
+    public async Task DeleteLogsAsync(string userId)
+    {
+        var mustQuery = new List<Func<QueryContainerDescriptor<TgBotLogIndex>, QueryContainer>>
+        {
+            q => q.Term(i => i.Field(f => f.Id).Value(userId))
+        };
+
+        QueryContainer Filter(QueryContainerDescriptor<TgBotLogIndex> f) =>
+            f.Bool(b => b.Must(mustQuery));
+        
+        var index = await _tgBotLogIndexRepository.GetAsync(Filter);
+        await _tgBotLogIndexRepository.DeleteAsync(index);
     }
 }

@@ -1301,4 +1301,24 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
         return true;
     }
+
+
+    public async Task DeleteLogAsync(string userId)
+    {
+        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        if (currentAddress.IsNullOrEmpty())
+        {
+            _logger.LogError("LogTgBotAsync, Get current address failed");
+            throw new UserFriendlyException("Invalid user");
+        }
+        
+        var whitelist = _tasksOptions.CurrentValue.Whitelist;
+        if (!whitelist.Contains(currentAddress))
+        {
+            _logger.LogError("delete log Unauthorized,  address: {address}", currentAddress);
+            throw new UserFriendlyException("Unauthorized");
+        }
+        
+        await  _tasksProvider.DeleteLogsAsync(userId);
+    }
 }
