@@ -1311,6 +1311,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             _logger.LogError("LogTgBotAsync, Get current address failed");
             throw new UserFriendlyException("Invalid user");
         }
+        _logger.LogInformation("DeleteLogAsync, currentAddress: {address}", currentAddress);
         
         var whitelist = _tasksOptions.CurrentValue.Whitelist;
         if (!whitelist.Contains(currentAddress))
