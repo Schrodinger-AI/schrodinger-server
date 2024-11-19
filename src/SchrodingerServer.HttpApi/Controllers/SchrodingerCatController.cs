@@ -105,4 +105,11 @@ public class SchrodingerCatController
     {
         return await _schrodingerCatService.GetPoolWinnerAsync();
     }
+    
+    [Authorize]
+    [HttpPost("redeem")]
+    public async Task<RedeemOutput> RedeemAsync()
+    {
+        return await _schrodingerCatService.RedeemAsync();
+    }
 }

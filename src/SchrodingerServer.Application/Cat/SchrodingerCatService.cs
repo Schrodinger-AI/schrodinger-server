@@ -306,157 +306,6 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         return genOtherList;
     }
 
-    private async Task<List<RankData>> GetItemLevelInfoAsync(GetLevelInfoInputDto input)
-    {
-        var result = new List<RankData>();
-
-        var batchSize = _levelOptions.CurrentValue.BatchQuerySize;
-        var totalItems = input.CatsTraits.Count;
-
-        for (var i = 0; i < totalItems; i += batchSize)
-        {
-            var remainingItems = totalItems - i;
-            var batchItems = input.CatsTraits.Skip(i).Take(Math.Min(batchSize, remainingItems));
-            var batchInput = new GetLevelInfoInputDto
-            {
-                Address = input.Address,
-                SearchAddress = input.SearchAddress,
-                CatsTraits = new List<List<List<List<string>>>>(batchItems)
-            };
-
-            var batchResult = await _levelProvider.GetItemLevelAsync(batchInput);
-            result.AddRange(batchResult);
-        }
-        return result;
-    }
-    
-    // private async Task<List<RankData>> GetRarityDataAsync(GetRarityDataDto input)
-    // {
-    //     var result = new List<RankData>();
-    //
-    //     var rarityData = await _schrodingerCatProvider.GetRankDataAsync(input.SymbolIds);
-    //     
-    //     var map = new Dictionary<string, RankData>();
-    //
-    //     foreach (var rarity in rarityData.RarityInfo)
-    //     {
-    //         _logger.LogInformation("rarity data: {a} {b}}", input.Address, rarity.Rank);
-    //         var rankData = await _levelProvider.GetRarityInfo(input.Address, rarity.Rank, input.IsGen9);
-    //         map[rarity.Symbol] = rankData;
-    //     }
-    //
-    //     foreach (var adoptId in input.SymbolIds)
-    //     {
-    //         var rankData = map[adoptId];
-    //         result.Add(rankData);
-    //     }
-    //     
-    //     return result;
-    // }
-
-    private static GetLevelInfoInputDto BuildParams(List<List<TraitsInfo>> traitInfosList, string address,
-        string chainId, string searchAddress = "")
-    {
-        // var catsTraits = new LinkedList<LinkedList<LinkedList<LinkedList<string>>>>();
-        // foreach (var traitsInfos in traitInfosList)
-        // {
-        //     var catTraits = new LinkedList<LinkedList<LinkedList<string>>>();
-        //     var genOneTraits = new LinkedList<LinkedList<string>>();
-        //     var genTwoToNineTraits = new LinkedList<LinkedList<string>>();
-        //     var genOneTraitType = new LinkedList<string>();
-        //     var genOneTraitValue = new LinkedList<string>();
-        //
-        //     var genTwoToNineTraitType = new LinkedList<string>();
-        //     var genTwoToNineTraitValue = new LinkedList<string>();
-        //     foreach (var traitsInfo in traitsInfos)
-        //     {
-        //         if (GenOneTraitTypes.Contains(traitsInfo.TraitType))
-        //         {
-        //             genOneTraitType.AddLast(traitsInfo.TraitType);
-        //             genOneTraitValue.AddLast(traitsInfo.Value);
-        //         }
-        //         else
-        //         {
-        //             var traitType = traitsInfo.TraitType;
-        //             var traitValue = traitsInfo.Value;
-        //                 
-        //             if (traitType == "Face" && traitValue == "WUKONG Face Paint")
-        //             {
-        //                 traitValue = "Monkey King Face Paint";
-        //             }
-        //             
-        //             genTwoToNineTraitType.AddLast(traitType);
-        //             genTwoToNineTraitValue.AddLast(traitValue);
-        //         }
-        //     }
-        //
-        //     genOneTraits.AddLast(genOneTraitType);
-        //     genOneTraits.AddLast(genOneTraitValue);
-        //
-        //     genTwoToNineTraits.AddLast(genTwoToNineTraitType);
-        //     genTwoToNineTraits.AddLast(genTwoToNineTraitValue);
-        //
-        //     catTraits.AddLast(genOneTraits);
-        //     catTraits.AddLast(genTwoToNineTraits);
-        //     catsTraits.AddLast(catTraits);
-        // }
-        
-        var catsTraits = new List<List<List<List<string>>>>();
-        foreach (var traitsInfos in traitInfosList)
-        {
-            var catTraits = new List<List<List<string>>>();
-            var genOneTraits = new List<List<string>>();
-            var genTwoToNineTraits = new List<List<string>>();
-    
-            var genOneTraitType = new List<string>();
-            var genOneTraitValue = new List<string>();
-
-            var genTwoToNineTraitType = new List<string>();
-            var genTwoToNineTraitValue = new List<string>();
-
-            foreach (var traitsInfo in traitsInfos)
-            {
-                if (GenOneTraitTypes.Contains(traitsInfo.TraitType))
-                {
-                    genOneTraitType.Add(traitsInfo.TraitType);
-                    genOneTraitValue.Add(traitsInfo.Value);
-                }
-                else
-                {
-                    var traitType = traitsInfo.TraitType;
-                    var traitValue = traitsInfo.Value;
-
-                    // if (traitType == "Face" && traitValue == "WUKONG Face Paint")
-                    // {
-                    //     traitValue = "Monkey King Face Paint";
-                    // }
-
-                    genTwoToNineTraitType.Add(traitType);
-                    genTwoToNineTraitValue.Add(traitValue);
-                }
-            }
-
-            genOneTraits.Add(genOneTraitType);
-            genOneTraits.Add(genOneTraitValue);
-
-            genTwoToNineTraits.Add(genTwoToNineTraitType);
-            genTwoToNineTraits.Add(genTwoToNineTraitValue);
-
-            catTraits.Add(genOneTraits);
-            catTraits.Add(genTwoToNineTraits);
-
-            catsTraits.Add(catTraits);
-        }
-        
-
-        return new GetLevelInfoInputDto
-        {
-            Address = !string.IsNullOrEmpty(address) ? "ELF_" + address + "_" + chainId : "",
-            CatsTraits = catsTraits,
-            SearchAddress = !string.IsNullOrEmpty(searchAddress) ? "ELF_" + searchAddress + "_" + chainId : ""
-        };
-    }
-
     private async Task<List<SchrodingerIndexerDto>> GetSchrodingerCatAllList(GetCatListInput input)
     {
         var res = new List<SchrodingerIndexerDto>();
@@ -907,5 +756,58 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         res.RankList = rankList;
 
         return res;
+    }
+
+    public async Task<RedeemOutput> RedeemAsync()
+    {
+        var currentAddress = await _userActionProvider.GetCurrentUserAddressAsync();
+        // var currentAddress = input.Address;
+        if (currentAddress.IsNullOrEmpty())
+        {
+            _logger.LogError("CombineAsync Get current address failed");
+            throw new UserFriendlyException("Invalid user");
+        }
+        _logger.LogDebug("RedeemAsync for address, address:{address}", currentAddress);
+        
+        var poolId = _poolOptionsMonitor.CurrentValue.PoolId;
+        var poolData = await _schrodingerCatProvider.GetPoolDataAsync(poolId);
+        if (poolData == null)
+        {
+            _logger.LogInformation("GetPoolAsync Error, no pool data");
+            throw new UserFriendlyException("No pool data");
+        }
+
+        if (poolData.WinnerSymbol.IsNullOrEmpty())
+        {
+            _logger.LogInformation("GetPoolAsync Error, no winner");
+            throw new UserFriendlyException("No winner");
+        }
+        
+        var rankData = await _schrodingerCatProvider.GetRankDataAsync(
+            new List<string> { poolData.WinnerSymbol });
+        
+        var rarityInfo = rankData.RarityInfo.First();
+        var level = poolData.WinnerLevel;
+        var data = new RedeemInput()
+        {
+            Tick = "SGR",
+            AdoptId = Hash.LoadFromHex(rarityInfo.AdoptId),
+            Level = level + 1
+        };
+        
+        _logger.LogInformation(
+            "redeem param, address:{address}, adoptId:{adoptId}, level:{level}", currentAddress,
+            rarityInfo.AdoptId, level);
+        
+        var dataHash = HashHelper.ComputeFrom(data);
+        var signature = await _secretProvider.GetSignatureFromHashAsync(_chainOptions.PublicKey, dataHash);
+        
+        return new RedeemOutput
+        {
+            Tick = "SGR",
+            AdoptId = rarityInfo.AdoptId,
+            Level = level + 1,
+            Signature = ByteStringHelper.FromHexString(signature)
+        };
     }
 }

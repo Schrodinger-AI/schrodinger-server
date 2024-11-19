@@ -535,3 +535,10 @@ message MergeInput {
   int64 level = 4;            
   bytes signature = 10000;    
 }
+
+message RedeemInput {
+  string tick = 1;
+  aelf.Hash adopt_id = 2;
+  int64 level = 3;        
+  bytes signature = 10000;
+}
