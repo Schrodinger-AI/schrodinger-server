@@ -792,7 +792,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         {
             Tick = "SGR",
             AdoptId = Hash.LoadFromHex(rarityInfo.AdoptId),
-            Level = level + 1
+            Level = 14
         };
         
         _logger.LogInformation(
