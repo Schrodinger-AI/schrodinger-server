@@ -33,4 +33,6 @@ public interface ISchrodingerCatService
     Task<PoolOutput> GetPoolAsync();
     
     Task<GetPoolWinnerOutput> GetPoolWinnerAsync();
+    
+    Task<RedeemOutput> RedeemAsync();
 }
