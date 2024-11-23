@@ -267,8 +267,8 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         DateTime todayUtcStart = new DateTime(currentUtcTime.Year, currentUtcTime.Month, currentUtcTime.Day, 0, 0, 0,
             DateTimeKind.Utc);
         var dayInMillis = TimeHelper.ToUtcMilliSeconds(todayUtcStart);
-        list = list.Where(i => i.CreateTime >= beginTs).ToList();
-        return list.Count;
+        res = res.Where(i => i.CreateTime >= beginTs).ToList();
+        return res.Count;
     }
 
     private async Task<List<UserReferralDto>> GetUserReferralRecordsAsync(List<string> addressList, long skipCount = 0,
