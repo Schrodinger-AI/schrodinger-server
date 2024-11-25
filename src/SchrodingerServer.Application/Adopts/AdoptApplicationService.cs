@@ -337,6 +337,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
                 break;
             }
             
+            
             var voteRecord = await _votesProvider.GetVoteAsync(adoptId);
             if (voteRecord != null && !voteRecord.AdoptId.IsNullOrEmpty())
             {
