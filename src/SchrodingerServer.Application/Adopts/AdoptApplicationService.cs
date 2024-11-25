@@ -161,10 +161,14 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return imageInfo;
     }
 
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleException))]
+    [ExceptionHandler(typeof(Exception), Message = "Check IsOverLoadedAsync Failed", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleException))]
     public async Task<bool> IsOverLoadedAsync()
     {
-
+        if (_traitsOptions.CurrentValue.UnderMaintenance)
+        {
+            return false;
+        }
+        
         using var httpClient = new HttpClient();
         var response = await httpClient.GetAsync(_traitsOptions.CurrentValue.IsOverLoadedUrl);
         if (response.IsSuccessStatusCode)
@@ -370,6 +374,11 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         if (input.AdoptOnly)
         {
             return output;
+        }
+        
+        if (_traitsOptions.CurrentValue.UnderMaintenance)
+        {
+            throw new UserFriendlyException("Unboxing is temporarily disabled during server maintenance.");
         }
 
         var images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
