@@ -161,6 +161,11 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
 
     public async Task<bool> IsOverLoadedAsync()
     {
+        if (_traitsOptions.CurrentValue.UnderMaintenance)
+        {
+            return false;
+        }
+        
         try
         {
             using var httpClient = new HttpClient();
@@ -387,6 +392,11 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         if (input.AdoptOnly)
         {
             return output;
+        }
+        
+        if (_traitsOptions.CurrentValue.UnderMaintenance)
+        {
+            throw new UserFriendlyException("Unboxing is temporarily disabled during server maintenance.");
         }
 
         var images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);

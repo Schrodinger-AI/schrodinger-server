@@ -9,4 +9,5 @@ public class TraitsOptions
     public string ImageQueryUrl { get; set; }
     public string IsOverLoadedUrl { get; set; }
     public string ImageProcessUrl { get; set; }
+    public bool UnderMaintenance { get; set; } = false;
 }
