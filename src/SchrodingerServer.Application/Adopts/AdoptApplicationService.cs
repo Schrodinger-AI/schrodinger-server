@@ -378,7 +378,8 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         
         if (_traitsOptions.CurrentValue.UnderMaintenance)
         {
-            throw new UserFriendlyException("Unboxing is temporarily disabled during server maintenance.");
+            output.UnderMaintenance = true;
+            return output;
         }
 
         var images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
