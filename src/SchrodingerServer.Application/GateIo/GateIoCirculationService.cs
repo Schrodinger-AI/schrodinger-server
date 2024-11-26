@@ -98,4 +98,10 @@ public class GateIoCirculationService : AbpRedisCache, IGateIoCirculationService
         
         return elfPrice * sgrPriceInElf;
     }
+
+    public async Task<bool> DelCacheAsync(string key)
+    {
+        await ConnectAsync();
+        return await RedisDatabase.KeyDeleteAsync(key);
+    }
 }

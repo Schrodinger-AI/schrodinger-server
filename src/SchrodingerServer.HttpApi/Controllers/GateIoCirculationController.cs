@@ -33,4 +33,10 @@ public class GateIoCirculationController : AbpController
     {
         return await _gateIoCirculationService.GetSgrPrice();
     }
+    
+    [HttpGet("test")]
+    public async Task<bool> DelCacheAsync(string key)
+    {
+        return await _gateIoCirculationService.DelCacheAsync(key);
+    }
 }
