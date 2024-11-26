@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nest;
@@ -10,6 +11,7 @@ using Orleans;
 using SchrodingerServer.Common;
 using SchrodingerServer.Grains.Grain.Points;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Points.Provider;
 using SchrodingerServer.Users;
 using SchrodingerServer.Users.Dto;
@@ -124,59 +126,53 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
 
         foreach (var tradeList in batchList)
         {
-            var bizId = IdGenerateHelper.GetPointBizId(chainId, bizDate, pointName, Guid.NewGuid().ToString());
-            _logger.LogInformation(
-                "Prepare to Assemble chainId:{chainId} count: {count} bizId: {bidId} tradeList:{tradeList}", chainId,  tradeList.Count, bizId, JsonConvert.SerializeObject(tradeList));
-            try
-            {
-                var pointSettleDto = PointSettleDto.Of(chainId, pointName, bizId, tradeList);
-                var pointAssemblyTransactionGrain = _clusterClient.GetGrain<IPointAssemblyTransactionGrain>(bizId);
-                var pointAssemblyGrainResult = await pointAssemblyTransactionGrain.CreateAsync(
-                        PointAssemblyTransactionGrainDto.Of(bizId, pointSettleDto));
-                if (!pointAssemblyGrainResult.Success)
-                {
-                    _logger.LogWarning("PointAssemblyTransactionGrain Create failed {bizId}", bizId);
-                    return;
-                }
-                //Update PointDailyRecord Pending, if Update Grain Fail or Final Update Es failed, repackage to generate bizId
-                await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(pointSettleDto, PointRecordStatus.Pending.ToString());
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "BatchSettle BulkAddOrUpdateAsync error, bizId:{bizId} ids:{ids}", bizId, 
-                    string.Join(",", tradeList.Select(item => item.Id)));
-            }
+            await HandlerPointRecord(chainId, bizDate, pointName, tradeList);
         }
         
         _logger.LogInformation("HandlePointRecords finish");
     }
     
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
+    private async Task HandlerPointRecord(string chainId, string bizDate, string pointName, List<PointDailyRecordIndex> tradeList)
+    {
+        var bizId = IdGenerateHelper.GetPointBizId(chainId, bizDate, pointName, Guid.NewGuid().ToString());
+        _logger.LogInformation(
+            "Prepare to Assemble chainId:{chainId} count: {count} bizId: {bidId} tradeList:{tradeList}", chainId,  tradeList.Count, bizId, JsonConvert.SerializeObject(tradeList));
+            
+        var pointSettleDto = PointSettleDto.Of(chainId, pointName, bizId, tradeList);
+        var pointAssemblyTransactionGrain = _clusterClient.GetGrain<IPointAssemblyTransactionGrain>(bizId);
+        var pointAssemblyGrainResult = await pointAssemblyTransactionGrain.CreateAsync(
+            PointAssemblyTransactionGrainDto.Of(bizId, pointSettleDto));
+        if (!pointAssemblyGrainResult.Success)
+        {
+            _logger.LogWarning("PointAssemblyTransactionGrain Create failed {bizId}", bizId);
+            return;
+        }
+        //Update PointDailyRecord Pending, if Update Grain Fail or Final Update Es failed, repackage to generate bizId
+        await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(pointSettleDto, PointRecordStatus.Pending.ToString());
+    }
+    
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task HandleSendPointRecord(string bizId)
     {
         _logger.LogInformation(
             "HandleSendPointRecord begin bizId:{bizId}", bizId);
-        try
+        
+        var pointAssemblyTransactionGrain = _clusterClient.GetGrain<IPointAssemblyTransactionGrain>(bizId);
+        var pointAssemblyGrainResult = await pointAssemblyTransactionGrain.GetAsync();
+        if (!pointAssemblyGrainResult.Success)
         {
-            var pointAssemblyTransactionGrain = _clusterClient.GetGrain<IPointAssemblyTransactionGrain>(bizId);
-            var pointAssemblyGrainResult = await pointAssemblyTransactionGrain.GetAsync();
-            if (!pointAssemblyGrainResult.Success)
-            {
-                _logger.LogWarning("PointAssemblyTransactionGrain Get failed {bizId}", bizId);
-                return;
-            }
-            var settleDto = pointAssemblyGrainResult.Data.PointSettleDto;
-            //Send Batch Settle
-            await _pointSettleService.BatchSettleAsync(settleDto);
-            
-            await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(settleDto, PointRecordStatus.Success.ToString());
-            
-            _logger.LogInformation(
-                "HandleSendPointRecord finish bizId:{bizId}", bizId);
+            _logger.LogWarning("PointAssemblyTransactionGrain Get failed {bizId}", bizId);
+            return;
         }
-        catch (Exception e)
-        {
-            _logger.LogError( "HandleSendPointRecords error, bizId: {bizId}, err: {}", bizId, e.Message);
-        }
+        var settleDto = pointAssemblyGrainResult.Data.PointSettleDto;
+        //Send Batch Settle
+        await _pointSettleService.BatchSettleAsync(settleDto);
+            
+        await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(settleDto, PointRecordStatus.Success.ToString());
+            
+        _logger.LogInformation(
+            "HandleSendPointRecord finish bizId:{bizId}", bizId);
     }
     
     private static List<List<PointDailyRecordIndex>> SplitList(List<PointDailyRecordIndex> records, int n)

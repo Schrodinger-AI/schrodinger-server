@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using AElf.Indexing.Elasticsearch;
 using GraphQL;
 using Microsoft.Extensions.Logging;
@@ -76,15 +77,13 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         _objectMapper = objectMapper;
     }
 
-
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerCatList Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<SchrodingerIndexerListDto> GetSchrodingerCatListAsync(GetCatListInput input)
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerQuery>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerQuery>(new GraphQLRequest
-            {
-                Query =
-                    @"query($keyword:String!, $chainId:String!, $address:String!, $tick:String!, $traits:[TraitInput!],$generations:[Int!],$skipCount:Int!,$maxResultCount:Int!,$filterSgr:Boolean!,$minAmount:String!){
+            Query =
+                @"query($keyword:String!, $chainId:String!, $address:String!, $tick:String!, $traits:[TraitInput!],$generations:[Int!],$skipCount:Int!,$maxResultCount:Int!,$filterSgr:Boolean!,$minAmount:String!){
                     getSchrodingerList(input: {keyword:$keyword,chainId:$chainId,address:$address,tick:$tick,traits:$traits,generations:$generations,skipCount:$skipCount,maxResultCount:$maxResultCount,filterSgr:$filterSgr,minAmount:$minAmount}){
                         totalCount,
                         data{
@@ -102,32 +101,25 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                     }
                 }
             }",
-                Variables = new
-                {
-                    keyword = input.Keyword ?? "", chainId = input.ChainId ?? "", address = input.Address ?? "",
-                    tick = input.Tick ?? "", traits = input.Traits, generations = input.Generations,
-                    skipCount = input.SkipCount, maxResultCount = input.MaxResultCount,filterSgr = input.FilterSgr,
-                    minAmount = input.MinAmount ?? ""
-                }
-            });
+            Variables = new
+            {
+                keyword = input.Keyword ?? "", chainId = input.ChainId ?? "", address = input.Address ?? "",
+                tick = input.Tick ?? "", traits = input.Traits, generations = input.Generations,
+                skipCount = input.SkipCount, maxResultCount = input.MaxResultCount,filterSgr = input.FilterSgr,
+                minAmount = input.MinAmount ?? ""
+            }
+        });
 
-            return indexerResult.GetSchrodingerList;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "GetSchrodingerCatList Indexer error");
-            return new SchrodingerIndexerListDto();
-        }
+        return indexerResult.GetSchrodingerList;
     }
-
+    
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerAllCatsListAsync Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<SchrodingerSymbolIndexerListDto> GetSchrodingerAllCatsListAsync(GetCatListInput input)
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerSymbolIndexerQuery>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerSymbolIndexerQuery>(new GraphQLRequest
-            {
-                Query =
-                    @"query($keyword:String!, $chainId:String!, $tick:String!, $traits:[TraitsInput!],$raritys:[String!],$generations:[Int!],$skipCount:Int!,$maxResultCount:Int!,$filterSgr:Boolean!,$minAmount:String!){
+            Query =
+                @"query($keyword:String!, $chainId:String!, $tick:String!, $traits:[TraitsInput!],$raritys:[String!],$generations:[Int!],$skipCount:Int!,$maxResultCount:Int!,$filterSgr:Boolean!,$minAmount:String!){
                     getAllSchrodingerList(input: {keyword:$keyword,chainId:$chainId,tick:$tick,traits:$traits,raritys:$raritys,generations:$generations,skipCount:$skipCount,maxResultCount:$maxResultCount,filterSgr:$filterSgr,minAmount:$minAmount}){
                         totalCount,
                         data{
@@ -148,32 +140,25 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                     }
                 }
             }",
-                Variables = new
-                {
-                    keyword = input.Keyword ?? "", chainId = input.ChainId ?? "",
-                    tick = input.Tick ?? "", traits = input.Traits,raritys = input.Rarities, generations = input.Generations,
-                    skipCount = input.SkipCount, maxResultCount = input.MaxResultCount,filterSgr = input.FilterSgr,
-                    minAmount = input.MinAmount
-                }
-            });
+            Variables = new
+            {
+                keyword = input.Keyword ?? "", chainId = input.ChainId ?? "",
+                tick = input.Tick ?? "", traits = input.Traits,raritys = input.Rarities, generations = input.Generations,
+                skipCount = input.SkipCount, maxResultCount = input.MaxResultCount,filterSgr = input.FilterSgr,
+                minAmount = input.MinAmount
+            }
+        });
 
-            return indexerResult.GetAllSchrodingerList;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "GetSchrodingerAllCatsListAsync Indexer error");
-            return new SchrodingerSymbolIndexerListDto();
-        }
+        return indexerResult.GetAllSchrodingerList;
     }
-
+    
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerCatDetailAsync Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync(GetCatDetailInput input)
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerDetailQueryDto>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerDetailQueryDto>(new GraphQLRequest
-            {
-                Query =
-                    @"query($chainId:String!, $address:String!, $symbol:String!){
+            Query =
+                @"query($chainId:String!, $address:String!, $symbol:String!){
                     getSchrodingerDetail(input: {chainId:$chainId,address:$address,symbol:$symbol}){
                         symbol,
                         tokenName,
@@ -186,31 +171,24 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                     
                 }
             }",
-                Variables = new
-                {
-                    chainId = input.ChainId ?? "",
-                    address = input.Address ?? "",
-                    symbol = input.Symbol ?? ""
-                }
-            });
+            Variables = new
+            {
+                chainId = input.ChainId ?? "",
+                address = input.Address ?? "",
+                symbol = input.Symbol ?? ""
+            }
+        });
 
-            return indexerResult.GetSchrodingerDetail;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "GetSchrodingerAllCatsListAsync Indexer error");
-            return new SchrodingerDetailDto();
-        }
+        return indexerResult.GetSchrodingerDetail;
     }
-
+    
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerCatRankAsync Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<CatRankDto> GetSchrodingerCatRankAsync(GetCatRankInput input)
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerCatQueryDto>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerCatQueryDto>(new GraphQLRequest
-            {
-                Query =
-                    @"query($chainId:String!, $symbol:String!){
+            Query =
+                @"query($chainId:String!, $symbol:String!){
                     getSchrodingerRank(input: {chainId:$chainId, symbol:$symbol}){
                         symbol,
                         tokenName,
@@ -224,58 +202,44 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         level
                 }
             }",
-                Variables = new
-                {
-                    chainId = input.ChainId ?? "",
-                    symbol = input.Symbol ?? ""
-                }
-            });
+            Variables = new
+            {
+                chainId = input.ChainId ?? "",
+                symbol = input.Symbol ?? ""
+            }
+        });
 
-            return indexerResult.GetSchrodingerRank;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "getSchrodingerRank error");
-            return new CatRankDto();
-        }
+        return indexerResult.GetSchrodingerRank;
     }
-
+    
+    [ExceptionHandler(typeof(Exception), Message = "GetHoldingRankAsync Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<List<RankItem>> GetHoldingRankAsync()
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<HoldingRankQueryDto>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<HoldingRankQueryDto>(new GraphQLRequest
-            {
-                Query =
-                    @"query($rankNumber:Int!){
+            Query =
+                @"query($rankNumber:Int!){
                     getHoldingRank(input: {rankNumber:$rankNumber}){
                         address,
                         amount        
                 }
             }",
-                Variables = new
-                {
-                    rankNumber = 100
-                }
-            });
+            Variables = new
+            {
+                rankNumber = 100
+            }
+        });
 
-            return indexerResult.GetHoldingRank;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "getHoldingRank error");
-            return new List<RankItem>();
-        }
+        return indexerResult.GetHoldingRank;
     }
     
+    [ExceptionHandler(typeof(Exception), Message = "GetRarityRankAsync Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<List<RarityRankItem>> GetRarityRankAsync()
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<RarityRankQueryDto>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<RarityRankQueryDto>(new GraphQLRequest
-            {
-                Query =
-                    @"query($rankNumber:Int!){
+            Query =
+                @"query($rankNumber:Int!){
                     getRarityRank(input: {rankNumber:$rankNumber}){
                         address,
         			    diamond,
@@ -286,58 +250,43 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         			    bronze
                 }
             }",
-                Variables = new
-                {
-                    rankNumber = 100
-                }
-            });
+            Variables = new
+            {
+                rankNumber = 100
+            }
+        });
 
-            return indexerResult.GetRarityRank;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "getRarityRank error");
-            return new List<RarityRankItem>();
-        }
+        return indexerResult.GetRarityRank;
     }
 
+    [ExceptionHandler(typeof(Exception), Message = "GetHomeDataAsync Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<HomeDataDto> GetHomeDataAsync(string chainId)
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<HomeDataQueryDto>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<HomeDataQueryDto>(new GraphQLRequest
-            {
-                Query =
-                    @"query($chainId:String!){
+            Query =
+                @"query($chainId:String!){
                     getHomeData(input: {chainId:$chainId}){
                         symbolCount,
                         holdingCount,
         		        tradeVolume
                 }
             }",
-                Variables = new
-                {
-                    chainId = chainId
-                }
-            });
+            Variables = new
+            {
+                chainId = chainId
+            }
+        });
 
-            return indexerResult.GetHomeData;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "getRarityRank error");
-            return new HomeDataDto();
-        }
+        return indexerResult.GetHomeData;
     }
 
 
     public async Task<List<NFTActivityIndexDto>> GetSchrodingerSoldListAsync(GetSchrodingerSoldInput input)
     {
-        try
+        var res = await _graphQlHelper.QueryAsync<SchrodingerSoldListQueryDto>(new GraphQLRequest
         {
-            var res = await _graphQlHelper.QueryAsync<SchrodingerSoldListQueryDto>(new GraphQLRequest
-            {
-                Query = @"query (
+            Query = @"query (
                     $timestampMax:Long!,
                     $timestampMin:Long!,
                     $chainId:String!
@@ -360,30 +309,23 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         transactionHash
                   }
                 }",
-                Variables = new
-                {
-                    timestampMin = input.TimestampMin,
-                    timestampMax = input.TimestampMax,
-                    chainId = input.ChainId
-                }
-            });
-            return res.GetSchrodingerSoldList;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "getSchrodingerSoldList query GraphQL error");
-            throw;
-        }
+            Variables = new
+            {
+                timestampMin = input.TimestampMin,
+                timestampMax = input.TimestampMax,
+                chainId = input.ChainId
+            }
+        });
+        return res.GetSchrodingerSoldList;
     }
     
     
+    [ExceptionHandler(typeof(Exception), Message = "GetHoldingPointBySymbolAsync Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<HoldingPointBySymbolDto> GetHoldingPointBySymbolAsync(string symbol, string chainId)
     {
-        try
+        var res = await _graphQlHelper.QueryAsync<HoldingPointBySymbolQueryDto>(new GraphQLRequest
         {
-            var res = await _graphQlHelper.QueryAsync<HoldingPointBySymbolQueryDto>(new GraphQLRequest
-            {
-                Query = @"query (
+            Query = @"query (
                     $symbol:String!,
                     $chainId:String!
                 ){
@@ -397,29 +339,22 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         level
                   }
                 }",
-                Variables = new
-                {
-                    symbol = symbol,
-                    chainId = chainId
-                }
-            });
-            return res.GetHoldingPointBySymbol;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "GetHoldingPointBySymbol query GraphQL error");
-            return  new HoldingPointBySymbolDto();
-        }
+            Variables = new
+            {
+                symbol = symbol,
+                chainId = chainId
+            }
+        });
+        return res.GetHoldingPointBySymbol;
     }
     
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerHoldingListAsync Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<SchrodingerIndexerListDto> GetSchrodingerHoldingListAsync(GetCatListInput input)
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerHoldingIndexerQuery>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerHoldingIndexerQuery>(new GraphQLRequest
-            {
-                Query =
-                    @"query($chainId:String!, $address:String!, $skipCount:Int!,$maxResultCount:Int!){
+            Query =
+                @"query($chainId:String!, $address:String!, $skipCount:Int!,$maxResultCount:Int!){
                     getSchrodingerHoldingList(input: {chainId:$chainId,address:$address,skipCount:$skipCount,maxResultCount:$maxResultCount}){
                         totalCount,
                         data{
@@ -433,29 +368,21 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                     }
                 }
             }",
-                Variables = new
-                {
-                    chainId = input.ChainId ?? "", address = input.Address ?? "",
-                    skipCount = input.SkipCount, maxResultCount = input.MaxResultCount
-                }
-            });
+            Variables = new
+            {
+                chainId = input.ChainId ?? "", address = input.Address ?? "",
+                skipCount = input.SkipCount, maxResultCount = input.MaxResultCount
+            }
+        });
 
-            return indexerResult.GetSchrodingerHoldingList;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "GetSchrodingerHoldingList Indexer error");
-            return new SchrodingerIndexerListDto();
-        }
+        return indexerResult.GetSchrodingerHoldingList;
     }
     
     public async Task<List<NFTActivityIndexDto>> GetSchrodingerTradeRecordAsync(GetSchrodingerTradeRecordInput input)
     {
-        try
+        var res = await _graphQlHelper.QueryAsync<SchrodingerTradeRecordQueryDto>(new GraphQLRequest
         {
-            var res = await _graphQlHelper.QueryAsync<SchrodingerTradeRecordQueryDto>(new GraphQLRequest
-            {
-                Query = @"query (
+            Query = @"query (
                     $symbol:String!,
                     $buyer:String!,
                     $chainId:String!,
@@ -480,31 +407,24 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         transactionHash
                   }
                 }",
-                Variables = new
-                {
-                    symbol = input.Symbol,
-                    buyer = input.Buyer,
-                    chainId = input.ChainId,
-                    tradeTime = input.TradeTime
-                }
-            });
-            return res.GetSchrodingerTradeRecord;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "getSchrodingerTradeRecord query GraphQL error");
-            throw;
-        }
+            Variables = new
+            {
+                symbol = input.Symbol,
+                buyer = input.Buyer,
+                chainId = input.ChainId,
+                tradeTime = input.TradeTime
+            }
+        });
+        return res.GetSchrodingerTradeRecord;
     }
     
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerBoxListAsync Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<SchrodingerIndexerBoxListDto> GetSchrodingerBoxListAsync(GetBlindBoxListInput input)
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxListQuery>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxListQuery>(new GraphQLRequest
-            {
-                Query =
-                    @"query($adopter:String!, $adoptTime:Long!, $minAmount:String!, $generation:Int!){
+            Query =
+                @"query($adopter:String!, $adoptTime:Long!, $minAmount:String!, $generation:Int!){
                     getBlindBoxList(input: {adopter:$adopter, adoptTime:$adoptTime, minAmount:$minAmount, generation:$generation}){
                         totalCount,
                         data{
@@ -522,32 +442,25 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                     }
                 }
             }",
-                Variables = new
-                {
-                    Adopter = input.Address,
-                    AdoptTime = input.AdoptTime,
-                    MinAmount = input.MinAmount ?? "",
-                    Generation = input.Generation
-                }
-            });
+            Variables = new
+            {
+                Adopter = input.Address,
+                AdoptTime = input.AdoptTime,
+                MinAmount = input.MinAmount ?? "",
+                Generation = input.Generation
+            }
+        });
 
-            return indexerResult.GetBlindBoxList;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "GetSchrodingerBoxList Indexer error");
-            return new SchrodingerIndexerBoxListDto();
-        }
+        return indexerResult.GetBlindBoxList;
     }
-
+    
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerBoxDetailAsync Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<SchrodingerIndexerBoxDto> GetSchrodingerBoxDetailAsync(GetCatDetailInput input)
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxDetailQuery>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxDetailQuery>(new GraphQLRequest
-            {
-                Query =
-                    @"query($symbol:String!){
+            Query =
+                @"query($symbol:String!){
                     getBlindBoxDetail(input: {symbol:$symbol}){
                         symbol,
                         tokenName,
@@ -564,29 +477,22 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                         directAdoption
                 }
             }",
-                Variables = new
-                {
-                    Symbol = input.Symbol
-                }
-            });
+            Variables = new
+            {
+                Symbol = input.Symbol
+            }
+        });
 
-            return indexerResult.GetBlindBoxDetail;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "getBlindBoxDetail Indexer error");
-            return new SchrodingerIndexerBoxDto();
-        }
+        return indexerResult.GetBlindBoxDetail;
     }
-
+    
+    [ExceptionHandler(typeof(Exception), Message = "GetStrayCatsListAsync Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<SchrodingerIndexerStrayCatsDto> GetStrayCatsListAsync(StrayCatsInput input)
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerStrayCatsQuery>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerStrayCatsQuery>(new GraphQLRequest
-            {
-                Query =
-                    @"query($adopter:String!, $chainId:String!, $skipCount:Int!, $maxResultCount:Int!, $adoptTime:Long!){
+            Query =
+                @"query($adopter:String!, $chainId:String!, $skipCount:Int!, $maxResultCount:Int!, $adoptTime:Long!){
                     getStrayCats(input: {adopter:$adopter, chainId:$chainId, skipCount:$skipCount, maxResultCount:$maxResultCount adoptTime:$adoptTime}){
                         totalCount,
                         data{
@@ -606,33 +512,26 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                     }
                 }
             }",
-                Variables = new
-                {
-                    Adopter = input.Adopter,
-                    SkipCount = input.SkipCount,
-                    MaxResultCount = input.MaxResultCount,
-                    AdoptTime = input.AdoptTime,
-                    ChainId = input.ChainId
-                }
-            });
+            Variables = new
+            {
+                Adopter = input.Adopter,
+                SkipCount = input.SkipCount,
+                MaxResultCount = input.MaxResultCount,
+                AdoptTime = input.AdoptTime,
+                ChainId = input.ChainId
+            }
+        });
 
-            return indexerResult.GetStrayCats;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "StrayCats Indexer error");
-            return new SchrodingerIndexerStrayCatsDto();
-        }
+        return indexerResult.GetStrayCats;
     }
     
+    [ExceptionHandler(typeof(Exception), Message = "GetRankDataAsync Indexer error", ReturnDefault = ReturnDefault.New)]
     public async Task<RarityDataDto> GetRankDataAsync(List<string> symbolIds)
     {
-        try
+        var indexerResult = await _graphQlHelper.QueryAsync<RarityDataDtoQuery>(new GraphQLRequest
         {
-            var indexerResult = await _graphQlHelper.QueryAsync<RarityDataDtoQuery>(new GraphQLRequest
-            {
-                Query =
-                    @"query($symbolIds:[String!]!){
+            Query =
+                @"query($symbolIds:[String!]!){
                     getRarityData(input: {symbolIds:$symbolIds}){
                         rarityInfo{
                         symbol,
@@ -644,19 +543,13 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
                     }
                 }
             }",
-                Variables = new
-                {
-                    symbolIds = symbolIds
-                }
-            });
+            Variables = new
+            {
+                symbolIds = symbolIds
+            }
+        });
 
-            return indexerResult.GetRarityData;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "GetRarityDataAsync Indexer error");
-            return new RarityDataDto();
-        }
+        return indexerResult.GetRarityData;
     }
     
     public async Task<List<AdpotInfoDto>> GetLatestRareAdoptionAsync(int number, long beginTime)

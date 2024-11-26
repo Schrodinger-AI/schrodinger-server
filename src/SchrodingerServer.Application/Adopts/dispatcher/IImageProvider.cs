@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -196,89 +197,69 @@ public class DefaultImageProvider : ImageProvider, ISingletonDependency
         _traitsOptions = traitsOptions;
     }
     
+    [ExceptionHandler(typeof(Exception), Message = "RequestImageGenerationsAsync error", ReturnDefault = ReturnDefault.New)]
     public async Task<string> RequestImageGenerationsAsync(string adoptId, GenerateOpenAIImage imageInfo)
     {
-        try
-        {
-            using var httpClient = new HttpClient();
-            var jsonString = ImageProviderHelper.ConvertObjectToJsonString(imageInfo);
-            var requestContent = new StringContent(jsonString, Encoding.UTF8, "application/json");
-            httpClient.DefaultRequestHeaders.Add("accept", "*/*");
-            var response = await httpClient.PostAsync(_traitsOptions.CurrentValue.ImageGenerationsUrl + adoptId, requestContent);
-            var responseString = await response.Content.ReadAsStringAsync();
+        using var httpClient = new HttpClient();
+        var jsonString = ImageProviderHelper.ConvertObjectToJsonString(imageInfo);
+        var requestContent = new StringContent(jsonString, Encoding.UTF8, "application/json");
+        httpClient.DefaultRequestHeaders.Add("accept", "*/*");
+        var response = await httpClient.PostAsync(_traitsOptions.CurrentValue.ImageGenerationsUrl + adoptId, requestContent);
+        var responseString = await response.Content.ReadAsStringAsync();
 
-            if (response.IsSuccessStatusCode)
-            {
-                // save adopt id and request id to grain
-                GenerateImageFromAiRes aiQueryResponse = JsonConvert.DeserializeObject<GenerateImageFromAiRes>(responseString);
-                Logger.LogInformation("TraitsActionProvider RequestImageGenerations generate success adopt id:" + adoptId + " " + aiQueryResponse.requestId);
-                if (null == aiQueryResponse.requestId)
-                {
-                    GenerateImageFromAiResError aiQueryResponseError = JsonConvert.DeserializeObject<GenerateImageFromAiResError>(responseString);
-                    if (null != aiQueryResponseError && aiQueryResponseError.error == "Duplicate request")
-                    {
-                        Logger.LogInformation("TraitsActionProvider RequestImageGenerations generate success adopt id:{adoptId} requestId Duplicate request", adoptId );
-                        return adoptId;
-                    }
-                    Logger.LogInformation("TraitsActionProvider RequestImageGenerations generate success adopt id:{adoptId} requestId null", adoptId );
-                    return "";
-                }
-                return aiQueryResponse.requestId;
-            }
-            else
-            {
-                Logger.LogError("TraitsActionProvider RequestImageGenerations generate error {adoptId} response{response}", adoptId, responseString);
-                GenerateImageFromAiResError aiQueryResponse = JsonConvert.DeserializeObject<GenerateImageFromAiResError>(responseString);
-                if (null != aiQueryResponse && aiQueryResponse.error == "Duplicate request")
-                {
-                    Logger.LogError("TraitsActionProvider RequestImageGenerations generate response {adoptId} response{response}", adoptId, JsonConvert.SerializeObject(aiQueryResponse));
-                    return adoptId;  // requestId is the same as adoptId
-                }
-            }
-
-            return "";
-        }
-        catch (Exception e)
+        if (response.IsSuccessStatusCode)
         {
-            Logger.LogError(e, "TraitsActionProvider RequestImageGenerations generate exception {adoptId}", adoptId);
-            return "";
+            // save adopt id and request id to grain
+            GenerateImageFromAiRes aiQueryResponse = JsonConvert.DeserializeObject<GenerateImageFromAiRes>(responseString);
+            Logger.LogInformation("TraitsActionProvider RequestImageGenerations generate success adopt id:" + adoptId + " " + aiQueryResponse.requestId);
+            if (null == aiQueryResponse.requestId)
+            {
+                GenerateImageFromAiResError aiQueryResponseError = JsonConvert.DeserializeObject<GenerateImageFromAiResError>(responseString);
+                if (null != aiQueryResponseError && aiQueryResponseError.error == "Duplicate request")
+                {
+                    Logger.LogInformation("TraitsActionProvider RequestImageGenerations generate success adopt id:{adoptId} requestId Duplicate request", adoptId );
+                    return adoptId;
+                }
+                Logger.LogInformation("TraitsActionProvider RequestImageGenerations generate success adopt id:{adoptId} requestId null", adoptId );
+                return "";
+            }
+            return aiQueryResponse.requestId;
         }
+        else
+        {
+            Logger.LogError("TraitsActionProvider RequestImageGenerations generate error {adoptId} response{response}", adoptId, responseString);
+        }
+
+        return "";
     }
-
+    
+    [ExceptionHandler(typeof(Exception), Message="RequestGenerateImage error", ReturnDefault = ReturnDefault.New)]
     public async Task<string> RequestGenerateImage(string adoptId, GenerateOpenAIImage imageInfo)
     {
-        try
-        {
-            var jsonString = ImageProviderHelper.ConvertObjectToJsonString(imageInfo);
-            var requestContent = new StringContent(jsonString, Encoding.UTF8, "application/json");
-            Client.DefaultRequestHeaders.Add("accept", "*/*");
-            var response = await Client.PostAsync(_traitsOptions.CurrentValue.ImageGenerateUrl, requestContent);
-            var responseString = await response.Content.ReadAsStringAsync();
+        var jsonString = ImageProviderHelper.ConvertObjectToJsonString(imageInfo);
+        var requestContent = new StringContent(jsonString, Encoding.UTF8, "application/json");
+        Client.DefaultRequestHeaders.Add("accept", "*/*");
+        var response = await Client.PostAsync(_traitsOptions.CurrentValue.ImageGenerateUrl, requestContent);
+        var responseString = await response.Content.ReadAsStringAsync();
 
-            if (response.IsSuccessStatusCode)
-            {
-                // save adopt id and request id to grain
-                GenerateImageFromAiRes aiQueryResponse = JsonConvert.DeserializeObject<GenerateImageFromAiRes>(responseString);
-                Logger.LogInformation("TraitsActionProvider GenerateImageByAiAsync generate success adopt id:" + adoptId + " " + aiQueryResponse.requestId);
-                if (null == aiQueryResponse.requestId)
-                {
-                    Logger.LogInformation("TraitsActionProvider GenerateImageByAiAsync generate success adopt id:{adoptId} requestId null", adoptId );
-                    return "";
-                }
-                return aiQueryResponse.requestId;
-            }
-            else
-            {
-                Logger.LogError("TraitsActionProvider GenerateImageByAiAsync generate error {adoptId} response{response}", adoptId, responseString);
-            }
-
-            return "";
-        }
-        catch (Exception e)
+        if (response.IsSuccessStatusCode)
         {
-            Logger.LogError(e, "TraitsActionProvider GenerateImageByAiAsync generate exception {adoptId}", adoptId);
-            return "";
+            // save adopt id and request id to grain
+            GenerateImageFromAiRes aiQueryResponse = JsonConvert.DeserializeObject<GenerateImageFromAiRes>(responseString);
+            Logger.LogInformation("TraitsActionProvider GenerateImageByAiAsync generate success adopt id:" + adoptId + " " + aiQueryResponse.requestId);
+            if (null == aiQueryResponse.requestId)
+            {
+                Logger.LogInformation("TraitsActionProvider GenerateImageByAiAsync generate success adopt id:{adoptId} requestId null", adoptId );
+                return "";
+            }
+            return aiQueryResponse.requestId;
         }
+        else
+        {
+            Logger.LogError("TraitsActionProvider GenerateImageByAiAsync generate error {adoptId} response{response}", adoptId, responseString);
+        }
+
+        return "";
     }
 
     public async Task<List<string>> QueryImages(string requestId)
@@ -311,43 +292,31 @@ public class DefaultImageProvider : ImageProvider, ISingletonDependency
         await DistributedEventBus.PublishAsync(new DefaultImageGenerateEto() { AdoptAddressId = adoptAddressId, AdoptId = adoptId, GenerateImage = imageInfo });
     }
     
+    [ExceptionHandler(typeof(Exception), Message="QueryImageInfoByAiNewAsync error", ReturnDefault = ReturnDefault.New)]
     private async Task<AiQueryResponse> QueryImageInfoByAiNewAsync(string requestId)
     {
-        try
+        using var httpClient = new HttpClient();
+        httpClient.Timeout = TimeSpan.FromSeconds(25);
+        httpClient.DefaultRequestHeaders.Add("accept", "*/*");
+        var start = DateTime.Now;
+        var url = _traitsOptions.CurrentValue.ImageGenerationsUrl + requestId;
+        Logger.LogInformation(
+            "TraitsActionProvider QueryImageInfoByAiNewAsync start new query {requestId} url={timeCost}", requestId,
+            url);
+        var response = await httpClient.GetAsync(url);
+        var timeCost = (DateTime.Now - start).TotalMilliseconds;
+        if (response.IsSuccessStatusCode)
         {
-            using var httpClient = new HttpClient();
-            httpClient.Timeout = TimeSpan.FromSeconds(25);
-            httpClient.DefaultRequestHeaders.Add("accept", "*/*");
-            var start = DateTime.Now;
-            var url = _traitsOptions.CurrentValue.ImageGenerationsUrl + requestId;
+            string responseContent = await response.Content.ReadAsStringAsync();
+            AiQueryResponse aiQueryResponse = JsonConvert.DeserializeObject<AiQueryResponse>(responseContent);
             Logger.LogInformation(
-                "TraitsActionProvider QueryImageInfoByAiNewAsync start new query {requestId} url={timeCost}", requestId,
-                url);
-            var response = await httpClient.GetAsync(url);
-            var timeCost = (DateTime.Now - start).TotalMilliseconds;
-            if (response.IsSuccessStatusCode)
-            {
-                string responseContent = await response.Content.ReadAsStringAsync();
-                AiQueryResponse aiQueryResponse = JsonConvert.DeserializeObject<AiQueryResponse>(responseContent);
-                Logger.LogInformation(
-                    "TraitsActionProvider QueryImageInfoByAiNewAsync query success {requestId} timeCost={timeCost}",
-                    requestId, timeCost);
-                return aiQueryResponse;
-            }
+                "TraitsActionProvider QueryImageInfoByAiNewAsync query success {requestId} timeCost={timeCost}",
+                requestId, timeCost);
+            return aiQueryResponse;
+        }
 
-            Logger.LogError("TraitsActionProvider QueryImageInfoByAiNewAsync query err {requestId}, resp:{resp}", requestId, response.ToString());
-            return new AiQueryResponse { };
-        }
-        catch (TimeoutException e)
-        {
-            Logger.LogError("TraitsActionProvider QueryImageInfoByAiNewAsync query timeout {requestId}", requestId);
-            return new AiQueryResponse { };
-        }
-        catch (Exception e)
-        {
-            Logger.LogError("TraitsActionProvider QueryImageInfoByAiNewAsync query failed {requestId}, error:{e}", requestId, e.ToString());
-            return new AiQueryResponse { };
-        }
+        Logger.LogError("TraitsActionProvider QueryImageInfoByAiNewAsync query err {requestId}, resp:{resp}", requestId, response.ToString());
+        return new AiQueryResponse { };
     }
 
     private async Task<AiQueryResponse> QueryImageInfoByAiAsync(string requestId)
