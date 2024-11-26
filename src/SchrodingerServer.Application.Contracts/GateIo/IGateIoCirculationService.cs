@@ -7,4 +7,5 @@ public interface IGateIoCirculationService
     Task<long> GetSgrCirculation();
 
     Task<decimal> GetSgrPrice();
+    Task<bool> DelCacheAsync(string key);
 }
