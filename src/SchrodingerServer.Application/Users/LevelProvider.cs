@@ -99,6 +99,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
         return price;
     }
 
+    [ExceptionHandler(typeof(Exception), Message = "Check AddressIsInWhite Failed", ReturnDefault = ReturnDefault.Default)]
     public async Task<bool> CheckAddressIsInWhiteListAsync(string address)
     {
         if (string.IsNullOrEmpty(address))
@@ -106,26 +107,13 @@ public class LevelProvider : ApplicationService, ILevelProvider
             return false;
         }
         
-        var chainId  = _levelOptions.CurrentValue.ChainId;
-        var chainIdForReal  = _levelOptions.CurrentValue.ChainIdForReal;
-        chainId = chainIdForReal.IsNullOrEmpty() ? chainId : chainIdForReal;
-        if (!address.EndsWith(chainId))
-        {
-            address = "ELF_" + address + "_" + chainId;
-        }
+        address = FullAddressHelper.ToShortAddress(address);
         
-        var resp = await _httpProvider.InvokeAsync<WhiteListResponse>(_levelOptions.CurrentValue.SchrodingerUrl,
-            PointServerProvider.Api.CheckIsInWhiteList, param: new Dictionary<string, string>
-            {
-                ["address"] = address
-            });
-        if (resp is not { Code: "20000" })
-        {
-            _logger.LogError("CheckAddressIsInWhiteListAsync get failed,response:{response}",(resp == null ? "non result" : resp.Code));
-            return false;
-        }
-
-        return resp.Data.IsAddressValid;
+        var resp = await _httpProvider.InvokeAsync<CmsWhiteListResponse>(_levelOptions.CurrentValue.CmsUrl,
+            PointServerProvider.Api.CmsWhiteList);
+            
+        var list = resp.Data.Data.Whitelist;
+        return list.Contains(address);
     }
 
     public async Task<LevelInfoDto> GetItemLevelDicAsync(int rank, double price)
