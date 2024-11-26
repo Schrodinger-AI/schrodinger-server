@@ -134,7 +134,7 @@ public class ContractInvokeGrain : Grain<ContractInvokeState>, IContractInvokeGr
         State.RefBlockNumber = signedTransaction.RefBlockNumber;
         State.Sender = signedTransaction.From.ToBase58();
         State.Status = ContractInvokeStatus.Pending.ToString();
-        //Send Transaction with catch exception
+  
         await SendTransactionAsync(State.ChainId, signedTransaction);
 
         _logger.LogInformation(

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using AElf;
 using AElf.Cryptography;
+using AElf.ExceptionHandler;
 using AElf.Types;
 using GraphQL;
 using GraphQL.Client.Http;
@@ -265,22 +266,15 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         return indexerCaHolderInfos;
     }
     
+    [ExceptionHandler(typeof(Exception), Message = "GetCaHolderManagerInfoAsync Failed", ReturnDefault = ReturnDefault.Default)]
     private async Task<CAHolderManager?> GetCaHolderManagerInfoAsync(string manager)
     {
         var portkeyCaHolderInfoUrl = _graphQlOption.CurrentValue.PortkeyCaHolderInfoUrl;
     
         var apiInfo = new ApiInfo(HttpMethod.Get, "/api/app/account/manager/check");
         var param = new Dictionary<string, string> { { "manager", manager } };
-        try
-        {
-            var resp = await _httpProvider.InvokeAsync<CAHolderManager>(portkeyCaHolderInfoUrl, apiInfo, param: param);
-            return resp;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "get ca holder manager info fail.");
-            return null;
-        }
+        var resp = await _httpProvider.InvokeAsync<CAHolderManager>(portkeyCaHolderInfoUrl, apiInfo, param: param);
+        return resp;
     }
 
     private async Task<bool> CreateUserAsync(IdentityUserManager userManager,
