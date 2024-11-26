@@ -45,11 +45,9 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
 
     public async Task<List<AwakenLiquidityRecordDto>> GetLiquidityRecordsAsync(GetAwakenLiquidityRecordDto dto)
     {
-        try
+        var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.AwakenClient).SendQueryAsync<GetAwakenLiquidityRecordResultDto>(new GraphQLRequest
         {
-            var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.AwakenClient).SendQueryAsync<GetAwakenLiquidityRecordResultDto>(new GraphQLRequest
-            {
-                Query = @"query (
+            Query = @"query (
                     $skipCount:Int!,
                     $maxResultCount:Int!,
                     $chainId:String!,
@@ -86,75 +84,53 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
                     }
                   }
                 }",
-                Variables = new
-                {
-                    chainId = dto.ChainId, 
-                    pair = dto.Pair, 
-                    skipCount = dto.SkipCount, 
-                    maxResultCount = dto.MaxResultCount,
-                    timestampMax = dto.TimestampMax,
-                    timestampMin = dto.TimestampMin
-                }
-            });
-            return res.Data.LiquidityRecord.Data;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "GetLiquidityRecordsAsync query GraphQL error");
-            throw;
-        }
+            Variables = new
+            {
+                chainId = dto.ChainId, 
+                pair = dto.Pair, 
+                skipCount = dto.SkipCount, 
+                maxResultCount = dto.MaxResultCount,
+                timestampMax = dto.TimestampMax,
+                timestampMin = dto.TimestampMin
+            }
+        });
+        return res.Data.LiquidityRecord.Data;
     }
     
     [ExceptionHandler(typeof(Exception), Message = "GetPriceAsync error", ReturnDefault = ReturnDefault.New)]
     public async Task<GetAwakenPriceDto> GetPriceAsync(string token0Symbol, string token1Symbol, string chainId, string feeRate)
     {
-        try
-        {
-            var resp = await _httpProvider.InvokeAsync<CommonResponseDto<GetAwakenPriceDto>>(
-                _levelOptions.CurrentValue.AwakenUrl, PointServerProvider.Api.GetAwakenPrice, null,
-                new Dictionary<string, string>()
-                {
-                    ["token0Symbol"] = token0Symbol,
-                    ["token1Symbol"] = token1Symbol,
-                    ["feeRate"] = feeRate,
-                    ["chainId"] = chainId
-                });
-            AssertHelper.NotNull(resp, "Response empty");
-            AssertHelper.NotNull(resp.Success, "Response failed, {}", resp.Message);
-            return resp.Data ?? new GetAwakenPriceDto();
-        }
-        catch (Exception e)
-        {
-            _logger.LogWarning(e, "Points domain get points failed");
-            return new GetAwakenPriceDto();
-        }
+        var resp = await _httpProvider.InvokeAsync<CommonResponseDto<GetAwakenPriceDto>>(
+            _levelOptions.CurrentValue.AwakenUrl, PointServerProvider.Api.GetAwakenPrice, null,
+            new Dictionary<string, string>()
+            {
+                ["token0Symbol"] = token0Symbol,
+                ["token1Symbol"] = token1Symbol,
+                ["feeRate"] = feeRate,
+                ["chainId"] = chainId
+            });
+        AssertHelper.NotNull(resp, "Response empty");
+        AssertHelper.NotNull(resp.Success, "Response failed, {}", resp.Message);
+        return resp.Data ?? new GetAwakenPriceDto();
     }
 
     [ExceptionHandler(typeof(Exception), Message = "GetAwakenTradeRecordsAsync error", ReturnDefault = ReturnDefault.New)]
     public async Task<GetAwakenTradeRecordDto> GetAwakenTradeRecordsAsync(long beginTime, long endTime, long skipCount, long maxResultCount)
     {
-        try
-        {
-            var resp = await _httpProvider.InvokeAsync<CommonResponseDto<GetAwakenTradeRecordDto>>(
-                _levelOptions.CurrentValue.AwakenUrl, PointServerProvider.Api.GetAwakenTradeRecords, null,
-                new Dictionary<string, string>()
-                {
-                    ["skipCount"] = skipCount.ToString(),
-                    ["maxResultCount"] = maxResultCount.ToString(),
-                    ["TimestampMin"] = beginTime.ToString(),
-                    ["TimestampMax"] = endTime.ToString(),
-                    ["ChainId"] = "tDVV",
-                    ["TokenSymbol"] = "SGR-1"
-                });
-            AssertHelper.NotNull(resp, "Response empty");
-            AssertHelper.NotNull(resp.Success, "Response failed, {}", resp.Message);
-            return resp.Data ?? new GetAwakenTradeRecordDto();
-        }
-        catch (Exception e)
-        {
-            _logger.LogWarning(e, "Points domain get points failed");
-            return new GetAwakenTradeRecordDto();
-        }
+        var resp = await _httpProvider.InvokeAsync<CommonResponseDto<GetAwakenTradeRecordDto>>(
+            _levelOptions.CurrentValue.AwakenUrl, PointServerProvider.Api.GetAwakenTradeRecords, null,
+            new Dictionary<string, string>()
+            {
+                ["skipCount"] = skipCount.ToString(),
+                ["maxResultCount"] = maxResultCount.ToString(),
+                ["TimestampMin"] = beginTime.ToString(),
+                ["TimestampMax"] = endTime.ToString(),
+                ["ChainId"] = "tDVV",
+                ["TokenSymbol"] = "SGR-1"
+            });
+        AssertHelper.NotNull(resp, "Response empty");
+        AssertHelper.NotNull(resp.Success, "Response failed, {}", resp.Message);
+        return resp.Data ?? new GetAwakenTradeRecordDto();
     }
 }
 

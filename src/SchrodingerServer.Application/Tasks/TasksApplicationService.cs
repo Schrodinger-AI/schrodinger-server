@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AElf;
+using AElf.ExceptionHandler;
 using AElf.Types;
 using Google.Protobuf;
 using Microsoft.Extensions.Caching.Distributed;
@@ -1243,38 +1244,31 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         
         await _tasksProvider.DeleteMilestoneVoucherClaimedRecordAsync(taskId, address, level);
     }
-
+    
+    [ExceptionHandler(typeof(Exception), Message = "SendAirdropVoucherTransactionAsync Failed", ReturnDefault = ReturnDefault.New)]
     public async Task<CheckTransactionDto> SendAirdropVoucherTransactionAsync(string chainId, string address)
     {
-        try
+        var aelfAddress = Address.FromBase58(address);
+        var param = new AirdropVoucherInput
         {
-            var aelfAddress = Address.FromBase58(address);
-            var param = new AirdropVoucherInput
-            {
-                Tick = DefaultTick,
-                Amount = 1,
-                List = { aelfAddress }
-            };
+            Tick = DefaultTick,
+            Amount = 1,
+            List = { aelfAddress }
+        };
 
-            var rawTxResult = await _contractProvider.CreateTransactionAsync(chainId,
-                _chainOptions.ChainInfos[chainId].PointTxPublicKey,
-                _chainOptions.ChainInfos[chainId].SchrodingerContractAddress, "AirdropVoucher", param.ToByteString().ToBase64());
-            _logger.LogInformation("SendAirdropVoucherTransactionAsync rawTxResult: {result}", JsonConvert.SerializeObject(rawTxResult));
+        var rawTxResult = await _contractProvider.CreateTransactionAsync(chainId,
+            _chainOptions.ChainInfos[chainId].PointTxPublicKey,
+            _chainOptions.ChainInfos[chainId].SchrodingerContractAddress, "AirdropVoucher", param.ToByteString().ToBase64());
+        _logger.LogInformation("SendAirdropVoucherTransactionAsync rawTxResult: {result}", JsonConvert.SerializeObject(rawTxResult));
 
-            var signedTransaction = rawTxResult.transaction;
+        var signedTransaction = rawTxResult.transaction;
 
-            var transactionOutput = await _contractProvider.SendTransactionWithRetAsync(chainId, signedTransaction);
-            _logger.LogInformation("SendAirdropVoucherTransactionAsync transactionId: {id}", transactionOutput.TransactionId);
-            var transactionResult =
-                await _contractProvider.CheckTransactionStatusAsync(transactionOutput.TransactionId, chainId);
+        var transactionOutput = await _contractProvider.SendTransactionWithRetAsync(chainId, signedTransaction);
+        _logger.LogInformation("SendAirdropVoucherTransactionAsync transactionId: {id}", transactionOutput.TransactionId);
+        var transactionResult =
+            await _contractProvider.CheckTransactionStatusAsync(transactionOutput.TransactionId, chainId);
         
-            return transactionResult;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError("AirdropVoucher error: {error}", e.Message);
-            return new CheckTransactionDto();
-        }
+        return transactionResult;
     }
 
     public async Task<bool> CheckUserAsync(string userId)
