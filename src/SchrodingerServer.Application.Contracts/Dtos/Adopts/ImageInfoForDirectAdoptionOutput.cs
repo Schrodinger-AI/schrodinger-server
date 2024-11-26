@@ -8,4 +8,5 @@ public class ImageInfoForDirectAdoptionOutput
     public string ImageUri { get; set; }
     public AdoptImageInfo AdoptImageInfo { get; set; }
     public bool UnderMaintenance { get; set; } = false;
+    
 }
