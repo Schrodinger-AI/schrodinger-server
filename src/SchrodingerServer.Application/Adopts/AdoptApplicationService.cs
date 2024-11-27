@@ -356,6 +356,12 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             BoxImage = BoxHelper.GetBoxImage(adoptInfo.Generation == 9, adoptInfo.Rarity)
         };
         
+        if (_traitsOptions.CurrentValue.UnderMaintenance)
+        {
+            output.UnderMaintenance = true;
+            return output;
+        }
+        
         var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, address);
         var provider = _imageDispatcher.CurrentProvider();
         var judgement1 = await _adoptImageService.HasSendRequest(adoptId);
@@ -373,12 +379,6 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         
         if (input.AdoptOnly)
         {
-            return output;
-        }
-        
-        if (_traitsOptions.CurrentValue.UnderMaintenance)
-        {
-            output.UnderMaintenance = true;
             return output;
         }
 
