@@ -1,3 +1,5 @@
+using Orleans;
+
 namespace SchrodingerServer.Dtos.Adopts;
 
 public class GetWaterMarkImageInfoOutput
@@ -9,9 +11,12 @@ public class GetWaterMarkImageInfoOutput
 }
 
 
+[GenerateSerializer]
 public class WaterImageGrainInfoDto
 {
+    [Id(0)]
     public string ResizedImage { get; set; }
-    
+
+    [Id(1)]
     public string ImageUri { get; set; }
 } 
