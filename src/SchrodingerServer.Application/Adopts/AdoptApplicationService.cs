@@ -358,7 +358,11 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         
         if (_traitsOptions.CurrentValue.UnderMaintenance)
         {
-            output.UnderMaintenance = true;
+            if (!input.AdoptOnly)
+            {
+                output.UnderMaintenance = true;
+            }
+            
             return output;
         }
         
