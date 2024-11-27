@@ -10,4 +10,5 @@ public class GetAdoptImageInfoInput
     public bool AdoptOnly { get; set; } = false;
     [CanBeNull] public string Address { get; set; }
     public string Faction { get; set; }
+    public bool ForceTriggerGenerate { get; set; } = false;
 }

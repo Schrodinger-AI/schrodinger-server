@@ -374,15 +374,26 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             BoxImage = BoxHelper.GetBoxImage(adoptInfo.Generation == 9, adoptInfo.Rarity)
         };
         
+        if (_traitsOptions.CurrentValue.UnderMaintenance)
+        {
+            if (!input.AdoptOnly)
+            {
+                output.UnderMaintenance = true;
+            }
+            
+            return output;
+        }
+        
         var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, address);
         var provider = _imageDispatcher.CurrentProvider();
         var judgement1 = await _adoptImageService.HasSendRequest(adoptId);
         var judgement2 = await provider.HasRequestId(adoptAddressId);
-        _logger.LogInformation("send judgment for adoptAddressId:{adoptAddressId}, {judgement1}, {judgement2}", adoptAddressId,  judgement1, judgement2);
+        _logger.LogInformation("send judgment for adoptAddressId:{adoptAddressId}, {judgement1}, {judgement2} {force}", 
+            adoptAddressId,  judgement1, judgement2, input.ForceTriggerGenerate);
         
         var hasSendRequest = judgement1 && judgement2;
         
-        if (!hasSendRequest)
+        if (!hasSendRequest || input.ForceTriggerGenerate)
         {
             _logger.LogInformation("send ai generation request for adoptId:{adoptId}, addressId:{addressId}", adoptId, adoptAddressId);
             await _imageDispatcher.DispatchAIGenerationRequest(adoptAddressId, AdoptInfo2GenerateImage(adoptInfo), adoptId);
@@ -391,12 +402,6 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         
         if (input.AdoptOnly)
         {
-            return output;
-        }
-        
-        if (_traitsOptions.CurrentValue.UnderMaintenance)
-        {
-            output.UnderMaintenance = true;
             return output;
         }
 
