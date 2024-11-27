@@ -358,6 +358,8 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         
         if (_traitsOptions.CurrentValue.UnderMaintenance)
         {
+            _logger.LogInformation("under maintenance, adoptId:{adoptId}", adoptId);
+            
             if (!input.AdoptOnly)
             {
                 output.UnderMaintenance = true;
@@ -385,11 +387,6 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         if (input.AdoptOnly)
         {
             return output;
-        }
-        
-        if (_traitsOptions.CurrentValue.UnderMaintenance)
-        {
-            throw new UserFriendlyException("Unboxing is temporarily disabled during server maintenance.");
         }
 
         var images = await provider.GetAIGeneratedImagesAsync(adoptId, adoptAddressId);
