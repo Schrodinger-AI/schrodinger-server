@@ -10,6 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.Sdk" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Orleans.Serialization.Abstractions" Version="7.0.0" />
     <PackageReference Include="Volo.Abp.Identity.Domain.Shared" Version="8.2.0" />
     <PackageReference Include="Volo.Abp.BackgroundJobs.Domain.Shared" Version="8.2.0" />
     <PackageReference Include="Volo.Abp.AuditLogging.Domain.Shared" Version="8.2.0" />
@@ -18,7 +20,6 @@
     <PackageReference Include="Volo.Abp.FeatureManagement.Domain.Shared" Version="8.2.0" />
     <PackageReference Include="Volo.Abp.PermissionManagement.Domain.Shared" Version="8.2.0" />
     <PackageReference Include="Volo.Abp.SettingManagement.Domain.Shared" Version="8.2.0" />
-    <PackageReference Include="Microsoft.Orleans.Serialization.Abstractions" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
