@@ -271,7 +271,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
         foreach (var rarity in rankData.RarityInfo)
         {
-            _logger.LogInformation("rarity data: {a} {b}}", address, rarity.Rank);
+            _logger.LogInformation("rarity data: {a} {b}", address, rarity.Rank);
             var rarityData = await _levelProvider.GetRarityInfo(address, rarity.Rank, true);
             map[rarity.Symbol] = rarityData;
         }
