@@ -9,6 +9,7 @@ public class GetTaskListOutput
     public List<TaskData> DailyTasks { get; set; } = new();
     public List<TaskData> SocialTasks { get; set; } = new();
     public  List<TaskData> AccomplishmentTasks { get; set; } = new();
+    public  List<TaskData> PartnerTasks { get; set; } = new();
     public int Countdown { get; set; }
 }
 

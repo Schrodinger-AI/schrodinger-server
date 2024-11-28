@@ -24,7 +24,8 @@ public enum TaskType
 {
     Daily = 1,
     Social = 2,
-    Accomplishment = 3
+    Accomplishment = 3,
+    Partner = 4
 }
 
 public enum RewardType

@@ -117,6 +117,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var dailyTasks = taskList.Where(i => i.Type == TaskType.Daily).ToList();
         var socialTasks = taskList.Where(i => i.Type == TaskType.Social).ToList();
         var accomplishmentTasks = taskList.Where(i => i.Type == TaskType.Accomplishment).ToList();
+        var partnerTasks = taskList.Where(i => i.Type == TaskType.Partner).ToList();
 
         var dailyTaskList = await GetDailyTasksAsync(dailyTasks, currentAddress);
         _logger.LogDebug("GetDailyTaskList, list:{dailyTaskList}", JsonConvert.SerializeObject(dailyTaskList));
@@ -131,6 +132,10 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             JsonConvert.SerializeObject(accomplishmentTaskList));
         accomplishmentTaskList =
             accomplishmentTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
+        
+        var partnerTaskList = await GetOtherTasksAsync(partnerTasks, currentAddress);
+        _logger.LogDebug("GetPartnerTaskList, list:{socialTaskList}", JsonConvert.SerializeObject(partnerTaskList));
+        partnerTaskList = partnerTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
 
         var nowUtc = DateTime.UtcNow;
         var tomorrowUtcZero =
@@ -142,6 +147,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             DailyTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(dailyTaskList),
             SocialTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(socialTaskList),
             AccomplishmentTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(accomplishmentTaskList),
+            PartnerTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(partnerTaskList),
             Countdown = (int)Math.Ceiling(timeDifference.TotalSeconds)
         };
     }
