@@ -206,7 +206,7 @@ public class DefaultImageProvider : ImageProvider, ISingletonDependency
         httpClient.DefaultRequestHeaders.Add("accept", "*/*");
         var response = await httpClient.PostAsync(_traitsOptions.CurrentValue.ImageGenerationsUrl + adoptId, requestContent);
         var responseString = await response.Content.ReadAsStringAsync();
-        
+
         if (response.IsSuccessStatusCode)
         {
             // save adopt id and request id to grain
@@ -232,9 +232,11 @@ public class DefaultImageProvider : ImageProvider, ISingletonDependency
             Logger.LogError("parse response {adoptId} response{response}", adoptId, JsonConvert.SerializeObject(aiQueryResponse));
             if (null != aiQueryResponse && aiQueryResponse.error == "Duplicate request")
             {
-                Logger.LogError("TraitsActionProvider RequestImageGenerations generate response {adoptId} response{response}", adoptId, JsonConvert.SerializeObject(aiQueryResponse));
+                Logger.LogError("Duplicate request {adoptId}", adoptId);
                 return adoptId;  // requestId is the same as adoptId
             }
+
+            Logger.LogError("TraitsActionProvider RequestImageGenerations generate error {adoptId} response{response}", adoptId, responseString);
         }
 
         return "";
