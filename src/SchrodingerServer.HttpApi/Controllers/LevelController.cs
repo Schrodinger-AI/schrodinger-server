@@ -22,4 +22,10 @@ public class LevelController : AbpController
     {
         _levelProvider = levelProvider;
     }
+    
+    [HttpGet("whitelist/{address}")]
+    public async Task<bool> GetItemLevelDicAsync(string address)
+    {
+        return await _levelProvider.CheckAddressIsInWhiteListAsync(address);
+    }
 }
