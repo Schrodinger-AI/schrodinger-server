@@ -179,7 +179,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             }
         });
 
-        return indexerResult.GetSchrodingerDetail;
+        return indexerResult?.GetSchrodingerDetail;
     }
     
     [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerCatRankAsync Indexer error", ReturnDefault = ReturnDefault.New)]
@@ -451,7 +451,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             }
         });
 
-        return indexerResult.GetBlindBoxList;
+        return indexerResult?.GetBlindBoxList;
     }
     
     [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerBoxDetailAsync Indexer error", ReturnDefault = ReturnDefault.New)]

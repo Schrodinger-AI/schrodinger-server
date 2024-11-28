@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using SchrodingerServer.Dtos.Cat;
 
 namespace SchrodingerServer.Cat.Provider.Dtos;
@@ -19,7 +20,7 @@ public class SchrodingerIndexerBoxDto
     public long Amount { get; set; }
     public int Gen { get; set; }
     public int Decimals { get; set; }
-    public string Adopter { get; set; }
+    [CanBeNull] public string Adopter { get; set; }
     public long AdoptTime { get; set; }
     public string Rarity { get; set; }
     public long ConsumeAmount { get; set; }

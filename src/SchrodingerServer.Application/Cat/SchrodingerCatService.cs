@@ -429,7 +429,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         input.AdoptTime = _levelOptions.CurrentValue.AdoptTime;
         var schrodingerIndexerBoxListDto = await _schrodingerCatProvider.GetSchrodingerBoxListAsync(input);
 
-        var data = schrodingerIndexerBoxListDto.Data;
+        var data = schrodingerIndexerBoxListDto?.Data;
         if (data.IsNullOrEmpty())
         {
             return resp;
@@ -592,7 +592,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 ChainId = _levelOptions.CurrentValue.ChainIdForReal
             });
 
-            if (!holderDetail.Symbol.IsNullOrEmpty())
+            if (holderDetail != null && !holderDetail.Symbol.IsNullOrEmpty())
             {
                 if (holderDetail.Amount < 100000000)
                 {
