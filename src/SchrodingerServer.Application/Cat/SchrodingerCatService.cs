@@ -688,7 +688,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             throw new UserFriendlyException("No pool data");
         }
         
-        var key = "sgr_prize";
+        var key = "sgr-prize";
         var cache = await _distributedCache.GetAsync(key);
         double sgrPrice;
         if (cache == null)
@@ -697,7 +697,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             sgrPrice = await _levelProvider.GetAwakenSGRPrice() * elfPrice;
             await _distributedCache.SetAsync(key, sgrPrice.ToString(), new DistributedCacheEntryOptions
             {
-                SlidingExpiration = TimeSpan.FromMinutes(10)
+                AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(10)
             });
             _logger.LogInformation("get sgr price from api");
         }
