@@ -247,7 +247,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return await _adoptGraphQlProvider.QueryAdoptInfoAsync(adoptId);
     }
 
-    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "Get WatermarkImageAsync Failed", ReturnDefault = ReturnDefault.Default)]
     private async Task<WatermarkResponse> GetWatermarkImageAsync(WatermarkInput input)
     {
  
