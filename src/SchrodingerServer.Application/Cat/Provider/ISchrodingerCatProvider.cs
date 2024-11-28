@@ -522,7 +522,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
             }
         });
 
-        return indexerResult.GetStrayCats;
+        return indexerResult?.GetStrayCats;
     }
     
     [ExceptionHandler(typeof(Exception), Message = "GetRankDataAsync Indexer error", ReturnDefault = ReturnDefault.New)]

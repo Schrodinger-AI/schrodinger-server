@@ -538,9 +538,14 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
 
         input.AdoptTime = _levelOptions.CurrentValue.AdoptTime;
-        var boxDetail = await _schrodingerCatProvider.GetStrayCatsListAsync(input);
+        var strayCats = await _schrodingerCatProvider.GetStrayCatsListAsync(input);
+
+        if (strayCats == null)
+        {
+            return  new StrayCatsListDto();
+        }
         
-        var resp = _objectMapper.Map<SchrodingerIndexerStrayCatsDto, StrayCatsListDto>(boxDetail);
+        var resp = _objectMapper.Map<SchrodingerIndexerStrayCatsDto, StrayCatsListDto>(strayCats);
         return resp;
     }
 
