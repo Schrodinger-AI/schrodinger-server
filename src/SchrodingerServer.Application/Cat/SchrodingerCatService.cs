@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AElf;
 using AElf.Types;
 using Google.Protobuf;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -21,6 +22,7 @@ using SchrodingerServer.Users;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
 using Volo.Abp.Auditing;
+using Volo.Abp.Caching;
 using Volo.Abp.ObjectMapping;
 
 namespace SchrodingerServer.Cat;
@@ -40,6 +42,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
     private readonly ISecretProvider _secretProvider;
     private readonly ChainOptions _chainOptions;
     private readonly IOptionsMonitor<PoolOptions> _poolOptionsMonitor;
+    private readonly IDistributedCache<string> _distributedCache;
 
     private static readonly List<string> GenOneTraitTypes = new() { "Background", "Clothes", "Breed" };
 
@@ -47,7 +50,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         IObjectMapper objectMapper, ILogger<SchrodingerCatService> logger, IOptionsMonitor<LevelOptions> levelOptions,
         IUserInformationProvider userInformationProvider,IUserActionProvider userActionProvider, 
         IOptionsMonitor<ActivityTraitOptions> traitsOptions, ISecretProvider secretProvider, IOptionsMonitor<ChainOptions> chainOptions, 
-        IOptionsMonitor<PoolOptions> poolOptionsMonitor)
+        IOptionsMonitor<PoolOptions> poolOptionsMonitor, IDistributedCache<string> distributedCache)
     {
         _schrodingerCatProvider = schrodingerCatProvider;
         _levelProvider = levelProvider;
@@ -60,6 +63,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         _secretProvider = secretProvider;
         _chainOptions = chainOptions.CurrentValue;
         _poolOptionsMonitor = poolOptionsMonitor;
+        _distributedCache = distributedCache;
     }
 
     public async Task<SchrodingerListDto> GetSchrodingerCatListAsync(GetCatListInput input)
@@ -684,8 +688,23 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             throw new UserFriendlyException("No pool data");
         }
         
-        var elfPrice = await _levelProvider.GetAwakenELFPrice();
-        var sgrPrice = await _levelProvider.GetAwakenSGRPrice() * elfPrice;
+        var key = "sgr_prize";
+        var cache = await _distributedCache.GetAsync(key);
+        double sgrPrice;
+        if (cache == null)
+        {
+            var elfPrice = await _levelProvider.GetAwakenELFPrice();
+            sgrPrice = await _levelProvider.GetAwakenSGRPrice() * elfPrice;
+            await _distributedCache.SetAsync(key, sgrPrice.ToString(), new DistributedCacheEntryOptions
+            {
+                SlidingExpiration = TimeSpan.FromMinutes(10)
+            });
+            _logger.LogInformation("get sgr price from api");
+        }
+        else
+        {
+            sgrPrice = double.Parse(cache);
+        }
         
         var res = new PoolOutput
         {
