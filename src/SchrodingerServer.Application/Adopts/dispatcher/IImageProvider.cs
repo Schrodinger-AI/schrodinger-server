@@ -235,8 +235,6 @@ public class DefaultImageProvider : ImageProvider, ISingletonDependency
                 Logger.LogError("Duplicate request {adoptId}", adoptId);
                 return adoptId;  // requestId is the same as adoptId
             }
-
-            Logger.LogError("TraitsActionProvider RequestImageGenerations generate error {adoptId} response{response}", adoptId, responseString);
         }
 
         return "";
