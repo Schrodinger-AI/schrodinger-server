@@ -166,8 +166,12 @@ public class PointAssemblyTransactionService : IPointAssemblyTransactionService,
             return;
         }
         var settleDto = pointAssemblyGrainResult.Data.PointSettleDto;
+        _logger.LogInformation(
+            "BatchSettleAsync Begin bizId:{bizId}", bizId);
         //Send Batch Settle
         await _pointSettleService.BatchSettleAsync(settleDto);
+        _logger.LogInformation(
+            "BatchSettleAsync Finish bizId:{bizId}", bizId);
             
         await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(settleDto, PointRecordStatus.Success.ToString());
             
