@@ -1067,6 +1067,8 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         // var scoreConsumeFromSpin = await _tasksProvider.GetConsumeScoreFromSpin(address);
         var scoreConsumeFromSpin = 0;
         var unfinishedSpin = await _tasksProvider.GetUnfinishedSpinAsync(address);
+        _logger.LogDebug("GetUnfinishedSpinAsync, address:{address}, list:{score}", address, scoreFromTask);
+        
         foreach (var spin in unfinishedSpin)
         {
             var isSpinFinished = await _tasksProvider.IsSpinFinished(spin.Seed);
@@ -1075,6 +1077,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 scoreConsumeFromSpin += 100;
             }
         }
+        _logger.LogDebug("GetUnfinishedSpinAsync after, address:{address}, score:{score}", address, scoreConsumeFromSpin);
 
         var finsihedSpinCount = await _tasksProvider.GetFinishedSpinCountAsync(address);
         scoreConsumeFromSpin += finsihedSpinCount * 100;

@@ -11,5 +11,4 @@ public interface IAdoptApplicationService
     Task<ImageInfoForDirectAdoptionOutput> GetAdoptImageInfoForDirectAdoptionAsync(GetAdoptImageInfoInput input);
     Task<ConfirmAdoptionOutput> ConfirmAdoptionAsync(ConfirmAdoptionInput input);
     Task<GetVotesOutput> GetVoteAsync();
-    
 }
