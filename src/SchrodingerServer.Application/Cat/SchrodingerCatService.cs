@@ -705,6 +705,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             {
                 AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(10)
             });
+
             _logger.LogInformation("get sgr price from api， prize: {prize}", sgrPrice);
         }
         else
