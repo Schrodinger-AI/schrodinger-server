@@ -31,6 +31,7 @@ public class PointDailyRecordHandler : IDistributedEventHandler<PointDailyRecord
     [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task HandleEventAsync(PointDailyRecordEto eventData)
     {
+        _logger.LogDebug("HandleEventAsync PointDailyRecordEto data: {data}", JsonConvert.SerializeObject(eventData));
         var contact = _objectMapper.Map<PointDailyRecordEto, PointDailyRecordIndex>(eventData);
         await _repository.AddOrUpdateAsync(contact);
         _logger.LogDebug("HandleEventAsync PointDailyRecordEto success");
