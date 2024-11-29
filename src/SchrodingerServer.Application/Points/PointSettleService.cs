@@ -49,6 +49,7 @@ public class PointSettleService : IPointSettleService, ISingletonDependency
 
     public async Task BatchSettleAsync(PointSettleDto dto)
     {
+        _logger.LogInformation("BatchSettle begin, bizId:{bizId}.", dto.BizId);
         AssertHelper.NotEmpty(dto.BizId, "Invalid bizId.");
         _logger.LogInformation("BatchSettle bizId:{bizId}", dto.BizId);
         var actionName = _pointTradeOptions.CurrentValue.GetActionName(dto.PointName);
@@ -78,6 +79,7 @@ public class PointSettleService : IPointSettleService, ISingletonDependency
             //ParamJson = JsonConvert.SerializeObject(dto)
         };
         var contractInvokeGrain = _clusterClient.GetGrain<IContractInvokeGrain>(dto.BizId);
+        _logger.LogInformation("BatchSettle CreateAsync, bizId:{bizId}.", dto.BizId);
         var result = await contractInvokeGrain.CreateAsync(input);
         if (!result.Success)
         {
@@ -85,7 +87,8 @@ public class PointSettleService : IPointSettleService, ISingletonDependency
                 "Create Contract Invoke fail, bizId: {dto.BizId}.", dto.BizId);
             throw new UserFriendlyException($"Create Contract Invoke fail, bizId: {dto.BizId}.");
         }
-
+        
+        _logger.LogInformation("BatchSettle success, bizId:{bizId}.", dto.BizId);
         await PublishData(
             _objectMapper.Map<ContractInvokeGrainDto, ContractInvokeEto>(result.Data));
     }
