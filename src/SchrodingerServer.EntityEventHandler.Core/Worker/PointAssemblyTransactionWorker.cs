@@ -101,6 +101,7 @@ public class PointAssemblyTransactionWorker : AsyncPeriodicBackgroundWorkerBase
         await _pointDispatchProvider.SetDispatchAsync(PointDispatchConstants.POINT_ASSEMBLY_TRANSACTION_PREFIX, bizDate, pointName, true);
     }
 
+    
     private bool IsAlwaysCheck(string pointName)
     {
         if (pointName == "XPSGR-7" || pointName == "XPSGR-8")
