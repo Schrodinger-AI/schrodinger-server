@@ -28,11 +28,11 @@ public class ContractInvokeHandler : IDistributedEventHandler<ContractInvokeEto>
         _logger = logger;
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task HandleEventAsync(ContractInvokeEto eventData)
     {
+        _logger.LogDebug("HandleEventAsync ContractInvokeEto Begin, bizId: {bidId}", eventData.BizId);
         var contact = _objectMapper.Map<ContractInvokeEto, ContractInvokeIndex>(eventData);
         await _repository.AddOrUpdateAsync(contact);
-        _logger.LogDebug("HandleEventAsync ContractInvokeEto success");
+        _logger.LogDebug("HandleEventAsync ContractInvokeEto success, bizId: {bidId}", eventData.BizId);
     }
 }

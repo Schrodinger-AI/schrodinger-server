@@ -28,7 +28,6 @@ public class XpRecordHandler : IDistributedEventHandler<XpRecordEto>, IDistribut
         _logger = logger;
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task HandleEventAsync(XpRecordEto eventData)
     {
         var contact = _objectMapper.Map<XpRecordEto, ZealyUserXpRecordIndex>(eventData);
@@ -36,7 +35,6 @@ public class XpRecordHandler : IDistributedEventHandler<XpRecordEto>, IDistribut
         _logger.LogInformation("add or update xp record success, recordId:{recordId}", eventData.Id);
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task HandleEventAsync(AddXpRecordEto eventData)
     {
         var contact = _objectMapper.Map<AddXpRecordEto, ZealyUserXpRecordIndex>(eventData);

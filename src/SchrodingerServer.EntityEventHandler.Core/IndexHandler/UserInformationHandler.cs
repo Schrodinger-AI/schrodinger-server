@@ -28,14 +28,10 @@ public class UserInformationHandler : IDistributedEventHandler<UserInformationEt
     }
 
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task HandleEventAsync(UserInformationEto eventData)
     {
         var contact = _objectMapper.Map<UserInformationEto, UserIndex>(eventData);
         await _userRepository.AddOrUpdateAsync(contact);
         _logger.LogDebug("HandleEventAsync UserInformationEto success");
     }
-    
-    
-    
 }
