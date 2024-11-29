@@ -28,7 +28,6 @@ public class PointDailyRecordHandler : IDistributedEventHandler<PointDailyRecord
         _logger = logger;
     }
     
-    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task HandleEventAsync(PointDailyRecordEto eventData)
     {
         _logger.LogDebug("HandleEventAsync PointDailyRecordEto data: {data}", JsonConvert.SerializeObject(eventData));
