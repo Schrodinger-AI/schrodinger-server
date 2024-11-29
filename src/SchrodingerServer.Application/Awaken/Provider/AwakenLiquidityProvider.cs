@@ -9,6 +9,7 @@ using SchrodingerServer.Common;
 using SchrodingerServer.Common.Dtos;
 using SchrodingerServer.Common.GraphQL;
 using SchrodingerServer.Common.HttpClient;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Options;
 using SchrodingerServer.PointServer;
 using Volo.Abp.DependencyInjection;
@@ -97,7 +98,7 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
         return res.Data.LiquidityRecord.Data;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetPriceAsync error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetPriceAsync error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<GetAwakenPriceDto> GetPriceAsync(string token0Symbol, string token1Symbol, string chainId, string feeRate)
     {
         var resp = await _httpProvider.InvokeAsync<CommonResponseDto<GetAwakenPriceDto>>(
@@ -114,7 +115,7 @@ public class AwakenLiquidityProvider : IAwakenLiquidityProvider, ISingletonDepen
         return resp.Data ?? new GetAwakenPriceDto();
     }
 
-    [ExceptionHandler(typeof(Exception), Message = "GetAwakenTradeRecordsAsync error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetAwakenTradeRecordsAsync error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<GetAwakenTradeRecordDto> GetAwakenTradeRecordsAsync(long beginTime, long endTime, long skipCount, long maxResultCount)
     {
         var resp = await _httpProvider.InvokeAsync<CommonResponseDto<GetAwakenTradeRecordDto>>(

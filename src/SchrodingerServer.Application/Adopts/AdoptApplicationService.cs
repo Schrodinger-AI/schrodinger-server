@@ -198,7 +198,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return resp;
     }
 
-    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionStr))]
     private async Task<string> UploadToS3Async(string base64String, string fileName)
     {
         byte[] imageBytes = Convert.FromBase64String(base64String);
@@ -247,7 +247,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return await _adoptGraphQlProvider.QueryAdoptInfoAsync(adoptId);
     }
 
-    [ExceptionHandler(typeof(Exception), Message = "Get WatermarkImageAsync Failed", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "Get WatermarkImageAsync Failed", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task<WatermarkResponse> GetWatermarkImageAsync(WatermarkInput input)
     {
  

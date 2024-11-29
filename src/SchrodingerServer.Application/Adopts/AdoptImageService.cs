@@ -22,14 +22,14 @@ public class AdoptImageService : IAdoptImageService, ISingletonDependency
         _logger = logger;
     }
 
-    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionStr))]
     public async Task<string> GetRequestIdAsync(string adoptId)
     {
         var grain = _clusterClient.GetGrain<IAdoptImageInfoGrain>(adoptId);
         return await grain.GetImageGenerationIdAsync();
     }
 
-    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionStr))]
     public async Task<string> SetImageGenerationIdNXAsync(string adoptId, string imageGenerationId)
     {
         var grain = _clusterClient.GetGrain<IAdoptImageInfoGrain>(adoptId);

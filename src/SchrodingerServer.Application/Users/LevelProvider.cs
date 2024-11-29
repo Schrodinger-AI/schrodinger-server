@@ -15,6 +15,7 @@ using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dto;
 using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Dtos.TraitsDto;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Helper;
 using SchrodingerServer.Options;
 using SchrodingerServer.PointServer;
@@ -51,7 +52,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
         _traitOptions = traitOptions;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetAwakenSGRPrice Failed", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "GetAwakenSGRPrice Failed", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<double> GetAwakenSGRPrice()
     {
         //get awaken price
@@ -75,7 +76,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
         return price;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetAwakenELFPrice Failed", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "GetAwakenELFPrice Failed", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<double> GetAwakenELFPrice()
     {
         //get awaken price
@@ -99,7 +100,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
         return price;
     }
 
-    [ExceptionHandler(typeof(Exception), Message = "Check AddressIsInWhite Failed", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "Check AddressIsInWhite Failed", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<bool> CheckAddressIsInWhiteListAsync(string address)
     {
         if (string.IsNullOrEmpty(address))
@@ -167,7 +168,7 @@ public class LevelProvider : ApplicationService, ILevelProvider
         return _levelInfoDic.TryGetValue(rank.ToString(), out levelInfo) ? levelInfo.DeepCopy() : null;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "BatchGetForestNftInfoAsync Failed", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "BatchGetForestNftInfoAsync Failed", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<List<NftInfo>> BatchGetForestNftInfoAsync(List<string> nftIdList, string chainId)
     {
         var resp = await _httpProvider.InvokeAsync<BatchGetForestNftInfoDto>(

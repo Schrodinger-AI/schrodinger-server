@@ -12,6 +12,7 @@ using SchrodingerServer.Common;
 using SchrodingerServer.Common.GraphQL;
 using SchrodingerServer.Dto;
 using SchrodingerServer.Dtos.Cat;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Message.Dtos;
 using SchrodingerServer.Message.Provider.Dto;
 using SchrodingerServer.Users.Index;
@@ -77,7 +78,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         _objectMapper = objectMapper;
     }
 
-    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerCatList Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerCatList Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<SchrodingerIndexerListDto> GetSchrodingerCatListAsync(GetCatListInput input)
     {
         var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerQuery>(new GraphQLRequest
@@ -113,7 +114,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         return indexerResult.GetSchrodingerList;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerAllCatsListAsync Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerAllCatsListAsync Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<SchrodingerSymbolIndexerListDto> GetSchrodingerAllCatsListAsync(GetCatListInput input)
     {
         var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerSymbolIndexerQuery>(new GraphQLRequest
@@ -152,7 +153,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         return indexerResult.GetAllSchrodingerList;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerCatDetailAsync Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerCatDetailAsync Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<SchrodingerDetailDto> GetSchrodingerCatDetailAsync(GetCatDetailInput input)
     {
         var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerDetailQueryDto>(new GraphQLRequest
@@ -182,7 +183,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         return indexerResult?.GetSchrodingerDetail;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerCatRankAsync Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerCatRankAsync Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<CatRankDto> GetSchrodingerCatRankAsync(GetCatRankInput input)
     {
         var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerCatQueryDto>(new GraphQLRequest
@@ -212,7 +213,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         return indexerResult.GetSchrodingerRank;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetHoldingRankAsync Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetHoldingRankAsync Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<List<RankItem>> GetHoldingRankAsync()
     {
         var indexerResult = await _graphQlHelper.QueryAsync<HoldingRankQueryDto>(new GraphQLRequest
@@ -233,7 +234,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         return indexerResult.GetHoldingRank;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetRarityRankAsync Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetRarityRankAsync Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<List<RarityRankItem>> GetRarityRankAsync()
     {
         var indexerResult = await _graphQlHelper.QueryAsync<RarityRankQueryDto>(new GraphQLRequest
@@ -259,7 +260,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         return indexerResult.GetRarityRank;
     }
 
-    [ExceptionHandler(typeof(Exception), Message = "GetHomeDataAsync Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetHomeDataAsync Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<HomeDataDto> GetHomeDataAsync(string chainId)
     {
         var indexerResult = await _graphQlHelper.QueryAsync<HomeDataQueryDto>(new GraphQLRequest
@@ -320,7 +321,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
     }
     
     
-    [ExceptionHandler(typeof(Exception), Message = "GetHoldingPointBySymbolAsync Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetHoldingPointBySymbolAsync Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<HoldingPointBySymbolDto> GetHoldingPointBySymbolAsync(string symbol, string chainId)
     {
         var res = await _graphQlHelper.QueryAsync<HoldingPointBySymbolQueryDto>(new GraphQLRequest
@@ -348,7 +349,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         return res.GetHoldingPointBySymbol;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerHoldingListAsync Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerHoldingListAsync Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<SchrodingerIndexerListDto> GetSchrodingerHoldingListAsync(GetCatListInput input)
     {
         var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerHoldingIndexerQuery>(new GraphQLRequest
@@ -418,7 +419,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         return res.GetSchrodingerTradeRecord;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerBoxListAsync Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerBoxListAsync Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<SchrodingerIndexerBoxListDto> GetSchrodingerBoxListAsync(GetBlindBoxListInput input)
     {
         var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxListQuery>(new GraphQLRequest
@@ -454,7 +455,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         return indexerResult?.GetBlindBoxList;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerBoxDetailAsync Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetSchrodingerBoxDetailAsync Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<SchrodingerIndexerBoxDto> GetSchrodingerBoxDetailAsync(GetCatDetailInput input)
     {
         var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerBoxDetailQuery>(new GraphQLRequest
@@ -486,7 +487,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         return indexerResult.GetBlindBoxDetail;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetStrayCatsListAsync Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetStrayCatsListAsync Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<SchrodingerIndexerStrayCatsDto> GetStrayCatsListAsync(StrayCatsInput input)
     {
         var indexerResult = await _graphQlHelper.QueryAsync<SchrodingerIndexerStrayCatsQuery>(new GraphQLRequest
@@ -525,7 +526,7 @@ public class SchrodingerCatProvider : ISchrodingerCatProvider, ISingletonDepende
         return indexerResult?.GetStrayCats;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetRankDataAsync Indexer error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetRankDataAsync Indexer error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<RarityDataDto> GetRankDataAsync(List<string> symbolIds)
     {
         var indexerResult = await _graphQlHelper.QueryAsync<RarityDataDtoQuery>(new GraphQLRequest

@@ -63,7 +63,7 @@ public class PointServerProvider : IPointServerProvider, ISingletonDependency
         _logger = logger;
     }
 
-    [ExceptionHandler(typeof(Exception), Message = "CheckDomainAsync error", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "CheckDomainAsync error", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<bool> CheckDomainAsync(string domain)
     {
         var resp = await _httpProvider.InvokeAsync<CommonResponseDto<CheckDomainResponse>>(
@@ -77,7 +77,7 @@ public class PointServerProvider : IPointServerProvider, ISingletonDependency
         return resp.Data.Exists;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetMyPointsAsync error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetMyPointsAsync error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<MyPointDetailsDto> GetMyPointsAsync(GetMyPointsInput input)
     {
         var resp = await _httpProvider.InvokeAsync<CommonResponseDto<MyPointDetailsDto>>(
@@ -101,7 +101,7 @@ public class PointServerProvider : IPointServerProvider, ISingletonDependency
         return HashHelper.ComputeFrom(source).ToHex();
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetEcoEarnRewardsAsync error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetEcoEarnRewardsAsync error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<EcoEarnRewardDto> GetEcoEarnRewardsAsync(string address)
     {
         if (!_pointServiceOptions.CurrentValue.EcoEarnReady)
@@ -125,7 +125,7 @@ public class PointServerProvider : IPointServerProvider, ISingletonDependency
         return resp.Data ?? new EcoEarnRewardDto();
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetEcoEarnTotalRewardsAsync error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "GetEcoEarnTotalRewardsAsync error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<EcoEarnTotalRewardDto> GetEcoEarnTotalRewardsAsync(string address)
     {
         if (!_pointServiceOptions.CurrentValue.EcoEarnReady)

@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using SchrodingerServer.Common.Dtos;
 using SchrodingerServer.Common.HttpClient;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.ExceptionHandling;
 using Volo.Abp.DependencyInjection;
 using HttpMethod = System.Net.Http.HttpMethod;
 
@@ -64,7 +65,7 @@ public class SecretProvider : ISecretProvider, ITransientDependency
         return resp.Data!.Signature;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "CallSignatureServiceFailed error", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "CallSignatureServiceFailed error", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionStr))]
     public async Task<string> GetSignatureFromHashAsync(string publicKey, Hash hash)
     {
         var signatureSend = new SendSignatureDto

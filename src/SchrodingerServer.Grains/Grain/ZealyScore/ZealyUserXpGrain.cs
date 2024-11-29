@@ -96,7 +96,7 @@ public class ZealyUserXpGrain : Grain<ZealyUserXpState>, IZealyUserXpGrain
         return Success();
     }
 
-    [ExceptionHandler(typeof(Exception), Message = "ClearRecordInfo error", TargetType = typeof(GrainExceptionHandlingService), MethodName = nameof(GrainExceptionHandlingService.HandleExceptionDefault))]
+    [ExceptionHandler(typeof(Exception), Message = "ClearRecordInfo error", ReturnDefault = ReturnDefault.New, TargetType = typeof(GrainExceptionHandlingService), MethodName = nameof(GrainExceptionHandlingService.HandleExceptionDefault))]
     public async Task<GrainResultDto<ZealyUserXpGrainDto>> ClearRecordInfo(string date)
     {
         var recordInfo = State.RecordInfos.FirstOrDefault(t => t.Date == date);
