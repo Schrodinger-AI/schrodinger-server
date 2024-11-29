@@ -5,12 +5,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using AElf;
 using AElf.Cryptography;
+using AElf.ExceptionHandler;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using SchrodingerServer.AddressRelationship.Dto;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Options;
 using SchrodingerServer.Points;
 using SchrodingerServer.Points.Provider;
@@ -98,49 +100,47 @@ public class AddressRelationshipApplicationService : ApplicationService, IAddres
         
         foreach (var tradeList in batchList)
         {
-            var bizId = IdGenerateHelper.GetPointBizId(chainId, bizDate, pointName, Guid.NewGuid().ToString());
-            _logger.LogInformation("SettlePoints process for bizId:{id}", bizId);
-
-            try
-            {
-                var pointSettleDto = new PointSettleDto
-                {
-                    ChainId = chainId,
-                    PointName = pointName,
-                    BizId = bizId,
-                    UserPointsInfos = tradeList.Select(item => new UserPointInfo
-                    {
-                        Id = item.Id,
-                        Address = aelfAddress,
-                        PointAmount = item.PointAmount
-                    }).ToList()
-                }; 
-                
-                var aggPointSettleDto = new PointSettleDto
-                    {
-                        ChainId = chainId,
-                        PointName = pointName,
-                        BizId = bizId,
-                        UserPointsInfos = new List<UserPointInfo>()
-                        {
-                            new UserPointInfo
-                            {
-                                Id = tradeList.First().Id,
-                                Address = aelfAddress,
-                                PointAmount = tradeList.Sum(item => item.PointAmount)
-                            }
-                        }
-                    }; 
-                await _pointSettleService.BatchSettleAsync(aggPointSettleDto);
-                
-                await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(pointSettleDto, PointRecordStatus.Success.ToString());
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "SettlePoints error, bizId:{bizId} ids:{ids}", bizId, 
-                    string.Join(",", tradeList.Select(item => item.Id)));
-            }
+            await Settle(chainId, bizDate, pointName, aelfAddress, tradeList);
         }
+    }
+    
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
+    private async Task Settle(string chainId, string bizDate, string pointName, string aelfAddress, List<PointDailyRecordIndex> tradeList)
+    {
+        var bizId = IdGenerateHelper.GetPointBizId(chainId, bizDate, pointName, Guid.NewGuid().ToString());
+        _logger.LogInformation("SettlePoints process for bizId:{id}", bizId);
+
+        var pointSettleDto = new PointSettleDto
+        {
+            ChainId = chainId,
+            PointName = pointName,
+            BizId = bizId,
+            UserPointsInfos = tradeList.Select(item => new UserPointInfo
+            {
+                Id = item.Id,
+                Address = aelfAddress,
+                PointAmount = item.PointAmount
+            }).ToList()
+        }; 
+                
+        var aggPointSettleDto = new PointSettleDto
+        {
+            ChainId = chainId,
+            PointName = pointName,
+            BizId = bizId,
+            UserPointsInfos = new List<UserPointInfo>()
+            {
+                new UserPointInfo
+                {
+                    Id = tradeList.First().Id,
+                    Address = aelfAddress,
+                    PointAmount = tradeList.Sum(item => item.PointAmount)
+                }
+            }
+        }; 
+        await _pointSettleService.BatchSettleAsync(aggPointSettleDto);
+                
+        await _pointDailyRecordProvider.UpdatePointDailyRecordAsync(pointSettleDto, PointRecordStatus.Success.ToString());
     }
     
     

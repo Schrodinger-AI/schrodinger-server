@@ -67,27 +67,27 @@ public class SchrodingerServerEntityEventHandlerModule : AbpModule
         ConfigureRedis(context, configuration, context.Services.GetHostingEnvironment());
         ConfigureCache(configuration);
         context.Services.AddHostedService<SchrodingerServerHostedService>();
-        context.Services.AddSingleton<IClusterClient>(o =>
-        {
-            return new ClientBuilder()
-                .ConfigureDefaults()
-                .UseMongoDBClient(configuration["Orleans:MongoDBClient"])
-                .UseMongoDBClustering(options =>
-                {
-                    options.DatabaseName = configuration["Orleans:DataBase"];;
-                    options.Strategy = MongoDBMembershipStrategy.SingleDocument;
-                })
-                .Configure<ClusterOptions>(options =>
-                {
-                    options.ClusterId = configuration["Orleans:ClusterId"];
-                    options.ServiceId = configuration["Orleans:ServiceId"];
-                })
-                .ConfigureApplicationParts(parts =>
-                    parts.AddApplicationPart(typeof(SchrodingerServerGrainsModule).Assembly).WithReferences())
-                //.AddSimpleMessageStreamProvider(AElfIndexerApplicationConsts.MessageStreamName)
-                .ConfigureLogging(builder => builder.AddProvider(o.GetService<ILoggerProvider>()))
-                .Build();
-        });
+        // context.Services.AddSingleton<IClusterClient>(o =>
+        // {
+        //     return new ClientBuilder()
+        //         .ConfigureDefaults()
+        //         .UseMongoDBClient(configuration["Orleans:MongoDBClient"])
+        //         .UseMongoDBClustering(options =>
+        //         {
+        //             options.DatabaseName = configuration["Orleans:DataBase"];;
+        //             options.Strategy = MongoDBMembershipStrategy.SingleDocument;
+        //         })
+        //         .Configure<ClusterOptions>(options =>
+        //         {
+        //             options.ClusterId = configuration["Orleans:ClusterId"];
+        //             options.ServiceId = configuration["Orleans:ServiceId"];
+        //         })
+        //         .ConfigureApplicationParts(parts =>
+        //             parts.AddApplicationPart(typeof(SchrodingerServerGrainsModule).Assembly).WithReferences())
+        //         //.AddSimpleMessageStreamProvider(AElfIndexerApplicationConsts.MessageStreamName)
+        //         .ConfigureLogging(builder => builder.AddProvider(o.GetService<ILoggerProvider>()))
+        //         .Build();
+        // });
         ConfigureEsIndexCreation();
         
         context.Services.AddSingleton<IHostedService, InitJobsService>();
@@ -106,13 +106,13 @@ public class SchrodingerServerEntityEventHandlerModule : AbpModule
         context.AddBackgroundWorkerAsync<PointCompensateWorker>();
         context.AddBackgroundWorkerAsync<CheckPoolWorker>();
         var client = context.ServiceProvider.GetRequiredService<IClusterClient>();
-        AsyncHelper.RunSync(async ()=> await client.Connect());
+        // AsyncHelper.RunSync(async ()=> await client.Connect());
     }
 
     public override void OnApplicationShutdown(ApplicationShutdownContext context)
     {
-        var client = context.ServiceProvider.GetRequiredService<IClusterClient>();
-        AsyncHelper.RunSync(client.Close);
+        // var client = context.ServiceProvider.GetRequiredService<IClusterClient>();
+        // AsyncHelper.RunSync(client.Close);
     }
 
     //Create the ElasticSearch Index based on Domain Entity

@@ -1,6 +1,7 @@
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using CoinGecko.Clients;
 using CoinGecko.Interfaces;
 using Microsoft.Extensions.Caching.Distributed;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using SchrodingerServer.CoinGeckoApi;
 using SchrodingerServer.Common;
+using SchrodingerServer.ExceptionHandling;
 using Volo.Abp.Caching;
 using Volo.Abp.DependencyInjection;
 
@@ -75,6 +77,7 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
         return priceItem.Price;
     }
     
+    [ExceptionHandler(typeof(Exception), Message = "GetEcoEarnTotalRewardsAsync error", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<decimal> GetPriceAsync(string symbol)
     {
         if (string.IsNullOrEmpty(symbol))
@@ -88,58 +91,17 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
             Logger.LogWarning($"can not get the token {symbol}");
             return 0;
         }
-        try
-        {
-            var coinData =
-                await RequestAsync(async () =>
-                    await _coinGeckoClient.SimpleClient.GetSimplePrice(new[] { coinId }, new[] { UsdSymbol }));
+        
+        var coinData =
+            await RequestAsync(async () =>
+                await _coinGeckoClient.SimpleClient.GetSimplePrice(new[] { coinId }, new[] { UsdSymbol }));
 
-            if (!coinData.TryGetValue(coinId, out var value))
-            {
-                return 0;
-            }
-
-            return value[UsdSymbol].Value;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, $"can not get current price :{symbol}.");
-            return 0;
-        }
-    }
-
-    public async Task<decimal> GetHistoryPriceAsync(string symbol, DateTime dateTime)
-    {
-        if (string.IsNullOrEmpty(symbol))
+        if (!coinData.TryGetValue(coinId, out var value))
         {
             return 0;
         }
 
-        var coinId = GetCoinIdAsync(symbol);
-        if (coinId == null)
-        {
-            Logger.LogWarning($"can not get the token {symbol}");
-            return 0;
-        }
-
-        try
-        {
-            var coinData =
-                await RequestAsync(async () => await _coinGeckoClient.CoinsClient.GetHistoryByCoinId(coinId,
-                    dateTime.ToString("dd-MM-yyyy"), "false"));
-
-            if (coinData.MarketData == null)
-            {
-                return 0;
-            }
-
-            return (decimal)coinData.MarketData.CurrentPrice[UsdSymbol].Value;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, $"can not get :{symbol} price.");
-            return 0;
-        }
+        return value[UsdSymbol].Value;
     }
 
     private string GetCoinIdAsync(string symbol)

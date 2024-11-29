@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using SchrodingerServer.GateIo;
 using Volo.Abp;
@@ -31,5 +32,11 @@ public class GateIoCirculationController : AbpController
     public async Task<decimal> GetSgrPrice()
     {
         return await _gateIoCirculationService.GetSgrPrice();
+    }
+    
+    [HttpGet("test")]
+    public async Task<bool> DelCacheAsync(string key)
+    {
+        return await _gateIoCirculationService.DelCacheAsync(key);
     }
 }

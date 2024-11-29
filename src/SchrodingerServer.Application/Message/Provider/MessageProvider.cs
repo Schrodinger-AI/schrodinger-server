@@ -76,11 +76,9 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
 
     public async Task<NFTActivityIndexListDto> GetSchrodingerSoldListAsync(GetSchrodingerSoldListInput input)
     {
-        try
+        var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient).SendQueryAsync<NFTActivityIndexListQueryDto>(new GraphQLRequest
         {
-            var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient).SendQueryAsync<NFTActivityIndexListQueryDto>(new GraphQLRequest
-            {
-                Query = @"query (
+            Query = @"query (
                     $skipCount:Int!,
                     $maxResultCount:Int!,
                     $filterSymbol:String!,
@@ -114,24 +112,18 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
                     }
                   }
                 }",
-                Variables = new
-                {
-                    skipCount = input.SkipCount, 
-                    maxResultCount = input.MaxResultCount,
-                    filterSymbol = input.FilterSymbol,
-                    address = input.Address,
-                    timestampMin = input.TimestampMin,
-                    chainId = input.ChainId,
-                    buyer = input.Buyer ?? ""
-                }
-            });
-            return res.Data?.GetSchrodingerSoldRecord;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "getSchrodingerSoldRecord query GraphQL error");
-            throw;
-        }
+            Variables = new
+            {
+                skipCount = input.SkipCount, 
+                maxResultCount = input.MaxResultCount,
+                filterSymbol = input.FilterSymbol,
+                address = input.Address,
+                timestampMin = input.TimestampMin,
+                chainId = input.ChainId,
+                buyer = input.Buyer ?? ""
+            }
+        });
+        return res.Data?.GetSchrodingerSoldRecord;
     }
     
     public async Task<List<string>> GetAllSchrodingerSoldIdAsync(GetSchrodingerSoldListInput input)
@@ -164,7 +156,6 @@ public class MessageProvider : IMessageProvider, ISingletonDependency
         await _readMessageIndexRepository.BulkAddOrUpdateAsync(readMessageList);
     }
 }
-
 
 
 

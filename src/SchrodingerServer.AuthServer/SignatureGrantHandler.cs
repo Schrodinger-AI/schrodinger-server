@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using AElf;
 using AElf.Cryptography;
+using AElf.ExceptionHandler;
 using AElf.Types;
 using GraphQL;
 using GraphQL.Client.Http;
@@ -23,6 +24,7 @@ using OpenIddict.Server.AspNetCore;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.HttpClient;
 using SchrodingerServer.Dto;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Options;
 using SchrodingerServer.Users;
 using Volo.Abp;
@@ -73,9 +75,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
 
     public async Task<IActionResult> HandleAsync(ExtensionGrantContext context)
     {
-        try
-        {
-            var publicKeyVal = context.Request.GetParameter("publickey").ToString();
+        var publicKeyVal = context.Request.GetParameter("publickey").ToString();
             var signatureVal = context.Request.GetParameter("signature").ToString();
             var timestampVal = context.Request.GetParameter("timestamp").ToString();
             var address = context.Request.GetParameter("address").ToString();
@@ -194,24 +194,19 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
                 .GetRequiredService<Microsoft.AspNetCore.Identity.SignInManager<IdentityUser>>();
             var principal = await signInManager.CreateUserPrincipalAsync(user);
             var claimsPrincipal = await userClaimsPrincipalFactory.CreateAsync(user);
-            claimsPrincipal.SetScopes("SchrodingerServer");
-            claimsPrincipal.SetResources(await GetResourcesAsync(context, principal.GetScopes()));
-            claimsPrincipal.SetAudiences("SchrodingerServer");
-            await context.HttpContext.RequestServices.GetRequiredService<AbpOpenIddictClaimDestinationsManager>()
-                .SetAsync(principal);
-            return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, claimsPrincipal);
-        }
-        catch (UserFriendlyException e)
-        {
-            _logger.LogWarning("Create token failed: {Message}", e.Message);
-            return ForbidResult(OpenIddictConstants.Errors.InvalidRequest, e.Message);
-        }
-        catch (Exception e)
-        {
-            // _logger.LogError(e, "Create token error");
-            _logger.LogError( "Create token error: {Message}", e.Message);
-            return ForbidResult(OpenIddictConstants.Errors.ServerError, "Internal error.");
-        }
+            // claimsPrincipal.SetScopes("SchrodingerServer");
+            // claimsPrincipal.SetResources(await GetResourcesAsync(context, principal.GetScopes()));
+            // claimsPrincipal.SetAudiences("SchrodingerServer");
+            principal.SetScopes("SchrodingerServer");
+            principal.SetResources(await GetResourcesAsync(context, principal.GetScopes()));
+            principal.SetAudiences("SchrodingerServer");
+            
+            // await context.HttpContext.RequestServices.GetRequiredService<AbpOpenIddictClaimDestinationsManager>()
+            //     .SetAsync(principal);
+            var abpOpenIddictClaimDestinationsManager = context.HttpContext.RequestServices
+                .GetRequiredService<AbpOpenIddictClaimsPrincipalManager>();
+            await abpOpenIddictClaimDestinationsManager.HandleAsync(context.Request, principal);
+            return new SignInResult(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, principal);
     }
     
     private static ForbidResult ForbidResult(string errorType, string errorDescription)
@@ -272,22 +267,15 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         return indexerCaHolderInfos;
     }
     
+    [ExceptionHandler(typeof(Exception), Message = "GetCaHolderManagerInfoAsync Failed", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task<CAHolderManager?> GetCaHolderManagerInfoAsync(string manager)
     {
         var portkeyCaHolderInfoUrl = _graphQlOption.CurrentValue.PortkeyCaHolderInfoUrl;
     
         var apiInfo = new ApiInfo(HttpMethod.Get, "/api/app/account/manager/check");
         var param = new Dictionary<string, string> { { "manager", manager } };
-        try
-        {
-            var resp = await _httpProvider.InvokeAsync<CAHolderManager>(portkeyCaHolderInfoUrl, apiInfo, param: param);
-            return resp;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "get ca holder manager info fail.");
-            return null;
-        }
+        var resp = await _httpProvider.InvokeAsync<CAHolderManager>(portkeyCaHolderInfoUrl, apiInfo, param: param);
+        return resp;
     }
 
     private async Task<bool> CreateUserAsync(IdentityUserManager userManager,

@@ -3,7 +3,7 @@
   <Import Project="..\..\common.props" />
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <RootNamespace>SchrodingerServer</RootNamespace>
     <AssetTargetFallback>$(AssetTargetFallback);portable-net45+win8+wp8+wpa81;</AssetTargetFallback>
@@ -23,6 +23,7 @@
     <Content Update="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Include="apollo.appsettings.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,27 +40,41 @@
     <PackageReference Include="AElf.Types" Version="1.5.0" />
     <PackageReference Include="GraphQL.Client" Version="5.1.0" />
     <PackageReference Include="GraphQL.Client.Serializer.Newtonsoft" Version="5.1.0" />
-    <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="3.6.5" />
+    <PackageReference Include="Microsoft.Orleans.Client" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Orleans.CodeGenerator" Version="7.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Orleans.Runtime" Version="7.0.0" />
+    <PackageReference Include="Volo.Abp.OpenIddict.Domain" Version="8.2.0" />
+    <PackageReference Include="Microsoft.Orleans.Serialization.NewtonsoftJson" Version="7.0.0" />
+    <PackageReference Include="Microsoft.Orleans.Streaming.EventHubs" Version="7.0.0" />
+    <!--<PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="7.0.0" />-->
+    <PackageReference Include="Microsoft.Orleans.Sdk" Version="7.0.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="5.0.0" />
     <PackageReference Include="Serilog.Sinks.Async" Version="1.5.0" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="6.0.7" />
     <PackageReference Include="DistributedLock.Redis" Version="1.0.2" />
-    <PackageReference Include="Volo.Abp.EventBus.RabbitMQ" Version="7.0.0" />
+    <PackageReference Include="Volo.Abp.Ddd.Domain" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.EventBus.RabbitMQ" Version="8.2.0" />
+
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" Version="2.0.*-*" />
+    <PackageReference Include="Volo.Abp.AspNetCore.Mvc.UI.Theme.LeptonXLite" Version="3.1.4" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Com.Ctrip.Framework.Apollo.Configuration" Version="2.10.1" />
-    <PackageReference Include="Volo.Abp.Autofac" Version="7.0.0" />
-    <PackageReference Include="Volo.Abp.Caching.StackExchangeRedis" Version="7.0.0" />
-    <PackageReference Include="Volo.Abp.DistributedLocking" Version="7.0.0" />
-    <PackageReference Include="Volo.Abp.AspNetCore.Serilog" Version="7.0.0" />
-    <PackageReference Include="Volo.Abp.Account.Web.OpenIddict" Version="7.0.0" />
-    <PackageReference Include="Volo.Abp.Account.Application" Version="7.0.0" />
-    <PackageReference Include="Volo.Abp.Account.HttpApi" Version="7.0.0" />
+    <PackageReference Include="Volo.Abp.Autofac" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.Caching.StackExchangeRedis" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.DistributedLocking" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.AspNetCore.Serilog" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.Account.Web.OpenIddict" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.Account.Application" Version="8.2.0" />
+    <PackageReference Include="Volo.Abp.Account.HttpApi" Version="8.2.0" />
+    <PackageReference Include="OpenIddict" Version="5.5.0"/>
+    <PackageReference Include="Volo.Abp.AspNetCore.Mvc.UI.MultiTenancy" Version="8.2.0" />
     <ProjectReference Include="..\SchrodingerServer.Application\SchrodingerServer.Application.csproj" />
     <ProjectReference Include="..\SchrodingerServer.MongoDB\SchrodingerServer.MongoDB.csproj" />
   </ItemGroup>

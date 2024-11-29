@@ -128,20 +128,12 @@ public class CheckPoolWorker : AsyncPeriodicBackgroundWorkerBase
             Owner = Address.FromBase58(_schrodingerPoolOptionsMonitor.CurrentValue.PoolAddress)
         };
 
-        try
-        {
-            var rawTxResult = await _contractProvider.CreateTransactionAsync(chainId, 
-                _schrodingerPoolOptionsMonitor.CurrentValue.PublicKey,
-                _schrodingerPoolOptionsMonitor.CurrentValue.TokenContractAddress, 
-                MethodName.GetBalance, param.ToByteString().ToBase64());
+        var rawTxResult = await _contractProvider.CreateTransactionAsync(chainId, 
+            _schrodingerPoolOptionsMonitor.CurrentValue.PublicKey,
+            _schrodingerPoolOptionsMonitor.CurrentValue.TokenContractAddress, 
+            MethodName.GetBalance, param.ToByteString().ToBase64());
         
-            var balance = await _contractProvider.CallTransactionAsync<GetBalanceOutput>(chainId, rawTxResult.transaction.ToByteArray().ToHex());
-            return balance.Balance;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "check balance error, msg:{msg}", e.Message);
-            throw;
-        }
+        var balance = await _contractProvider.CallTransactionAsync<GetBalanceOutput>(chainId, rawTxResult.transaction.ToByteArray().ToHex());
+        return balance.Balance;
     }
 }

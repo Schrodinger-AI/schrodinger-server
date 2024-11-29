@@ -31,6 +31,7 @@ public class Program
             builder.Host.AddAppSettingsSecretsJson()
                 .UseApollo()
                 .UseAutofac()
+                .UseOrleansClient()
                 .UseSerilog();
 
             await builder.AddApplicationAsync<SchrodingerServerHttpApiHostModule>();

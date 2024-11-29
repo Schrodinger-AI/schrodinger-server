@@ -55,6 +55,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SchrodingerServer.Signature
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SchrodingerServer.Common", "src\SchrodingerServer.Common\SchrodingerServer.Common.csproj", "{2AA267BF-E3C5-4DD5-893C-5AFB94439FB5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SchrodingerServer.SignatureApi.Host", "src\SchrodingerServer.SignatureApi.Host\SchrodingerServer.SignatureApi.Host.csproj", "{A0D30A74-EF38-48C1-B8CA-49BB2E5D9C85}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -157,6 +159,10 @@ Global
 		{2AA267BF-E3C5-4DD5-893C-5AFB94439FB5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2AA267BF-E3C5-4DD5-893C-5AFB94439FB5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2AA267BF-E3C5-4DD5-893C-5AFB94439FB5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A0D30A74-EF38-48C1-B8CA-49BB2E5D9C85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0D30A74-EF38-48C1-B8CA-49BB2E5D9C85}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0D30A74-EF38-48C1-B8CA-49BB2E5D9C85}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A0D30A74-EF38-48C1-B8CA-49BB2E5D9C85}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -186,6 +192,7 @@ Global
 		{B91CC1AC-11E6-41E6-B693-1697D257A42B} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 		{9442494E-FAEA-4434-AECB-13D853E2776F} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 		{2AA267BF-E3C5-4DD5-893C-5AFB94439FB5} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
+		{A0D30A74-EF38-48C1-B8CA-49BB2E5D9C85} = {CA9AC87F-097E-4F15-8393-4BC07735A5B0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {28315BFD-90E7-4E14-A2EA-F3D23AF4126F}

@@ -65,18 +65,6 @@ public static class TimeHelper
         return utcZoneTime.ToString(pattern, CultureInfo.InvariantCulture);
     }
     
-    public static DateTime? ParseFromUtc8(string dateTimeString, string pattern = DefaultPattern, DateTime? defaultDateTime = null)
-    {
-        try
-        {
-            return ParseFromZone(dateTimeString, 8, pattern);
-        }
-        catch (Exception)
-        {
-            return defaultDateTime;
-        }
-    }
-    
     public static DateTime ParseFromZone(string dateTimeString, int utcOffset, string pattern = DefaultPattern)
     {
         var dateTime = DateTime.ParseExact(dateTimeString, pattern, CultureInfo.InvariantCulture);

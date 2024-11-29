@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using SchrodingerServer.Dto;
 using SchrodingerServer.Users;
@@ -21,10 +22,10 @@ public class LevelController : AbpController
     {
         _levelProvider = levelProvider;
     }
-
-    [HttpPost("item/level")]
-    public async Task<List<RankData>> GetItemLevelInfoAsync(GetLevelInfoInputDto input)
+    
+    [HttpGet("whitelist/{address}")]
+    public async Task<bool> GetItemLevelDicAsync(string address)
     {
-        return await _levelProvider.GetItemLevelAsync(input);
+        return await _levelProvider.CheckAddressIsInWhiteListAsync(address);
     }
 }

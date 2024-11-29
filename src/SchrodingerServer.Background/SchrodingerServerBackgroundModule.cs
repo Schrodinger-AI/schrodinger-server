@@ -82,7 +82,6 @@ public class SchrodingerServerBackgroundModule : AbpModule
         context.Services.AddHttpClient();
         ConfigureHangfire(context, configuration);
         ConfigureZealyClient(context, configuration);
-        ConfigureOrleans(context, configuration);
     }
     
     private void ConfigureCache(IConfiguration configuration)
@@ -91,29 +90,29 @@ public class SchrodingerServerBackgroundModule : AbpModule
     }
 
   
-    private static void ConfigureOrleans(ServiceConfigurationContext context, IConfiguration configuration)
-    {
-        context.Services.AddSingleton(o =>
-        {
-            return new ClientBuilder()
-                .ConfigureDefaults()
-                .UseMongoDBClient(configuration["Orleans:MongoDBClient"])
-                .UseMongoDBClustering(options =>
-                {
-                    options.DatabaseName = configuration["Orleans:DataBase"];
-                    options.Strategy = MongoDBMembershipStrategy.SingleDocument;
-                })
-                .Configure<ClusterOptions>(options =>
-                {
-                    options.ClusterId = configuration["Orleans:ClusterId"];
-                    options.ServiceId = configuration["Orleans:ServiceId"];
-                })
-                .ConfigureApplicationParts(parts =>
-                    parts.AddApplicationPart(typeof(SchrodingerServerGrainsModule).Assembly).WithReferences())
-                .ConfigureLogging(builder => builder.AddProvider(o.GetService<ILoggerProvider>()))
-                .Build();
-        });
-    }
+    // private static void ConfigureOrleans(ServiceConfigurationContext context, IConfiguration configuration)
+    // {
+    //     context.Services.AddSingleton(o =>
+    //     {
+    //         return new ClientBuilder()
+    //             .ConfigureDefaults()
+    //             .UseMongoDBClient(configuration["Orleans:MongoDBClient"])
+    //             .UseMongoDBClustering(options =>
+    //             {
+    //                 options.DatabaseName = configuration["Orleans:DataBase"];
+    //                 options.Strategy = MongoDBMembershipStrategy.SingleDocument;
+    //             })
+    //             .Configure<ClusterOptions>(options =>
+    //             {
+    //                 options.ClusterId = configuration["Orleans:ClusterId"];
+    //                 options.ServiceId = configuration["Orleans:ServiceId"];
+    //             })
+    //             .ConfigureApplicationParts(parts =>
+    //                 parts.AddApplicationPart(typeof(SchrodingerServerGrainsModule).Assembly).WithReferences())
+    //             .ConfigureLogging(builder => builder.AddProvider(o.GetService<ILoggerProvider>()))
+    //             .Build();
+    //     });
+    // }
 
     private void ConfigureZealyClient(ServiceConfigurationContext context, IConfiguration configuration)
     {
@@ -180,13 +179,13 @@ public class SchrodingerServerBackgroundModule : AbpModule
         context.AddBackgroundWorkerAsync<XpScoreSettleWorker>();
         context.AddBackgroundWorkerAsync<XpScoreResultWorker>();
         InitRecurringJob(context.ServiceProvider);
-        StartOrleans(context.ServiceProvider);
+        // StartOrleans(context.ServiceProvider);
     }
 
-    public override void OnApplicationShutdown(ApplicationShutdownContext context)
-    {
-        StopOrleans(context.ServiceProvider);
-    }
+    // public override void OnApplicationShutdown(ApplicationShutdownContext context)
+    // {
+    //     StopOrleans(context.ServiceProvider);
+    // }
 
     private static void InitRecurringJob(IServiceProvider serviceProvider)
     {
@@ -194,17 +193,17 @@ public class SchrodingerServerBackgroundModule : AbpModule
         jobsService.InitRecurringJob();
     }
 
-    private static void StartOrleans(IServiceProvider serviceProvider)
-    {
-        var client = serviceProvider.GetRequiredService<IClusterClient>();
-        AsyncHelper.RunSync(async () => await client.Connect());
-    }
-
-    private static void StopOrleans(IServiceProvider serviceProvider)
-    {
-        var client = serviceProvider.GetRequiredService<IClusterClient>();
-        AsyncHelper.RunSync(client.Close);
-    }
+    // private static void StartOrleans(IServiceProvider serviceProvider)
+    // {
+    //     var client = serviceProvider.GetRequiredService<IClusterClient>();
+    //     AsyncHelper.RunSync(async () => await client.Connect());
+    // }
+    //
+    // private static void StopOrleans(IServiceProvider serviceProvider)
+    // {
+    //     var client = serviceProvider.GetRequiredService<IClusterClient>();
+    //     AsyncHelper.RunSync(client.Close);
+    // }
     
     private void ConfigureRedis(
         ServiceConfigurationContext context,

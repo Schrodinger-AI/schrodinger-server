@@ -1,5 +1,7 @@
+using AElf.ExceptionHandler;
 using Orleans;
 using SchrodingerServer.Common;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Grains.State.Users;
 using SchrodingerServer.Users;
 using Volo.Abp.ObjectMapping;
@@ -14,6 +16,48 @@ public interface IUserActionGrain : IGrainWithGuidKey
     
     Task<GrainResultDto<UserActionGrainDto>> AddActionAsync(ActionType actionType);
 }
+
+public class GrainExceptionHandlingService
+{
+    public static async Task<FlowBehavior> HandleExceptionDefault(Exception ex)
+    {
+        return new FlowBehavior
+        {
+            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return
+        };
+    }
+    
+    public static async Task<FlowBehavior> HandleException(Exception ex)
+    {
+        return new FlowBehavior
+        {
+            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
+            ReturnValue = 1
+        };
+    }
+    
+    public static async Task<FlowBehavior> HandleAElfClientException(Exception ex)
+    {
+        return new FlowBehavior
+        {
+            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
+            ReturnValue = 2
+        };
+    }
+    
+    public static async Task<FlowBehavior> HandleExceptionFalse(Exception ex)
+    {
+        return new FlowBehavior
+        {
+            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
+            ReturnValue = false
+        };
+    }
+    
+    
+    
+}
+
 
 public class UserActionGrain : Grain<UserActionState>, IUserActionGrain
 {
@@ -37,23 +81,17 @@ public class UserActionGrain : Grain<UserActionState>, IUserActionGrain
         var dto = _objectMapper.Map<UserActionState, UserActionGrainDto>(State);
         return Task.FromResult(new GrainResultDto<UserActionGrainDto>(dto));
     }
-
+    
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<GrainResultDto<UserActionGrainDto>> AddActionAsync(ActionType actionType)
     {
-        try
+        if (!State.ActionData.ContainsKey(actionType.ToString()))
         {
-            if (!State.ActionData.ContainsKey(actionType.ToString()))
-            {
-                State.ActionData[actionType.ToString()] = DateTime.UtcNow.ToUtcMilliSeconds();
-                await WriteStateAsync();
-            }
+            State.ActionData[actionType.ToString()] = DateTime.UtcNow.ToUtcMilliSeconds();
+            await WriteStateAsync();
+        }
             
-            var dto = _objectMapper.Map<UserActionState, UserActionGrainDto>(State);
-            return new GrainResultDto<UserActionGrainDto>(dto);
-        }
-        catch (Exception e)
-        {
-            return new GrainResultDto<UserActionGrainDto>().Error(e.Message);
-        }
+        var dto = _objectMapper.Map<UserActionState, UserActionGrainDto>(State);
+        return new GrainResultDto<UserActionGrainDto>(dto);
     }
 }

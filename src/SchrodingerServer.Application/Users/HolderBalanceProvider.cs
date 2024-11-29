@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using AElf.Indexing.Elasticsearch;
 using GraphQL;
 using Microsoft.Extensions.Logging;
 using Nest;
 using SchrodingerServer.Common.GraphQL;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Users.Index;
 using Volo.Abp.DependencyInjection;
 
@@ -111,15 +113,13 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
         return !tuple.Item2.IsNullOrEmpty() ? tuple.Item2 : new List<HolderBalanceIndex>();
     }
     
-    
+    [ExceptionHandler(typeof(Exception), Message = "GetLastHoldingRecordAsync error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<HolderDailyChangeDto> GetLastHoldingRecordAsync(string chainId, string address, string symbol, List<string>  excludeDate)
     {
-        try
+        var graphQlResponse = await _graphQlHelper.QueryAsync<IndexerHolderDailyChangeDto>(new GraphQLRequest
         {
-            var graphQlResponse = await _graphQlHelper.QueryAsync<IndexerHolderDailyChangeDto>(new GraphQLRequest
-            {
-                Query =
-                    @"query($chainId:String!,$skipCount:Int!,$maxResultCount:Int!,$address:String!,$symbol:String!,$excludeDate:[String!]){
+            Query =
+                @"query($chainId:String!,$skipCount:Int!,$maxResultCount:Int!,$address:String!,$symbol:String!,$excludeDate:[String!]){
             getSchrodingerHolderDailyChangeList(input: {chainId:$chainId,skipCount:$skipCount,maxResultCount:$maxResultCount, address:$address, symbol:$symbol, excludeDate:$excludeDate})
             {
                data {
@@ -131,22 +131,16 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
                 },
                 totalCount
             }}",
-                Variables = new
-                {
-                    chainId = chainId,
-                    skipCount = 0,
-                    maxResultCount = 1000,
-                    address = address,
-                    symbol = symbol,
-                    excludeDate = excludeDate
-                }
-            });
-            return graphQlResponse?.GetSchrodingerHolderDailyChangeList.Data?.LastOrDefault();
-        }
-        catch (Exception e)
-        {
-            _logger.LogError("GetLastHoldingRecordAsync fail for: {msg}", e.Message);
-            return null;
-        }
+            Variables = new
+            {
+                chainId = chainId,
+                skipCount = 0,
+                maxResultCount = 1000,
+                address = address,
+                symbol = symbol,
+                excludeDate = excludeDate
+            }
+        });
+        return graphQlResponse?.GetSchrodingerHolderDailyChangeList.Data?.LastOrDefault();
     }
 }

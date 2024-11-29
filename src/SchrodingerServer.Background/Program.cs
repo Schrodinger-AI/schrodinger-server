@@ -43,6 +43,7 @@ public class Program
             .ConfigureServices((hostContext, services) => { services.AddApplication<SchrodingerServerBackgroundModule>(); })
             .ConfigureAppConfiguration((h,c)=>c.AddJsonFile("apollo.appsettings.json")) 
             .UseApollo()
+            .UseOrleansClient()
             .UseAutofac()
             .UseSerilog();
 }

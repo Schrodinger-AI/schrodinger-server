@@ -31,3 +31,18 @@ public class CheckResult
 {
     public bool IsAddressValid { get; set; }
 }
+
+public class CmsWhiteListResponse
+{
+    public WhiteListData Data { get; set; }
+}
+
+public class WhiteListData
+{
+    public AddressList Data { get; set; }
+}
+
+public class AddressList
+{
+    public List<string> Whitelist { get; set; }
+}

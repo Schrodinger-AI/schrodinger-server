@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using AElf.Indexing.Elasticsearch;
 using GraphQL;
 using Microsoft.Extensions.Logging;
@@ -10,6 +11,7 @@ using Orleans;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.GraphQL;
 using SchrodingerServer.Dto;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Grains.Grain.Points;
 using SchrodingerServer.Users.Dto;
 using SchrodingerServer.Users.Eto;
@@ -114,7 +116,7 @@ public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDep
         var tuple = await _pointDailyRecordIndexRepository.GetSortListAsync(Filter, skip: skipCount, sortFunc: sorting);
         return tuple.Item2;
     }
-
+    
     public async Task UpdatePointDailyRecordAsync(PointSettleDto settleDto, string status)
     {
         var bizId = settleDto.BizId;
@@ -122,22 +124,21 @@ public class PointDailyRecordProvider : IPointDailyRecordProvider, ISingletonDep
         _logger.LogInformation("UpdatePointDailyRecord bizId:{bizId} status:{status}, infos:{infos}", bizId, status, JsonConvert.SerializeObject(userPointInfos));
         foreach (var userPoints in userPointInfos)
         {
-            try
-            {
-                var pointDailyRecordGrain = _clusterClient.GetGrain<IPointDailyRecordGrain>(userPoints.Id);
-                var result = await pointDailyRecordGrain.UpdateAsync(bizId, status);
-                if (!result.Success)
-                {
-                    _logger.LogError("PointDailyRecordGrain UpdateAsync fail, id: {id}.", userPoints.Id);
-                }
-                await _distributedEventBus.PublishAsync(
-                    _objectMapper.Map<PointDailyRecordGrainDto, PointDailyRecordEto>(result.Data));
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "PointDailyRecordGrain UpdateAsync fail, id: {id}.", userPoints.Id);
-            }
+            await ProcessRecordAsync(userPoints.Id, bizId, status);
         }
+    }
+
+    [ExceptionHandler(typeof(Exception), Message = "PointDailyRecordGrain UpdateAsync fail", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
+    private async Task ProcessRecordAsync(string id, string bizId, string status)
+    {
+        var pointDailyRecordGrain = _clusterClient.GetGrain<IPointDailyRecordGrain>(id);
+        var result = await pointDailyRecordGrain.UpdateAsync(bizId, status);
+        if (!result.Success)
+        {
+            _logger.LogError("PointDailyRecordGrain UpdateAsync fail, id: {id}.", id);
+        }
+        await _distributedEventBus.PublishAsync(
+            _objectMapper.Map<PointDailyRecordGrainDto, PointDailyRecordEto>(result.Data));
     }
     
     public async Task<List<PointDailyRecordIndex>> GetAllDailyRecordIndex(string chainId, string bizDate, string pointName)

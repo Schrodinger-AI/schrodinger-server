@@ -203,6 +203,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         return detail;
     }
     
+    
     private async Task<SchrodingerListDto> GetSchrodingerAllCatsPageList(GetCatListInput input)
     {
         var result = new SchrodingerListDto();
@@ -275,7 +276,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
 
         foreach (var rarity in rankData.RarityInfo)
         {
-            _logger.LogInformation("rarity data: {a} {b}}", address, rarity.Rank);
+            _logger.LogInformation("rarity data: {a} {b}", address, rarity.Rank);
             var rarityData = await _levelProvider.GetRarityInfo(address, rarity.Rank, true);
             map[rarity.Symbol] = rarityData;
         }
@@ -433,7 +434,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         input.AdoptTime = _levelOptions.CurrentValue.AdoptTime;
         var schrodingerIndexerBoxListDto = await _schrodingerCatProvider.GetSchrodingerBoxListAsync(input);
 
-        var data = schrodingerIndexerBoxListDto.Data;
+        var data = schrodingerIndexerBoxListDto?.Data;
         if (data.IsNullOrEmpty())
         {
             return resp;
@@ -538,9 +539,14 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         }
 
         input.AdoptTime = _levelOptions.CurrentValue.AdoptTime;
-        var boxDetail = await _schrodingerCatProvider.GetStrayCatsListAsync(input);
+        var strayCats = await _schrodingerCatProvider.GetStrayCatsListAsync(input);
+
+        if (strayCats == null)
+        {
+            return  new StrayCatsListDto();
+        }
         
-        var resp = _objectMapper.Map<SchrodingerIndexerStrayCatsDto, StrayCatsListDto>(boxDetail);
+        var resp = _objectMapper.Map<SchrodingerIndexerStrayCatsDto, StrayCatsListDto>(strayCats);
         return resp;
     }
 
@@ -596,7 +602,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
                 ChainId = _levelOptions.CurrentValue.ChainIdForReal
             });
 
-            if (!holderDetail.Symbol.IsNullOrEmpty())
+            if (holderDetail != null && !holderDetail.Symbol.IsNullOrEmpty())
             {
                 if (holderDetail.Amount < 100000000)
                 {
@@ -699,7 +705,8 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
             {
                 AbsoluteExpiration = DateTimeOffset.UtcNow.AddMinutes(10)
             });
-            _logger.LogInformation("get sgr price from api");
+
+            _logger.LogInformation("get sgr price from api， prize: {prize}", sgrPrice);
         }
         else
         {

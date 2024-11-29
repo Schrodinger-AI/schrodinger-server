@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using AElf.Client.Dto;
 using AElf.Client.Service;
+using AElf.ExceptionHandler;
 using AElf.Types;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -8,7 +10,9 @@ using Orleans;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.ApplicationHandler;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Grains.Grain.ApplicationHandler;
+using SchrodingerServer.Grains.Grain.Users;
 using SchrodingerServer.Grains.State.ContractInvoke;
 using Volo.Abp.ObjectMapping;
 
@@ -33,16 +37,16 @@ public class ContractInvokeGrain : Grain<ContractInvokeState>, IContractInvokeGr
         _chainOptionsMonitor = chainOptionsMonitor;
     }
 
-    public override async Task OnActivateAsync()
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         await ReadStateAsync();
-        await base.OnActivateAsync();
+        await base.OnActivateAsync(cancellationToken);
     }
 
-    public override async Task OnDeactivateAsync()
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
         await WriteStateAsync();
-        await base.OnDeactivateAsync();
+        await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
     public async Task<GrainResultDto<ContractInvokeGrainDto>> CreateAsync(ContractInvokeGrainDto input)
@@ -80,30 +84,35 @@ public class ContractInvokeGrain : Grain<ContractInvokeState>, IContractInvokeGr
         }
         
         var status = EnumConverter.ConvertToEnum<ContractInvokeStatus>(State.Status);
+        
+        var res = await ProcessJob(status);
 
-        try
+        if (!res)
         {
-            switch (status)
-            {
-                case ContractInvokeStatus.ToBeCreated:
-                    await HandleCreatedAsync();
-                    break;
-                case ContractInvokeStatus.Pending:
-                    await HandlePendingAsync();
-                    break;
-                case ContractInvokeStatus.Failed:
-                    await HandleFailedAsync();
-                    break;
-            }
+            _logger.LogError( "An error occurred during job execution and will be retried bizId:{bizId} txHash: {TxHash}",
+                State.BizId, State.TransactionId);
+        }
+        
+        return OfContractInvokeGrainResultDto(res);
+    }
+    
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
+    private async Task<bool> ProcessJob(ContractInvokeStatus status)
+    {
+        switch (status)
+        {
+            case ContractInvokeStatus.ToBeCreated:
+                await HandleCreatedAsync();
+                break;
+            case ContractInvokeStatus.Pending:
+                await HandlePendingAsync();
+                break;
+            case ContractInvokeStatus.Failed:
+                await HandleFailedAsync();
+                break;
+        }
 
-            return OfContractInvokeGrainResultDto(true);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "An error occurred during job execution and will be retried bizId:{bizId} txHash: {TxHash} err: {err}",
-                State.BizId, State.TransactionId,  ex.ToString());
-            return OfContractInvokeGrainResultDto(false);
-        }
+        return true;
     }
 
     private async Task HandleCreatedAsync()
@@ -126,7 +135,7 @@ public class ContractInvokeGrain : Grain<ContractInvokeState>, IContractInvokeGr
         State.RefBlockNumber = signedTransaction.RefBlockNumber;
         State.Sender = signedTransaction.From.ToBase58();
         State.Status = ContractInvokeStatus.Pending.ToString();
-        //Send Transaction with catch exception
+  
         await SendTransactionAsync(State.ChainId, signedTransaction);
 
         _logger.LogInformation(
@@ -216,14 +225,7 @@ public class ContractInvokeGrain : Grain<ContractInvokeState>, IContractInvokeGr
     
     private async Task SendTransactionAsync(string chainId, Transaction signedTransaction)
     {
-        try
-        {
-            await _contractProvider.SendTransactionAsync(chainId, signedTransaction);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "SendTransaction error, txId:{txId}, err:{err}", signedTransaction.GetHash().ToHex(), e.ToString());
-        }
+        await _contractProvider.SendTransactionAsync(chainId, signedTransaction);
     }
     
     private GrainResultDto<ContractInvokeGrainDto> OfContractInvokeGrainResultDto(bool success, string message = null)

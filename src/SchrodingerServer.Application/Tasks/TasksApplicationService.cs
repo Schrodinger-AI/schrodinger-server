@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AElf;
+using AElf.ExceptionHandler;
 using AElf.Types;
 using Google.Protobuf;
 using Microsoft.Extensions.Caching.Distributed;
@@ -15,6 +16,7 @@ using SchrodingerServer.Common;
 using SchrodingerServer.Common.AElfSdk;
 using SchrodingerServer.Common.Dtos;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Message.Dtos;
 using SchrodingerServer.Message.Provider;
 using SchrodingerServer.Options;
@@ -116,6 +118,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         var dailyTasks = taskList.Where(i => i.Type == TaskType.Daily).ToList();
         var socialTasks = taskList.Where(i => i.Type == TaskType.Social).ToList();
         var accomplishmentTasks = taskList.Where(i => i.Type == TaskType.Accomplishment).ToList();
+        var partnerTasks = taskList.Where(i => i.Type == TaskType.Partner).ToList();
 
         var dailyTaskList = await GetDailyTasksAsync(dailyTasks, currentAddress);
         _logger.LogDebug("GetDailyTaskList, list:{dailyTaskList}", JsonConvert.SerializeObject(dailyTaskList));
@@ -130,6 +133,10 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             JsonConvert.SerializeObject(accomplishmentTaskList));
         accomplishmentTaskList =
             accomplishmentTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
+        
+        var partnerTaskList = await GetOtherTasksAsync(partnerTasks, currentAddress);
+        _logger.LogDebug("GetPartnerTaskList, list:{socialTaskList}", JsonConvert.SerializeObject(partnerTaskList));
+        partnerTaskList = partnerTaskList.OrderBy(i => GetSortOrder(i.Status)).ThenBy(i => i.Name).ToList();
 
         var nowUtc = DateTime.UtcNow;
         var tomorrowUtcZero =
@@ -141,6 +148,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
             DailyTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(dailyTaskList),
             SocialTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(socialTaskList),
             AccomplishmentTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(accomplishmentTaskList),
+            PartnerTasks = _objectMapper.Map<List<TasksDto>, List<TaskData>>(partnerTaskList),
             Countdown = (int)Math.Ceiling(timeDifference.TotalSeconds)
         };
     }
@@ -1243,38 +1251,31 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         
         await _tasksProvider.DeleteMilestoneVoucherClaimedRecordAsync(taskId, address, level);
     }
-
+    
+    [ExceptionHandler(typeof(Exception), Message = "SendAirdropVoucherTransactionAsync Failed", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<CheckTransactionDto> SendAirdropVoucherTransactionAsync(string chainId, string address)
     {
-        try
+        var aelfAddress = Address.FromBase58(address);
+        var param = new AirdropVoucherInput
         {
-            var aelfAddress = Address.FromBase58(address);
-            var param = new AirdropVoucherInput
-            {
-                Tick = DefaultTick,
-                Amount = 1,
-                List = { aelfAddress }
-            };
+            Tick = DefaultTick,
+            Amount = 1,
+            List = { aelfAddress }
+        };
 
-            var rawTxResult = await _contractProvider.CreateTransactionAsync(chainId,
-                _chainOptions.ChainInfos[chainId].PointTxPublicKey,
-                _chainOptions.ChainInfos[chainId].SchrodingerContractAddress, "AirdropVoucher", param.ToByteString().ToBase64());
-            _logger.LogInformation("SendAirdropVoucherTransactionAsync rawTxResult: {result}", JsonConvert.SerializeObject(rawTxResult));
+        var rawTxResult = await _contractProvider.CreateTransactionAsync(chainId,
+            _chainOptions.ChainInfos[chainId].PointTxPublicKey,
+            _chainOptions.ChainInfos[chainId].SchrodingerContractAddress, "AirdropVoucher", param.ToByteString().ToBase64());
+        _logger.LogInformation("SendAirdropVoucherTransactionAsync rawTxResult: {result}", JsonConvert.SerializeObject(rawTxResult));
 
-            var signedTransaction = rawTxResult.transaction;
+        var signedTransaction = rawTxResult.transaction;
 
-            var transactionOutput = await _contractProvider.SendTransactionWithRetAsync(chainId, signedTransaction);
-            _logger.LogInformation("SendAirdropVoucherTransactionAsync transactionId: {id}", transactionOutput.TransactionId);
-            var transactionResult =
-                await _contractProvider.CheckTransactionStatusAsync(transactionOutput.TransactionId, chainId);
+        var transactionOutput = await _contractProvider.SendTransactionWithRetAsync(chainId, signedTransaction);
+        _logger.LogInformation("SendAirdropVoucherTransactionAsync transactionId: {id}", transactionOutput.TransactionId);
+        var transactionResult =
+            await _contractProvider.CheckTransactionStatusAsync(transactionOutput.TransactionId, chainId);
         
-            return transactionResult;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError("AirdropVoucher error: {error}", e.Message);
-            return new CheckTransactionDto();
-        }
+        return transactionResult;
     }
 
     public async Task<bool> CheckUserAsync(string userId)

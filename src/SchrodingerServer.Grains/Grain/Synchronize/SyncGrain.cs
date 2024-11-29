@@ -1,6 +1,7 @@
 using AElf;
 using AElf.Client.Dto;
 using AElf.Contracts.MultiToken;
+using AElf.ExceptionHandler;
 using AElf.Types;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Orleans;
 using SchrodingerServer.Common;
 using SchrodingerServer.Grains.Grain.ApplicationHandler;
+using SchrodingerServer.Grains.Grain.Users;
 using SchrodingerServer.Grains.State.Sync;
 using Volo.Abp.ObjectMapping;
 using IContractProvider = SchrodingerServer.Grains.Grain.Provider.IContractProvider;
@@ -33,7 +35,8 @@ public class SyncGrain : Grain<SyncState>, ISyncGrain
         _targetChainId = _syncOptions.CurrentValue.TargetChainId;
         _sourceChainId = _syncOptions.CurrentValue.SourceChainId;
     }
-
+    
+    
     public async Task<GrainResultDto<SyncGrainDto>> ExecuteJobAsync(SyncJobGrainDto input)
     {
         if (string.IsNullOrEmpty(State.Id))
@@ -50,44 +53,85 @@ public class SyncGrain : Grain<SyncState>, ISyncGrain
         State.TransactionId = input.Id;
         await WriteStateAsync();
 
-        try
-        {
-            switch (State.Status)
-            {
-                case SyncJobStatus.TokenCreating:
-                    await HandleTokenCreatingAsync();
-                    break;
-                case SyncJobStatus.TokenValidating:
-                    await HandleTokenValidatingAsync();
-                    break;
-                case SyncJobStatus.WaitingIndexing:
-                    await HandleMainChainIndexSideChainAsync();
-                    break;
-                case SyncJobStatus.WaitingSideIndexing:
-                    await HandleWaitingIndexingAsync();
-                    break;
-                case SyncJobStatus.CrossChainTokenCreating:
-                    await HandleCrossChainTokenCreatingAsync();
-                    break;
-                case SyncJobStatus.CrossChainTokenCreated:
-                    break;
-                default:
-                    throw new InvalidOperationException("Invalid status");
-            }
+        // try
+        // {
+        //     switch (State.Status)
+        //     {
+        //         case SyncJobStatus.TokenCreating:
+        //             await HandleTokenCreatingAsync();
+        //             break;
+        //         case SyncJobStatus.TokenValidating:
+        //             await HandleTokenValidatingAsync();
+        //             break;
+        //         case SyncJobStatus.WaitingIndexing:
+        //             await HandleMainChainIndexSideChainAsync();
+        //             break;
+        //         case SyncJobStatus.WaitingSideIndexing:
+        //             await HandleWaitingIndexingAsync();
+        //             break;
+        //         case SyncJobStatus.CrossChainTokenCreating:
+        //             await HandleCrossChainTokenCreatingAsync();
+        //             break;
+        //         case SyncJobStatus.CrossChainTokenCreated:
+        //             break;
+        //         default:
+        //             throw new InvalidOperationException("Invalid status");
+        //     }
+        //
+        //     result.Data = _objectMapper.Map<SyncState, SyncGrainDto>(State);
+        // }
+        // catch (AElf.Client.AElfClientException ce)
+        // {
+        //     _logger.LogError(ce, "When sync task {tx}, the call to sdk failed. Will try again later.", input.Id);
+        // }
+        // catch (Exception e)
+        // {
+        //     _logger.LogError(e, "Sync job {tx} Failed, Synchronization will restart", input.Id);
+        //     await Resync(input.Id);
+        // }
 
+        var res = await ProcessJob();
+        if (res == 1)
+        {
+            _logger.LogError( "Sync job {tx} Failed, Synchronization will restart", input.Id);
+            await Resync(input.Id);
+        } 
+        else if (res == 0)
+        {
             result.Data = _objectMapper.Map<SyncState, SyncGrainDto>(State);
         }
-        catch (AElf.Client.AElfClientException ce)
+        
+        return result;
+    }
+    
+    [ExceptionHandler(typeof(AElf.Client.AElfClientException), Message = "When sync task, the call to sdk failed. Will try again later", TargetType = typeof(GrainExceptionHandlingService), MethodName = nameof(GrainExceptionHandlingService.HandleAElfClientException))]
+    [ExceptionHandler(typeof(Exception), Message = "Sync job Failed, Synchronization will restart", TargetType = typeof(GrainExceptionHandlingService), MethodName = nameof(GrainExceptionHandlingService.HandleException))]
+    private async Task<int> ProcessJob()
+    {
+        switch (State.Status)
         {
-            _logger.LogError(ce, "When sync task {tx}, the call to sdk failed. Will try again later.", input.Id);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Sync job {tx} Failed, Synchronization will restart", input.Id);
-            await Resync(input.Id);
+            case SyncJobStatus.TokenCreating:
+                await HandleTokenCreatingAsync();
+                break;
+            case SyncJobStatus.TokenValidating:
+                await HandleTokenValidatingAsync();
+                break;
+            case SyncJobStatus.WaitingIndexing:
+                await HandleMainChainIndexSideChainAsync();
+                break;
+            case SyncJobStatus.WaitingSideIndexing:
+                await HandleWaitingIndexingAsync();
+                break;
+            case SyncJobStatus.CrossChainTokenCreating:
+                await HandleCrossChainTokenCreatingAsync();
+                break;
+            case SyncJobStatus.CrossChainTokenCreated:
+                break;
+            default:
+                throw new InvalidOperationException("Invalid status");
         }
 
-        return result;
+        return 0;
     }
 
     # region Token crossChain

@@ -98,27 +98,19 @@ public class PointCompensateWorker : AsyncPeriodicBackgroundWorkerBase
             var bizId = IdGenerateHelper.GetPointBizId(chainId, bizDate, pointName, Guid.NewGuid().ToString());
             _logger.LogInformation("PointCompensateWorker process for bizId:{id}", bizId);
 
-            try
+            var pointSettleDto = new PointSettleDto
             {
-                var pointSettleDto = new PointSettleDto
+                ChainId = chainId,
+                PointName = pointName,
+                BizId = bizId,
+                UserPointsInfos = tradeList.Select(item => new UserPointInfo
                 {
-                    ChainId = chainId,
-                    PointName = pointName,
-                    BizId = bizId,
-                    UserPointsInfos = tradeList.Select(item => new UserPointInfo
-                    {
-                        Id = item.Id,
-                        Address = item.Address,
-                        PointAmount = item.Amount * (100000000 - 1)
-                    }).ToList()
-                }; 
-                await _pointSettleService.BatchSettleAsync(pointSettleDto);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "PointCompensateWorker Compensate error, bizId:{bizId} ids:{ids}", bizId, 
-                    string.Join(",", tradeList.Select(item => item.Id)));
-            }
+                    Id = item.Id,
+                    Address = item.Address,
+                    PointAmount = item.Amount * (100000000 - 1)
+                }).ToList()
+            }; 
+            await _pointSettleService.BatchSettleAsync(pointSettleDto);
         }
     }
     

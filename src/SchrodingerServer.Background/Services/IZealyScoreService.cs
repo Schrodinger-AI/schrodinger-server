@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AElf;
+using AElf.ExceptionHandler;
 using Hangfire;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,7 @@ using SchrodingerServer.Common;
 using SchrodingerServer.Grains.Grain.ZealyScore;
 using SchrodingerServer.Grains.Grain.ZealyScore.Dtos;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Options;
 using SchrodingerServer.Zealy;
 using Volo.Abp;
@@ -64,33 +66,30 @@ public class ZealyScoreService : IZealyScoreService, ISingletonDependency
 
     public async Task UpdateScoreAsync()
     {
-        try
+        await CheckAndHandle(); 
+        await _distributedCache.RemoveAsync(GetCacheKey());
+        
+    }
+    
+    [ExceptionHandler(typeof(Exception), Message = "update zealy score error", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
+    private async Task CheckAndHandle()
+    {
+        var jobIsStart = await CheckJobAsync();
+        if (!jobIsStart)
         {
-            var jobIsStart = await CheckJobAsync();
-            if (!jobIsStart)
-            {
-                _logger.LogWarning("update zealy score recurring job is started");
-                return;
-            }
-
-            _logger.LogInformation("begin update zealy score recurring job");
-            // update user
-            await _userRelationService.AddUserRelationAsync();
-
-            // wait es synchronization
-            await Task.Delay(1000);
-
-            await HandleUserScoreAsync();
-            _logger.LogInformation("finish update zealy score recurring job");
+            _logger.LogWarning("update zealy score recurring job is started");
+            return;
         }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "update zealy score error");
-        }
-        finally
-        {
-            await _distributedCache.RemoveAsync(GetCacheKey());
-        }
+
+        _logger.LogInformation("begin update zealy score recurring job");
+        // update user
+        await _userRelationService.AddUserRelationAsync();
+
+        // wait es synchronization
+        await Task.Delay(1000);
+
+        await HandleUserScoreAsync();
+        _logger.LogInformation("finish update zealy score recurring job");
     }
 
     private async Task<bool> CheckJobAsync()
@@ -158,22 +157,19 @@ public class ZealyScoreService : IZealyScoreService, ISingletonDependency
 
         foreach (var user in users)
         {
-            try
-            {
-                // assert address
-                if (!ValidAddress(user.Address))
-                {
-                    continue;
-                }
-
-                await HandleUserScoreAsync(user);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "handle user score error, userInfo:{userInfo}", JsonConvert.SerializeObject(user));
-                continue;
-            }
+            await ProcessUser(user);
         }
+    }
+    
+    [ExceptionHandler(typeof(Exception), Message = "handle user score error", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
+    private async Task ProcessUser(ZealyUserIndex user)
+    {
+        if (!ValidAddress(user.Address))
+        {
+            return;
+        }
+
+        await HandleUserScoreAsync(user);
     }
 
     private async Task HandleUserScoreAsync(ZealyUserIndex user)
@@ -263,38 +259,24 @@ public class ZealyScoreService : IZealyScoreService, ISingletonDependency
 
         throw new UserFriendlyException(result.Message);
     }
-
+    
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task<ZealyUserDto> GetZealyUserAsync(string userId)
     {
-        try
-        {
-            var uri = CommonConstant.GetUserUri + $"/{userId}";
-            _logger.LogInformation("get user info, uri:{uri}", uri);
-            return await _zealyClientProxyProvider.GetAsync<ZealyUserDto>(uri);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "get user score from zealy error, userId:{userId}", userId);
-            return null;
-        }
+        var uri = CommonConstant.GetUserUri + $"/{userId}";
+        _logger.LogInformation("get user info, uri:{uri}", uri);
+        return await _zealyClientProxyProvider.GetAsync<ZealyUserDto>(uri);
     }
-
+    
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private bool ValidAddress(string address)
     {
-        try
+        var isValid = AddressHelper.VerifyFormattedAddress(address);
+        if (!isValid)
         {
-            var isValid = AddressHelper.VerifyFormattedAddress(address);
-            if (!isValid)
-            {
-                _logger.LogInformation("invalid address: {address}", address);
-            }
+            _logger.LogInformation("invalid address: {address}", address);
+        }
 
-            return isValid;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "valid address error", address);
-            return false;
-        }
+        return isValid;
     }
 }

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using AElf.ExceptionHandler;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -6,6 +7,7 @@ using Newtonsoft.Json;
 using Orleans;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.Http;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Grains.Grain.Synchronize;
 using SchrodingerServer.Worker.Core.Dtos;
 using SchrodingerServer.Worker.Core.Options;
@@ -92,26 +94,16 @@ public class SyncWorker : AsyncPeriodicBackgroundWorkerBase
         }
     }
 
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task HandlerJobExecuteAsync(string transactionId)
     {
-        try
+        _logger.LogDebug("[Execute] Start sync transaction {tx}", transactionId);
+        var jobGrain = _clusterClient.GetGrain<ISyncGrain>(transactionId);
+        var result = await jobGrain.ExecuteJobAsync(new SyncJobGrainDto { Id = transactionId });
+        if (result.Data?.Status == SyncJobStatus.CrossChainTokenCreated)
         {
-            _logger.LogDebug("[Execute] Start sync transaction {tx}", transactionId);
-            var jobGrain = _clusterClient.GetGrain<ISyncGrain>(transactionId);
-            var result = await jobGrain.ExecuteJobAsync(new SyncJobGrainDto { Id = transactionId });
-            if (result.Data?.Status == SyncJobStatus.CrossChainTokenCreated)
-            {
-                _logger.LogInformation("[Execute] Transaction {tx} token sync finished.", transactionId);
-                _finishedQueue.Enqueue(result.Data.TransactionId);
-            }
-        }
-        catch (TimeoutException)
-        {
-            _logger.LogWarning("Execute job {tx} timeout.", transactionId);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Execute job {tx} failed.", transactionId);
+            _logger.LogInformation("[Execute] Transaction {tx} token sync finished.", transactionId);
+            _finishedQueue.Enqueue(result.Data.TransactionId);
         }
     }
 
@@ -175,31 +167,23 @@ public class SyncWorker : AsyncPeriodicBackgroundWorkerBase
 
     private async Task<long> GetIndexBlockHeightAsync(string chainId)
     {
-        try
-        {
-            var resp = await _httpProvider.InvokeAsync(
-                HttpMethod.Get, _options.CurrentValue.AefinderApiUrl);
-            AssertHelper.NotNull(resp, "Response empty");
+        var resp = await _httpProvider.InvokeAsync(
+            HttpMethod.Get, _options.CurrentValue.AefinderApiUrl);
+        AssertHelper.NotNull(resp, "Response empty");
             
-            var respDto = JsonConvert.DeserializeObject<SynStateResponse>(resp);
-            _logger.LogDebug("get chain data success");
+        var respDto = JsonConvert.DeserializeObject<SynStateResponse>(resp);
+        _logger.LogDebug("get chain data success");
 
-            var chainData = respDto.CurrentVersion;
-            foreach (var item in chainData.Items)
-            {
-                if (item.ChainId == chainId)
-                {
-                    _logger.LogDebug("LastIrreversibleBlockHeight: {height}", item.LastIrreversibleBlockHeight);
-                    return item.LastIrreversibleBlockHeight;
-                }
-            }
-
-            return 0;
-        }
-        catch (Exception e)
+        var chainData = respDto.CurrentVersion;
+        foreach (var item in chainData.Items)
         {
-            _logger.LogWarning(e, "get chain data failed");
-            return 0;
+            if (item.ChainId == chainId)
+            {
+                _logger.LogDebug("LastIrreversibleBlockHeight: {height}", item.LastIrreversibleBlockHeight);
+                return item.LastIrreversibleBlockHeight;
+            }
         }
+
+        return 0;
     }
 }

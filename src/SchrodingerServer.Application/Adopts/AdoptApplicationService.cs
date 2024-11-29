@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using AElf;
 using AElf.Cryptography;
+using AElf.ExceptionHandler;
 using AElf.Types;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -21,6 +22,7 @@ using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dtos.Adopts;
 using SchrodingerServer.Dtos.Cat;
 using SchrodingerServer.Dtos.TraitsDto;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Ipfs;
 using SchrodingerServer.Options;
 using SchrodingerServer.Users;
@@ -159,6 +161,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return imageInfo;
     }
 
+    [ExceptionHandler(typeof(Exception), Message = "Check IsOverLoadedAsync Failed", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleException))]
     public async Task<bool> IsOverLoadedAsync()
     {
         if (_traitsOptions.CurrentValue.UnderMaintenance)
@@ -166,35 +169,27 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             return false;
         }
         
-        try
+        using var httpClient = new HttpClient();
+        var response = await httpClient.GetAsync(_traitsOptions.CurrentValue.IsOverLoadedUrl);
+        if (response.IsSuccessStatusCode)
         {
-            using var httpClient = new HttpClient();
-            var response = await httpClient.GetAsync(_traitsOptions.CurrentValue.IsOverLoadedUrl);
-            if (response.IsSuccessStatusCode)
-            {
-                var responseString = await response.Content.ReadAsStringAsync();
-                _logger.LogInformation("IsOverLoadedAsync get result Success");
-                var resp = JsonConvert.DeserializeObject<IsOverLoadedResponse>(responseString);
-                return resp.isOverLoaded;
-            }
-            else
-            {
-                _logger.LogError("IsOverLoadedAsync get result Success fail, {resp}", response.ToString());
-            }
+            var responseString = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("IsOverLoadedAsync get result Success");
+            var resp = JsonConvert.DeserializeObject<IsOverLoadedResponse>(responseString);
+            return resp.isOverLoaded;
+        }
+        else
+        {
+            _logger.LogError("IsOverLoadedAsync get result fail, {resp}", response.ToString());
+        }
 
-            return true;
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "IsOverLoadedAsync get result Success fail error, {err}", e.ToString());
-            return true;
-        }
+        return true;    
     }
 
 
     public async Task<GetWaterMarkImageInfoOutput> GetWaterMarkImageInfoAsync(GetWaterMarkImageInfoInput input)
     {
-        _logger.Info("GetWaterMarkImageInfoAsync, AdoptId: {req}, dataLength: {length}", input.AdoptId, 
+        _logger.LogInformation("GetWaterMarkImageInfoAsync, AdoptId: {req}, dataLength: {length}", input.AdoptId, 
             input.Image.Length);
 
         var resp = await UploadAndWatermarkAsync(input.Image, input.AdoptId);
@@ -203,19 +198,12 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return resp;
     }
 
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionStr))]
     private async Task<string> UploadToS3Async(string base64String, string fileName)
     {
-        try
-        {
-            byte[] imageBytes = Convert.FromBase64String(base64String);
-            var stream = new MemoryStream(imageBytes);
-            return await _awsS3Client.UpLoadFileForNFTAsync(stream, fileName);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "upload to s3 error, {err}", e.ToString());
-            return string.Empty;
-        }
+        byte[] imageBytes = Convert.FromBase64String(base64String);
+        var stream = new MemoryStream(imageBytes);
+        return await _awsS3Client.UpLoadFileForNFTAsync(stream, fileName);
     }
 
     private string GenerateSignature(byte[] privateKey, string adoptId, string image)
@@ -259,38 +247,32 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         return await _adoptGraphQlProvider.QueryAdoptInfoAsync(adoptId);
     }
 
+    [ExceptionHandler(typeof(Exception), Message = "Get WatermarkImageAsync Failed", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task<WatermarkResponse> GetWatermarkImageAsync(WatermarkInput input)
     {
-        try
+ 
+        using var httpClient = new HttpClient();
+        var jsonString = ImageProviderHelper.ConvertObjectToJsonString(input);
+        var requestContent = new StringContent(jsonString, Encoding.UTF8, "application/json");
+        httpClient.DefaultRequestHeaders.Add("accept", "*/*");
+        var start = DateTime.Now;
+        var response = await httpClient.PostAsync(_traitsOptions.CurrentValue.ImageProcessUrl, requestContent);
+        var cost = (DateTime.Now - start).TotalMilliseconds;
+        if (response.IsSuccessStatusCode)
         {
-            using var httpClient = new HttpClient();
-            var jsonString = ImageProviderHelper.ConvertObjectToJsonString(input);
-            var requestContent = new StringContent(jsonString, Encoding.UTF8, "application/json");
-            httpClient.DefaultRequestHeaders.Add("accept", "*/*");
-            var start = DateTime.Now;
-            var response = await httpClient.PostAsync(_traitsOptions.CurrentValue.ImageProcessUrl, requestContent);
-            var cost = (DateTime.Now - start).TotalMilliseconds;
-            if (response.IsSuccessStatusCode)
-            {
-                var responseString = await response.Content.ReadAsStringAsync();
-                _logger.LogInformation("Get Watermark Image Success timeCost={cost}", cost);
+            var responseString = await response.Content.ReadAsStringAsync();
+            _logger.LogInformation("Get Watermark Image Success timeCost={cost}", cost);
 
-                var resp = JsonConvert.DeserializeObject<WatermarkResponse>(responseString);
+            var resp = JsonConvert.DeserializeObject<WatermarkResponse>(responseString);
 
-                return resp;
-            }
-            else
-            {
-                _logger.LogError("Get Watermark Image Success fail, {resp}", response.ToString());
-            }
-
-            return null;
+            return resp;
         }
-        catch (Exception e)
+        else
         {
-            _logger.LogError(e, "Get Watermark Image Success fail error, {err}", e.ToString());
-            return null;
+            _logger.LogError("Get Watermark Image Success fail, {resp}", response.ToString());
         }
+
+        return null;
     }
 
 
@@ -376,6 +358,8 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         
         if (_traitsOptions.CurrentValue.UnderMaintenance)
         {
+            _logger.LogInformation("under maintenance, adoptId:{adoptId}", adoptId);
+            
             if (!input.AdoptOnly)
             {
                 output.UnderMaintenance = true;
@@ -422,11 +406,11 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
     private async Task<GetWaterMarkImageInfoOutput> UploadAndWatermarkAsync(string image, string adoptId)
     {
         var images = await _adoptImageService.GetImagesAsync(adoptId);
-        _logger.Info("AI generated images count: {}", images.Count);
+        _logger.LogDebug("AI generated images count: {}", images.Count);
 
         if (images.IsNullOrEmpty() || !images.Contains(image))
         {
-            _logger.Info("Invalid adopt image, images:{}", JsonConvert.SerializeObject(images));
+            _logger.LogDebug("Invalid adopt image, images:{}", JsonConvert.SerializeObject(images));
             throw new UserFriendlyException("Invalid adopt image");
         }
 
@@ -435,11 +419,11 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         if (hasWaterMark)
         {
             var info = await _adoptImageService.GetWatermarkImageInfoAsync(adoptId);
-            _logger.Info("GetWatermarkImageInfo from grain, info: {info}", JsonConvert.SerializeObject(info));
+            _logger.LogDebug("GetWatermarkImageInfo from grain, info: {info}", JsonConvert.SerializeObject(info));
 
             if (info == null || info.ImageUri == null || info.ResizedImage == null)
             {
-                _logger.Info("Invalid watermark info, uri:{0}, resizeImage{1}", info.ImageUri, info.ResizedImage);
+                _logger.LogDebug("Invalid watermark info, uri:{0}, resizeImage{1}", info.ImageUri, info.ResizedImage);
                 throw new UserFriendlyException("Invalid watermark info");
             }
 
@@ -461,7 +445,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         }
 
         var adoptInfo = await QueryAdoptInfoAsync(adoptId);
-        _logger.Info("QueryAdoptInfoAsync, {adoptInfo}", JsonConvert.SerializeObject(adoptInfo));
+        _logger.LogDebug("QueryAdoptInfoAsync, {adoptInfo}", JsonConvert.SerializeObject(adoptInfo));
         if (adoptInfo == null)
         {
             throw new UserFriendlyException("query adopt info failed adoptId = " + adoptId);
@@ -531,7 +515,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         _logger.LogInformation("ConfirmAdoptionAsync Begin, adoptId: {adoptId}", adoptId);
         
         var adoptInfo = await QueryAdoptInfoAsync(adoptId);
-        _logger.Info("QueryAdoptInfoAsync, {adoptInfo}", JsonConvert.SerializeObject(adoptInfo));
+        _logger.LogDebug("QueryAdoptInfoAsync, {adoptInfo}", JsonConvert.SerializeObject(adoptInfo));
         if (adoptInfo == null)
         {
             _logger.LogError("Invalid adopt id: {id}", adoptId);
@@ -539,7 +523,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         }
         
         var images = await _adoptImageService.GetImagesAsync(adoptId);
-        _logger.Info("AI generated images count: {}", images.Count);
+        _logger.LogDebug("AI generated images count: {}", images.Count);
 
         if (images.IsNullOrEmpty())
         {
@@ -558,11 +542,11 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
         if (hasWaterMark)
         {
             var info = await _adoptImageService.GetWatermarkImageInfoAsync(adoptId);
-            _logger.Info("GetWatermarkImageInfo from grain, info: {info}", JsonConvert.SerializeObject(info));
+            _logger.LogDebug("GetWatermarkImageInfo from grain, info: {info}", JsonConvert.SerializeObject(info));
 
             if (info == null || info.ImageUri == null || info.ResizedImage == null)
             {
-                _logger.Info("Invalid watermark info, uri:{0}, resizeImage{1}", info.ImageUri, info.ResizedImage);
+                _logger.LogDebug("Invalid watermark info, uri:{0}, resizeImage{1}", info.ImageUri, info.ResizedImage);
                 throw new UserFriendlyException("Invalid watermark info");
             }
 

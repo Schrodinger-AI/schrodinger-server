@@ -30,16 +30,16 @@ public class XpRecordGrain : Grain<XpRecordState>, IXpRecordGrain
         _logger = logger;
     }
 
-    public override async Task OnActivateAsync()
+    public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         await ReadStateAsync();
-        await base.OnActivateAsync();
+        await base.OnActivateAsync(cancellationToken);
     }
 
-    public override async Task OnDeactivateAsync()
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
         await WriteStateAsync();
-        await base.OnDeactivateAsync();
+        await base.OnDeactivateAsync(reason, cancellationToken);
     }
 
     public async Task<GrainResultDto<XpRecordGrainDto>> CreateAsync(XpRecordGrainDto input)
@@ -76,14 +76,7 @@ public class XpRecordGrain : Grain<XpRecordState>, IXpRecordGrain
         await WriteStateAsync();
 
         // clear record info.
-        try
-        {
-            await userXpGrain.ClearRecordInfo(DateTime.UtcNow.ToString("yyyy-MM-dd"));
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "ClearRecordInfo error, userId:{userId}", State.UserId);
-        }
+        await userXpGrain.ClearRecordInfo(DateTime.UtcNow.ToString("yyyy-MM-dd"));
 
         return Success();
     }
@@ -123,15 +116,8 @@ public class XpRecordGrain : Grain<XpRecordState>, IXpRecordGrain
 
     private async Task ClearRecordsAsync(string userId, string date)
     {
-        try
-        {
-            var userXpGrain = GrainFactory.GetGrain<IZealyUserXpGrain>(userId);
-            await userXpGrain.ClearRecordInfo(date);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "ClearRecordInfo error, userId:{userId}", userId);
-        }
+        var userXpGrain = GrainFactory.GetGrain<IZealyUserXpGrain>(userId);
+        await userXpGrain.ClearRecordInfo(date);
     }
 
     public Task<GrainResultDto<XpRecordGrainDto>> GetAsync()

@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AElf.ExceptionHandler;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using SchrodingerServer.Dtos.Adopts;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Grains.Grain.Traits;
 using Volo.Abp.DependencyInjection;
 
@@ -20,32 +22,18 @@ public class AdoptImageService : IAdoptImageService, ISingletonDependency
         _logger = logger;
     }
 
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionStr))]
     public async Task<string> GetRequestIdAsync(string adoptId)
     {
-        try
-        {
-            var grain = _clusterClient.GetGrain<IAdoptImageInfoGrain>(adoptId);
-            return await grain.GetImageGenerationIdAsync();
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "GetRequestExistAsync Exception adoptId:{AdoptId}", adoptId);
-            return string.Empty;
-        }
+        var grain = _clusterClient.GetGrain<IAdoptImageInfoGrain>(adoptId);
+        return await grain.GetImageGenerationIdAsync();
     }
 
+    [ExceptionHandler(typeof(Exception), TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionStr))]
     public async Task<string> SetImageGenerationIdNXAsync(string adoptId, string imageGenerationId)
     {
-        try
-        {
-            var grain = _clusterClient.GetGrain<IAdoptImageInfoGrain>(adoptId);
-            return await grain.SetImageGenerationIdNXAsync(imageGenerationId);
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "SetRequestAsync Exception adoptId:{AdoptId}, imageGenerationId:{ImageGenerationId}", adoptId, imageGenerationId);
-            return "invalidVal";
-        }
+        var grain = _clusterClient.GetGrain<IAdoptImageInfoGrain>(adoptId);
+        return await grain.SetImageGenerationIdNXAsync(imageGenerationId);
     }
 
     public async Task<List<string>> GetImagesAsync(string adoptId)
