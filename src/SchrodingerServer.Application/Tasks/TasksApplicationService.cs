@@ -16,6 +16,7 @@ using SchrodingerServer.Common;
 using SchrodingerServer.Common.AElfSdk;
 using SchrodingerServer.Common.Dtos;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Message.Dtos;
 using SchrodingerServer.Message.Provider;
 using SchrodingerServer.Options;
@@ -1251,7 +1252,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         await _tasksProvider.DeleteMilestoneVoucherClaimedRecordAsync(taskId, address, level);
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "SendAirdropVoucherTransactionAsync Failed", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "SendAirdropVoucherTransactionAsync Failed", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<CheckTransactionDto> SendAirdropVoucherTransactionAsync(string chainId, string address)
     {
         var aelfAddress = Address.FromBase58(address);

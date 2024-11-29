@@ -24,6 +24,7 @@ using OpenIddict.Server.AspNetCore;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.HttpClient;
 using SchrodingerServer.Dto;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Options;
 using SchrodingerServer.Users;
 using Volo.Abp;
@@ -266,7 +267,7 @@ public class SignatureGrantHandler : ITokenExtensionGrant, ITransientDependency
         return indexerCaHolderInfos;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetCaHolderManagerInfoAsync Failed", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "GetCaHolderManagerInfoAsync Failed", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task<CAHolderManager?> GetCaHolderManagerInfoAsync(string manager)
     {
         var portkeyCaHolderInfoUrl = _graphQlOption.CurrentValue.PortkeyCaHolderInfoUrl;

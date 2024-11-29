@@ -9,7 +9,7 @@ jobs:
     runs-on: schrodinger-runner # this is the self-hosted runner name after it is being setup
     strategy:
       matrix:
-        servicename: [SchrodingerServer.DbMigrator, SchrodingerServer.HttpApi.Host, SchrodingerServer.Silo, SchrodingerServer.EntityEventHandler, SchrodingerServer.Worker, SchrodingerServer.Background, SchrodingerServer.AuthServer] # This should be the app that needs to be deploy.
+        servicename: [SchrodingerServer.DbMigrator, SchrodingerServer.HttpApi.Host, SchrodingerServer.Silo, SchrodingerServer.EntityEventHandler, SchrodingerServer.Worker, SchrodingerServer.Background, SchrodingerServer.AuthServer, SchrodingerServer.SignatureApi.Host] # This should be the app that needs to be deploy.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -30,7 +30,7 @@ jobs:
     runs-on: schrodinger-runner # this is the self-hosted runner name after it is being setup
     strategy:
       matrix:
-        servicename: [SchrodingerServer.DbMigrator, SchrodingerServer.HttpApi.Host, SchrodingerServer.Silo, SchrodingerServer.EntityEventHandler, SchrodingerServer.Worker, SchrodingerServer.Background, SchrodingerServer.AuthServer] # This should be the list of app that needs to be deploy.
+        servicename: [SchrodingerServer.DbMigrator, SchrodingerServer.HttpApi.Host, SchrodingerServer.Silo, SchrodingerServer.EntityEventHandler, SchrodingerServer.Worker, SchrodingerServer.Background, SchrodingerServer.AuthServer, SchrodingerServer.SignatureApi.Host] # This should be the list of app that needs to be deploy.
     permissions:
       contents: read
     outputs:

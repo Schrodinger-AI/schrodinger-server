@@ -25,7 +25,7 @@ public class IndexerProvider : IIndexerProvider, ISingletonDependency
         _logger = logger;
     }
     
-    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<List<string>> SubscribeConfirmedAsync(string chainId, long to, long from)
     {
         var indexerResult = await _graphQlHelper.QueryAsync<IndexerConfirmedListDto>(new GraphQLRequest

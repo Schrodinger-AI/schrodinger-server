@@ -1,6 +1,7 @@
 using AElf.ExceptionHandler;
 using Orleans;
 using SchrodingerServer.Common;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Grains.State.Users;
 using SchrodingerServer.Users;
 using Volo.Abp.ObjectMapping;
@@ -81,7 +82,7 @@ public class UserActionGrain : Grain<UserActionState>, IUserActionGrain
         return Task.FromResult(new GrainResultDto<UserActionGrainDto>(dto));
     }
     
-    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<GrainResultDto<UserActionGrainDto>> AddActionAsync(ActionType actionType)
     {
         if (!State.ActionData.ContainsKey(actionType.ToString()))

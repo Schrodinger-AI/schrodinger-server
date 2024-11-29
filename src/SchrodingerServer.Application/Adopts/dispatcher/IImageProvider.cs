@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using SchrodingerServer.Common.Options;
 using SchrodingerServer.Dtos.TraitsDto;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Image;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.EventBus.Distributed;
@@ -197,7 +198,7 @@ public class DefaultImageProvider : ImageProvider, ISingletonDependency
         _traitsOptions = traitsOptions;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "RequestImageGenerationsAsync error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message = "RequestImageGenerationsAsync error", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionStr))]
     public async Task<string> RequestImageGenerationsAsync(string adoptId, GenerateOpenAIImage imageInfo)
     {
         using var httpClient = new HttpClient();
@@ -240,7 +241,7 @@ public class DefaultImageProvider : ImageProvider, ISingletonDependency
         return "";
     }
     
-    [ExceptionHandler(typeof(Exception), Message="RequestGenerateImage error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message="RequestGenerateImage error", TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionStr))]
     public async Task<string> RequestGenerateImage(string adoptId, GenerateOpenAIImage imageInfo)
     {
         var jsonString = ImageProviderHelper.ConvertObjectToJsonString(imageInfo);
@@ -299,7 +300,7 @@ public class DefaultImageProvider : ImageProvider, ISingletonDependency
         await DistributedEventBus.PublishAsync(new DefaultImageGenerateEto() { AdoptAddressId = adoptAddressId, AdoptId = adoptId, GenerateImage = imageInfo });
     }
     
-    [ExceptionHandler(typeof(Exception), Message="QueryImageInfoByAiNewAsync error", ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), Message="QueryImageInfoByAiNewAsync error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task<AiQueryResponse> QueryImageInfoByAiNewAsync(string requestId)
     {
         using var httpClient = new HttpClient();

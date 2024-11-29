@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Nest;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.GraphQL;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Tasks.Dtos;
 using SchrodingerServer.Users.Index;
 using Volo.Abp.DependencyInjection;
@@ -370,7 +371,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         return 0;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetConsumeScoreFromSpin indexer Failed", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "GetConsumeScoreFromSpin indexer Failed", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<decimal> GetConsumeScoreFromSpin(string address)
     {
         var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient)
@@ -396,7 +397,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         return res.Data.GetConsumeScoreFromSpin.Score;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetScoreFromSpinRewardAsync indexer Failed", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "GetScoreFromSpinRewardAsync indexer Failed", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<decimal> GetScoreFromSpinRewardAsync(string address)
     {
         var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient)
@@ -421,7 +422,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         return res.Data.GetScoreFromSpinReward.Score;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "IsSpinFinished indexer Failed", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "IsSpinFinished indexer Failed", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleException))]
     public async Task<bool> IsSpinFinished(string seed)
     {
         var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient)
@@ -483,7 +484,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         await _spinIndexRepository.AddAsync(index);
     }
 
-    [ExceptionHandler(typeof(Exception), Message = "GetVoucherAdoptionAsync indexer Failed", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "GetVoucherAdoptionAsync indexer Failed", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<VoucherAdoptionDto> GetVoucherAdoptionAsync(string voucherId)
     {
         var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient)
@@ -510,7 +511,7 @@ public class TasksProvider : ITasksProvider, ISingletonDependency
         return res.Data.GetVoucherAdoption;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetSpinRewardConfigAsync indexer Failed", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "GetSpinRewardConfigAsync indexer Failed", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<SpinRewardConfigDto> GetSpinRewardConfigAsync()
     {
         var res = await _graphQlClientFactory.GetClient(GraphQLClientEnum.SchrodingerClient)

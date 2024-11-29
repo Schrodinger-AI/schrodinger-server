@@ -10,6 +10,7 @@ using Orleans;
 using SchrodingerServer.Common;
 using SchrodingerServer.Common.ApplicationHandler;
 using SchrodingerServer.Common.Options;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Grains.Grain.ApplicationHandler;
 using SchrodingerServer.Grains.Grain.Users;
 using SchrodingerServer.Grains.State.ContractInvoke;
@@ -95,7 +96,7 @@ public class ContractInvokeGrain : Grain<ContractInvokeState>, IContractInvokeGr
         return OfContractInvokeGrainResultDto(res);
     }
     
-    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task<bool> ProcessJob(ContractInvokeStatus status)
     {
         switch (status)

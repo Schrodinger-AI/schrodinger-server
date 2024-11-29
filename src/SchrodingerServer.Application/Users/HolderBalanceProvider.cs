@@ -8,6 +8,7 @@ using GraphQL;
 using Microsoft.Extensions.Logging;
 using Nest;
 using SchrodingerServer.Common.GraphQL;
+using SchrodingerServer.ExceptionHandling;
 using SchrodingerServer.Users.Index;
 using Volo.Abp.DependencyInjection;
 
@@ -112,7 +113,7 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
         return !tuple.Item2.IsNullOrEmpty() ? tuple.Item2 : new List<HolderBalanceIndex>();
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetLastHoldingRecordAsync error", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "GetLastHoldingRecordAsync error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<HolderDailyChangeDto> GetLastHoldingRecordAsync(string chainId, string address, string symbol, List<string>  excludeDate)
     {
         var graphQlResponse = await _graphQlHelper.QueryAsync<IndexerHolderDailyChangeDto>(new GraphQLRequest

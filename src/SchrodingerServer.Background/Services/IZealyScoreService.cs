@@ -260,7 +260,7 @@ public class ZealyScoreService : IZealyScoreService, ISingletonDependency
         throw new UserFriendlyException(result.Message);
     }
     
-    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New)]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private async Task<ZealyUserDto> GetZealyUserAsync(string userId)
     {
         var uri = CommonConstant.GetUserUri + $"/{userId}";
@@ -268,7 +268,7 @@ public class ZealyScoreService : IZealyScoreService, ISingletonDependency
         return await _zealyClientProxyProvider.GetAsync<ZealyUserDto>(uri);
     }
     
-    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     private bool ValidAddress(string address)
     {
         var isValid = AddressHelper.VerifyFormattedAddress(address);

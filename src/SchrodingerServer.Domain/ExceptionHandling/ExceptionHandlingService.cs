@@ -23,4 +23,13 @@ public class ExceptionHandlingService
         };
     }
     
+    public static async Task<FlowBehavior> HandleExceptionStr(Exception ex)
+    {
+        return new FlowBehavior
+        {
+            ExceptionHandlingStrategy = ExceptionHandlingStrategy.Return,
+            ReturnValue = ""
+        };
+    }
+    
 }

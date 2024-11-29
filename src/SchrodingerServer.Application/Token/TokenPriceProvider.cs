@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using SchrodingerServer.CoinGeckoApi;
 using SchrodingerServer.Common;
+using SchrodingerServer.ExceptionHandling;
 using Volo.Abp.Caching;
 using Volo.Abp.DependencyInjection;
 
@@ -76,7 +77,7 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
         return priceItem.Price;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetEcoEarnTotalRewardsAsync error", ReturnDefault = ReturnDefault.Default)]
+    [ExceptionHandler(typeof(Exception), Message = "GetEcoEarnTotalRewardsAsync error", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<decimal> GetPriceAsync(string symbol)
     {
         if (string.IsNullOrEmpty(symbol))
