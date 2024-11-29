@@ -203,6 +203,7 @@ public class SchrodingerCatService : ApplicationService, ISchrodingerCatService
         return detail;
     }
     
+    
     private async Task<SchrodingerListDto> GetSchrodingerAllCatsPageList(GetCatListInput input)
     {
         var result = new SchrodingerListDto();
