@@ -80,28 +80,7 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
     [ExceptionHandler(typeof(Exception), Message = "GetEcoEarnTotalRewardsAsync error", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<decimal> GetPriceAsync(string symbol)
     {
-        if (string.IsNullOrEmpty(symbol))
-        {
-            return 0;
-        }
-
-        var coinId = GetCoinIdAsync(symbol);
-        if (coinId == null)
-        {
-            Logger.LogWarning($"can not get the token {symbol}");
-            return 0;
-        }
-        
-        var coinData =
-            await RequestAsync(async () =>
-                await _coinGeckoClient.SimpleClient.GetSimplePrice(new[] { coinId }, new[] { UsdSymbol }));
-
-        if (!coinData.TryGetValue(coinId, out var value))
-        {
-            return 0;
-        }
-
-        return value[UsdSymbol].Value;
+        return 0;
     }
 
     private string GetCoinIdAsync(string symbol)
