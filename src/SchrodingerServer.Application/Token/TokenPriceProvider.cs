@@ -91,7 +91,8 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
         
         if (symbol == "SGR-1" || symbol == "SGR")
         {
-            return (decimal)await _levelProvider.GetAwakenSGRPrice();
+            var elfPrize = await _levelProvider.GetAwakenSGRPrice();
+            return (decimal)(await _levelProvider.GetAwakenSGRPrice() * elfPrize);
         }
         
         return 0;
