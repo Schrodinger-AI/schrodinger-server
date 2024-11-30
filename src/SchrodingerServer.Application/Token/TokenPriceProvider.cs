@@ -66,7 +66,7 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
         return httpClient;
     }
 
-    public async Task<double> GetPriceByCacheAsync(string symbol)
+    public async Task<decimal> GetPriceByCacheAsync(string symbol)
     {
         var priceItem = await _distributedCache.GetOrAddAsync(
             string.Join(":", PriceCachePrefix, symbol),
@@ -82,17 +82,16 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
         return priceItem.Price;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetEcoEarnTotalRewardsAsync error", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
-    public async Task<double> GetPriceAsync(string symbol)
+    public async Task<decimal> GetPriceAsync(string symbol)
     {
         if (symbol == "ELF")
         {
-            return await _levelProvider.GetAwakenELFPrice();
+            return (decimal)await _levelProvider.GetAwakenELFPrice();
         }
         
         if (symbol == "SGR-1" || symbol == "SGR")
         {
-            return await _levelProvider.GetAwakenSGRPrice();
+            return (decimal)await _levelProvider.GetAwakenSGRPrice();
         }
         
         return 0;
