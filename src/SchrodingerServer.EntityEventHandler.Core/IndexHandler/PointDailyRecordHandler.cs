@@ -32,7 +32,7 @@ public class PointDailyRecordHandler : IDistributedEventHandler<PointDailyRecord
     {
         _logger.LogDebug("HandleEventAsync PointDailyRecordEto data: {data}", JsonConvert.SerializeObject(eventData));
         var contact = _objectMapper.Map<PointDailyRecordEto, PointDailyRecordIndex>(eventData);
-        await _repository.AddOrUpdateAsync(contact);
+        // await _repository.AddOrUpdateAsync(contact);
         _logger.LogDebug("HandleEventAsync PointDailyRecordEto success");
     }
 }
