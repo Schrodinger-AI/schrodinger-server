@@ -2,5 +2,5 @@ namespace SchrodingerServer.Common;
 
 public class PriceCacheItem
 {
-    public decimal Price { get; set; }
+    public double Price { get; set; }
 }

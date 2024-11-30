@@ -4,5 +4,5 @@ namespace SchrodingerServer.Token;
 
 public interface ITokenPriceProvider
 {
-    Task<decimal> GetPriceByCacheAsync(string symbol);
+    Task<double> GetPriceByCacheAsync(string symbol);
 }
