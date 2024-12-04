@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 using SchrodingerServer.CoinGeckoApi;
 using SchrodingerServer.Common;
 using SchrodingerServer.ExceptionHandling;
+using SchrodingerServer.Users;
 using Volo.Abp.Caching;
 using Volo.Abp.DependencyInjection;
 
@@ -22,6 +23,7 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
     private readonly IRequestLimitProvider _requestLimitProvider;
     private readonly IOptionsMonitor<CoinGeckoOptions> _coinGeckoOptions;
     private readonly IDistributedCache<PriceCacheItem> _distributedCache;
+    private readonly ILevelProvider _levelProvider;
 
     private const string UsdSymbol = "usd";
     private const string PriceCachePrefix = "usd";
@@ -29,12 +31,15 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
 
     public ILogger<TokenPriceProvider> Logger { get; set; }
 
-    public TokenPriceProvider(IRequestLimitProvider requestLimitProvider, IHttpClientFactory httpClientFactory, IOptionsMonitor<CoinGeckoOptions> options, IDistributedCache<PriceCacheItem> distributedCache)
+    public TokenPriceProvider(IRequestLimitProvider requestLimitProvider, IHttpClientFactory httpClientFactory, 
+        IOptionsMonitor<CoinGeckoOptions> options, IDistributedCache<PriceCacheItem> distributedCache, 
+        ILevelProvider levelProvider)
     {
         _requestLimitProvider = requestLimitProvider;
         _coinGeckoOptions = options;
         _distributedCache = distributedCache;
         Logger = NullLogger<TokenPriceProvider>.Instance;
+        _levelProvider = levelProvider;
         if (_coinGeckoOptions.CurrentValue.ApiKey.IsNullOrEmpty())
         {
             _coinGeckoClient = CoinGeckoClient.Instance;
@@ -77,31 +82,20 @@ public class TokenPriceProvider : ITokenPriceProvider, ISingletonDependency
         return priceItem.Price;
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetEcoEarnTotalRewardsAsync error", ReturnDefault = ReturnDefault.Default, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<decimal> GetPriceAsync(string symbol)
     {
-        if (string.IsNullOrEmpty(symbol))
+        if (symbol == "ELF")
         {
-            return 0;
-        }
-
-        var coinId = GetCoinIdAsync(symbol);
-        if (coinId == null)
-        {
-            Logger.LogWarning($"can not get the token {symbol}");
-            return 0;
+            return (decimal)await _levelProvider.GetAwakenELFPrice();
         }
         
-        var coinData =
-            await RequestAsync(async () =>
-                await _coinGeckoClient.SimpleClient.GetSimplePrice(new[] { coinId }, new[] { UsdSymbol }));
-
-        if (!coinData.TryGetValue(coinId, out var value))
+        if (symbol == "SGR-1" || symbol == "SGR")
         {
-            return 0;
+            var elfPrize = await _levelProvider.GetAwakenELFPrice();
+            return (decimal)(await _levelProvider.GetAwakenSGRPrice() * elfPrize);
         }
-
-        return value[UsdSymbol].Value;
+        
+        return 0;
     }
 
     private string GetCoinIdAsync(string symbol)
