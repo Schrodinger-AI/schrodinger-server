@@ -9,6 +9,7 @@ using Google.Protobuf;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using Schrodinger;
 using SchrodingerServer.Adopts.provider;
@@ -961,7 +962,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
                 "found cache, seed: {id}", cache.Seed);
             var isSpinFinished = await _tasksProvider.IsSpinFinished(cache.Seed);
 
-            if (!isSpinFinished && nowTs < cache.ExpirationTime)
+            if (!isSpinFinished && nowTs < cache.ExpirationTime && !cache.Signature.IsNullOrEmpty())
             {
                 _logger.LogWarning(
                     "found unfinished seed in cache, seed: {id}, sig: {sig} ", cache.Seed, cache.Signature);
@@ -978,7 +979,7 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
 
         // query unfinished spin seed from es
         var unfinishedSpin = await _tasksProvider.GetUnfinishedSpinAsync(currentAddress);
-        var validSpins = unfinishedSpin.Where(i => i.ExpirationTime > nowTs).ToList();
+        var validSpins = unfinishedSpin.Where(i => i.ExpirationTime > nowTs && !i.Signature.IsNullOrEmpty()).ToList();
         if (!validSpins.IsNullOrEmpty())
         {
             var validSpin = validSpins.FirstOrDefault();
@@ -1020,6 +1021,12 @@ public class TasksApplicationService : ApplicationService, ITasksApplicationServ
         };
         var dataHash = HashHelper.ComputeFrom(data);
         var signature = await _secretProvider.GetSignatureFromHashAsync(_chainOptions.PublicKey, dataHash);
+
+        if (signature.IsNullOrEmpty())
+        {
+            _logger.LogError("Get signature failed");
+            throw new UserFriendlyException("Get signature failed, pleas try later");
+        }
 
         // write new cache
         var cacheData = new SpinOutputCache
