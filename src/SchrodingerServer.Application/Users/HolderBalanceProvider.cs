@@ -113,13 +113,14 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
         return !tuple.Item2.IsNullOrEmpty() ? tuple.Item2 : new List<HolderBalanceIndex>();
     }
     
-    [ExceptionHandler(typeof(Exception), Message = "GetLastHoldingRecordAsync error", ReturnDefault = ReturnDefault.New, TargetType = typeof(ExceptionHandlingService), MethodName = nameof(ExceptionHandlingService.HandleExceptionDefault))]
     public async Task<HolderDailyChangeDto> GetLastHoldingRecordAsync(string chainId, string address, string symbol, List<string>  excludeDate)
     {
-        var graphQlResponse = await _graphQlHelper.QueryAsync<IndexerHolderDailyChangeDto>(new GraphQLRequest
+        try
         {
-            Query =
-                @"query($chainId:String!,$skipCount:Int!,$maxResultCount:Int!,$address:String!,$symbol:String!,$excludeDate:[String!]){
+            var graphQlResponse = await _graphQlHelper.QueryAsync<IndexerHolderDailyChangeDto>(new GraphQLRequest
+            {
+                Query =
+                    @"query($chainId:String!,$skipCount:Int!,$maxResultCount:Int!,$address:String!,$symbol:String!,$excludeDate:[String!]){
             getSchrodingerHolderDailyChangeList(input: {chainId:$chainId,skipCount:$skipCount,maxResultCount:$maxResultCount, address:$address, symbol:$symbol, excludeDate:$excludeDate})
             {
                data {
@@ -131,16 +132,22 @@ public class HolderBalanceProvider : IHolderBalanceProvider, ISingletonDependenc
                 },
                 totalCount
             }}",
-            Variables = new
-            {
-                chainId = chainId,
-                skipCount = 0,
-                maxResultCount = 1000,
-                address = address,
-                symbol = symbol,
-                excludeDate = excludeDate
-            }
-        });
-        return graphQlResponse?.GetSchrodingerHolderDailyChangeList.Data?.LastOrDefault();
+                Variables = new
+                {
+                    chainId = chainId,
+                    skipCount = 0,
+                    maxResultCount = 1000,
+                    address = address,
+                    symbol = symbol,
+                    excludeDate = excludeDate
+                }
+            });
+            return graphQlResponse?.GetSchrodingerHolderDailyChangeList.Data?.LastOrDefault();
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "GetLastHoldingRecordAsync Error, address: {address}, symbol: {symbol}, excludeDate: {excludeDate}", address, symbol, excludeDate);
+            return null;
+        }
     }
 }

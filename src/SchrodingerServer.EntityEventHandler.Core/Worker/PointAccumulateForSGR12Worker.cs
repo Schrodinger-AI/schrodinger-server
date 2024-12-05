@@ -238,7 +238,12 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
             {
                 var dayBefore = TimeHelper.GetDateStrAddDays(bizDate, -1);
                 var excludeDate = new List<string> { dayBefore, bizDate };
+                _logger.LogInformation("PointAccumulateForSGR12Worker GetLastHoldingRecordAsync Req, address: " +
+                                       "{address}, symbol: {symbol}, date: {date}", holderInfo.Address, holderInfo.Symbol, excludeDate);
                 var lastHoldingRecord = await _holderBalanceProvider.GetLastHoldingRecordAsync(chainId, holderInfo.Address, holderInfo.Symbol, excludeDate);
+                _logger.LogInformation("PointAccumulateForSGR12Worker GetLastHoldingRecordAsync Resp, address: " +
+                                       "{address}, symbol: {symbol}, date: {date},  record: {record}", holderInfo.Address, holderInfo.Symbol, excludeDate, lastHoldingRecord);
+                
                 if (lastHoldingRecord != null && lastHoldingRecord.Balance <= 0)
                 {
                     _logger.LogInformation("PointAccumulateForSGR12Worker Holding Cat Less Than 24hours, address: {address}", holderInfo.Address);
@@ -246,7 +251,10 @@ public class PointAccumulateForSGR12Worker :  AsyncPeriodicBackgroundWorkerBase
                 }
                 
                 var snapshot = _objectMapper.Map<SchrodingerIndexerDto, PointsSnapshotIndex>(holderInfo);   
+                _logger.LogInformation("PointAccumulateForSGR12Worker GetHoldingPointBySymbolAsync Req, address: {address}, symbol: {symbol}", holderInfo.Address, holderInfo.Symbol);
                 var pointBySymbolDto = await _schrodingerCatProvider.GetHoldingPointBySymbolAsync(holderInfo.Symbol, chainId);
+                _logger.LogInformation("PointAccumulateForSGR12Worker GetHoldingPointBySymbolAsync Resp, address: {address}, symbol: {symbol}, point: {point}", holderInfo.Address, holderInfo.Symbol, pointBySymbolDto);
+                
                 snapshot.Amount = pointBySymbolDto.Point * holderInfo.Amount;
                 snapshot.Id = IdGenerateHelper.GetId(holderInfo.Address, holderInfo.Symbol, pointName, now.ToString("yyyy-MM-dd HH:mm"));
                 snapshot.PointName = pointName;
