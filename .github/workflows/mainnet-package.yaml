@@ -12,7 +12,7 @@ jobs:
       matrix:
         servicename:
           [
-            SchrodingerServer.HttpApi.Host, SchrodingerServer.Silo, SchrodingerServer.EntityEventHandler, SchrodingerServer.Worker, SchrodingerServer.Background, SchrodingerServer.AuthServer
+            SchrodingerServer.HttpApi.Host, SchrodingerServer.EntityEventHandler, SchrodingerServer.Worker, SchrodingerServer.Background, SchrodingerServer.AuthServer
           ]
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
       matrix:
         servicename:
           [
-            SchrodingerServer.HttpApi.Host, SchrodingerServer.Silo, SchrodingerServer.EntityEventHandler, SchrodingerServer.Worker, SchrodingerServer.Background, SchrodingerServer.AuthServer
+            SchrodingerServer.HttpApi.Host, SchrodingerServer.EntityEventHandler, SchrodingerServer.Worker, SchrodingerServer.Background, SchrodingerServer.AuthServer
           ]
     permissions:
       contents: read
