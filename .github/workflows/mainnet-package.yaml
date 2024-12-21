@@ -12,7 +12,7 @@ jobs:
       matrix:
         servicename:
           [
-            SchrodingerServer.HttpApi.Host, SchrodingerServer.EntityEventHandler, SchrodingerServer.Worker, SchrodingerServer.Background, SchrodingerServer.AuthServer
+            SchrodingerServer.EntityEventHandler
           ]
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +36,7 @@ jobs:
       matrix:
         servicename:
           [
-            SchrodingerServer.HttpApi.Host, SchrodingerServer.EntityEventHandler, SchrodingerServer.Worker, SchrodingerServer.Background, SchrodingerServer.AuthServer
+            SchrodingerServer.EntityEventHandler
           ]
     permissions:
       contents: read
