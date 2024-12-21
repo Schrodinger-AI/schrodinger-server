@@ -30,7 +30,7 @@ jobs:
     runs-on: schrodinger-runner # this is the self-hosted runner name after it is being setup
     strategy:
       matrix:
-        servicename: [  SchrodingerServer.EntityEventHandler ] # This should be the list of app that needs to be deploy.
+        servicename: [ SchrodingerServer.EntityEventHandler ] # This should be the list of app that needs to be deploy.
     permissions:
       contents: read
     outputs:
