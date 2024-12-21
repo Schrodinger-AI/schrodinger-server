@@ -229,13 +229,22 @@ public class DefaultImageProvider : ImageProvider, ISingletonDependency
         else
         {
             Logger.LogError("TraitsActionProvider RequestImageGenerations generate error {adoptId} response{response}", adoptId, responseString);
-            GenerateImageFromAiResError aiQueryResponse = JsonConvert.DeserializeObject<GenerateImageFromAiResError>(responseString);
-            Logger.LogError("parse response {adoptId} response{response}", adoptId, JsonConvert.SerializeObject(aiQueryResponse));
-            if (null != aiQueryResponse && aiQueryResponse.error == "Duplicate request")
+            try
             {
-                Logger.LogError("Duplicate request {adoptId}", adoptId);
-                return adoptId;  // requestId is the same as adoptId
+                GenerateImageFromAiResError aiQueryResponse = JsonConvert.DeserializeObject<GenerateImageFromAiResError>(responseString);
+                Logger.LogError("parse response {adoptId} response{response}", adoptId, JsonConvert.SerializeObject(aiQueryResponse));
+                if (null != aiQueryResponse && aiQueryResponse.error == "Duplicate request")
+                {
+                    Logger.LogError("Duplicate request {adoptId}", adoptId);
+                    return adoptId;  // requestId is the same as adoptId
+                }
             }
+            catch (Exception e)
+            {
+                Logger.LogError(e, "parse GenerateImageFromAiResError failed {adoptId} msg:{msg}", adoptId, e.Message);
+                return "";
+            }
+            
         }
 
         return "";
