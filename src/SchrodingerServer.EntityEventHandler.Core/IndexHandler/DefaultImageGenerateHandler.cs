@@ -49,7 +49,8 @@ public class DefaultImageGenerateHandler : IDistributedEventHandler<DefaultImage
         if (!lease.IsAcquired)
         {
             _logger.LogInformation("limit exceeded, will requeue, {AdoptId}", eventData.AdoptId);
-            throw new UserFriendlyException("limit exceeded");
+            // throw new UserFriendlyException("limit exceeded");
+            return;
         }
 
         var imageInfo = _objectMapper.Map<GenerateImage, GenerateOpenAIImage>(eventData.GenerateImage);
