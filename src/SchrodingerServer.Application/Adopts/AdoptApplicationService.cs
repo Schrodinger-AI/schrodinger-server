@@ -368,6 +368,7 @@ public class AdoptApplicationService : ApplicationService, IAdoptApplicationServ
             return output;
         }
         
+        
         var adoptAddressId = ImageProviderHelper.JoinAdoptIdAndAelfAddress(adoptId, address);
         var provider = _imageDispatcher.CurrentProvider();
         var judgement1 = await _adoptImageService.HasSendRequest(adoptId);
